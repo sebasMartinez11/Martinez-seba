@@ -77,10 +77,10 @@ WSGI_APPLICATION = 'crminm.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'crm_inmobiliaria',
-        'USER': 'crm',
+        'NAME': 'crm_im',
+        'USER': 'crm_inmobiliaria',
         'PASSWORD': '240803',
-        'HOST': '127.0.0.1',
+        'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'charset': 'utf8mb4',

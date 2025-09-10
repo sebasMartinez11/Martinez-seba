@@ -11,6 +11,9 @@ class Usuario(models.Model):
     token = models.CharField(max_length=40, unique=True, editable=False)
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
+    telefono = models.CharField(max_length=15, blank=True)
+    dni = models.CharField(max_length=20, blank=True)
+
 
     def save(self, *args, **kwargs):
         if not self.token:

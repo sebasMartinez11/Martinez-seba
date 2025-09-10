@@ -36,3 +36,4 @@ class DetalleUsuario(APIView):
         usuario = get_object_or_404(Usuario, pk=pk)
         usuario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+

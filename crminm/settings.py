@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'usuarios',
+    'leads',
 ]
 
 MIDDLEWARE = [
@@ -76,11 +77,11 @@ WSGI_APPLICATION = 'crminm.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'crm_inmobiliaria',
-        'USER': 'crm',
-        'PASSWORD': '220803',
-        'HOST': '127.0.0.1',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'crm_inm',
+        'USER': 'crm_inm1',
+        'PASSWORD': '1234',
+        'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'charset': 'utf8mb4',

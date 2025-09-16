@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'usuarios',
     'leads',
     'propiedades'
+    'dashboard',
 ]
 
 MIDDLEWARE = [

@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     'leads',
     'propiedades',
     'rest_framework',
-    
+    'dashboard',
 ]
 
 MIDDLEWARE = [

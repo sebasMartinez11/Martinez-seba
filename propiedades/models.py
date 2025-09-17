@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 
-
 class Propiedad(models.Model):
     TIPO_DE_PROPIEDAD_CHOICES = [
         ("casa", "Casa"),

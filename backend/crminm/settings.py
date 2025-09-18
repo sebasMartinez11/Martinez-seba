@@ -27,13 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'usuarios',
     'leads',
-<<<<<<< HEAD:crminm/settings.py
-    'propiedades',
-    'rest_framework',
-    
-=======
     'propiedades'
->>>>>>> 071dcd8ea1f6f6810dbee700788f5a0fb4ff2c06:backend/crminm/settings.py
 ]
 
 MIDDLEWARE = [

@@ -59,8 +59,4 @@ class PropiedadImagen(models.Model):
     descripcion = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
-<<<<<<< HEAD:propiedades/models.py
-        return f"Imagen de {self.propiedad.codigo} ({self.descripcion or 'sin descripción'})"
-=======
         return f"Imagen de {self.propiedad.codigo} ({self.descripcion or 'sin descripción'})"   
->>>>>>> 071dcd8ea1f6f6810dbee700788f5a0fb4ff2c06:backend/propiedades/models.py

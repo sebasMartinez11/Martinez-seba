@@ -28,12 +28,8 @@ INSTALLED_APPS = [
     'usuarios',
     'leads',
     'propiedades',
-<<<<<<< HEAD
-    'dashboard',
-=======
     'rest_framework',
     
->>>>>>> e4f788484afb0ab66fc4386dbcb4af8fd9462eb5
 ]
 
 MIDDLEWARE = [

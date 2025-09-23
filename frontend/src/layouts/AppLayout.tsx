@@ -1,16 +1,16 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function AppLayout() {
   const { pathname } = useLocation();
 
   const sectionTitle = useMemo(() => {
-    if (pathname.startsWith("/leads")) return "Leads";
-    if (pathname.startsWith("/propiedades")) return "Propiedades";
-    if (pathname.startsWith("/usuarios")) return "Usuarios";
+    if (pathname.startsWith("/app/leads")) return "Leads";
+    if (pathname.startsWith("/app/propiedades")) return "Propiedades";
+    if (pathname.startsWith("/app/usuarios")) return "Usuarios";
     return "Dashboard";
   }, [pathname]);
 
@@ -28,13 +28,10 @@ export default function AppLayout() {
         </main>
       </div>
 
-      {/* Fallback minimal footer */}
       <footer className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto">
           © {new Date().getFullYear()} Real Connect —{" "}
-          <Link to="/" className="underline hover:no-underline">
-            Home
-          </Link>
+          <Link to="/app" className="underline hover:no-underline">Home</Link>
         </div>
       </footer>
     </div>

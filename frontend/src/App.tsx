@@ -1,5 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppLayout from "./layouts/AppLayouts";
+import PublicLayout from "./layouts/PublicLayout";
+import AppLayout from "./layouts/AppLayout";
+
+import Landing from "./pages/Landing";
+import Login from "./pages/Auth/Login";
+import Register from "./pages/Auth/Register";
+
 import DashboardPage from "./pages/Dashboard";
 import LeadsPage from "./pages/Leads";
 import PropiedadesPage from "./pages/Propiedades";
@@ -8,11 +14,16 @@ import UsuariosPage from "./pages/Usuarios";
 export default function App() {
   return (
     <Routes>
-      {/* Parent con path="/" para que el layout siempre renderice */}
-      <Route path="/" element={<AppLayout />}>
-        {/* Ruta índice (equivale a "/") */}
+      {/* Público */}
+      <Route path="/" element={<PublicLayout />}>
+        <Route index element={<Landing />} />
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
+      </Route>
+
+      {/* App autenticada (placeholder, sin guard por ahora) */}
+      <Route path="/app" element={<AppLayout />}>
         <Route index element={<DashboardPage />} />
-        {/* Hijas sin barra inicial porque heredan de "/" */}
         <Route path="leads" element={<LeadsPage />} />
         <Route path="propiedades" element={<PropiedadesPage />} />
         <Route path="usuarios" element={<UsuariosPage />} />

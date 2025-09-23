@@ -135,6 +135,4 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
-# Si usás sesiones/CSRF en lugar de JWT, también agregarías:
-# CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "https://tu-front.app"]
-# CORS_ALLOW_CREDENTIALS = True
+

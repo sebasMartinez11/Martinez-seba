@@ -1,11 +1,9 @@
-# backend/crminm/urls.py
-
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 # ViewSets propios
-from leads.views import EstadoLeadViewSet, ContactoViewSet
+from leads.views import EstadoLeadViewSet, ContactoViewSet, EventoViewSet  # 👈 NUEVO
 from propiedades.views import PropiedadViewSet
 from usuarios.views import ListaYCreaUsuario, DetalleUsuario
 
@@ -27,24 +25,18 @@ def health(_request):
 router = DefaultRouter()
 router.register(r"estados-lead", EstadoLeadViewSet)
 router.register(r"contactos", ContactoViewSet)
+router.register(r"eventos", EventoViewSet)          # 👈 NUEVO
 router.register(r"propiedades", PropiedadViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-
-    # API base (router)
     path("api/", include(router.urls)),
-
-    # Usuarios (CBVs que ya tenías)
     path("api/usuarios/", ListaYCreaUsuario.as_view(), name="usuarios-lista"),
     path("api/usuarios/<int:pk>/", DetalleUsuario.as_view(), name="usuario-detalle"),
-
-    # Healthcheck y Auth JWT
     path("api/health", health, name="api-health"),
     path("api/auth/token", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/refresh", TokenRefreshView.as_view(), name="token_refresh"),
 ]
 
-# Servir archivos de MEDIA en desarrollo
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

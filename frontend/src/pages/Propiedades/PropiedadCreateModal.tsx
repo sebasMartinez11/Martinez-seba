@@ -1,3 +1,4 @@
+// src/pages/Propiedades/PropiedadCreateModal.tsx
 import type { FormEvent } from "react";
 import { useRef, useState, useEffect } from "react";
 import axios, { AxiosError } from "axios";
@@ -8,6 +9,7 @@ type Props = { open: boolean; onClose: () => void; onCreated?: () => void };
 type Estado = "disponible" | "vendido" | "reservado";
 type TipoProp = "casa" | "departamento" | "hotel";
 type Moneda = "USD" | "ARS";
+type Disponibilidad = "venta" | "alquiler";
 
 export default function PropiedadCreateModal({ open, onClose, onCreated }: Props) {
   const [submitting, setSubmitting] = useState(false);
@@ -19,7 +21,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
   const [descripcion, setDescripcion] = useState("");
   const [ubicacion, setUbicacion] = useState("");
   const [tipoDePropiedad, setTipoDePropiedad] = useState<TipoProp>("casa");
-  const [disponibilidad, setDisponibilidad] = useState(""); // texto libre
+  const [disponibilidad, setDisponibilidad] = useState<Disponibilidad | "">(""); // SELECT requerido
   const [precio, setPrecio] = useState<number | "">("");
   const [moneda, setMoneda] = useState<Moneda>("USD");
   const [ambiente, setAmbiente] = useState<number | "">("");
@@ -32,7 +34,9 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
-  useEffect(() => { if (!open) setServerError(null); }, [open]);
+  useEffect(() => {
+    if (!open) setServerError(null);
+  }, [open]);
 
   function onChangeFile() {
     const f = fileRef.current?.files?.[0];
@@ -43,14 +47,10 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
 
   async function uploadImagen(propId: number) {
     const f = fileRef.current?.files?.[0];
-    if (!f) return; // nada que subir
+    if (!f) return;
 
     const fd = new FormData();
-    // tu SubirImagenesSerializer acepta: imagenes (lista) o imagen (una)
     fd.append("imagen", f);
-    // opcional: descripción
-    // fd.append("descripcion", "Frente");
-
     await axios.post(`/api/propiedades/${propId}/subir-imagenes/`, fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -67,8 +67,8 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
         titulo,
         descripcion,
         ubicacion,
-        tipo_de_propiedad: tipoDePropiedad, // "casa" | "departamento" | "hotel"
-        disponibilidad,                      // string
+        tipo_de_propiedad: tipoDePropiedad,   // "casa" | "departamento" | "hotel"
+        disponibilidad: disponibilidad || "", // "venta" | "alquiler" (minúsculas)
         precio: precio === "" ? 0 : Number(precio),
         moneda,                               // "USD" | "ARS"
         ambiente: ambiente === "" ? 0 : Number(ambiente),
@@ -123,142 +123,214 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
 
   return (
     <Modal open={open} onClose={onClose} title="Registrar propiedad" maxWidth="lg">
-      {/* Layout mejorado: full en mobile, 12 columnas en md+ */}
-      <form onSubmit={onSubmit} className="space-y-5">
-        {serverError && (
-          <div className="rounded-md border px-3 py-2 text-sm border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
-            {serverError}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-          {/* Columna izquierda */}
-          <div className="md:col-span-7 space-y-4">
-            <div>
-              <label className="text-sm">Código *</label>
-              <input required className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                value={codigo} onChange={(e) => setCodigo(e.target.value)} />
+      {/* Contenedor scrollable para que no se corte en 100% zoom */}
+      <div className="max-h-[85vh] overflow-y-auto pr-1">
+        <form onSubmit={onSubmit} className="space-y-5">
+          {serverError && (
+            <div className="rounded-md border px-3 py-2 text-sm border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
+              {serverError}
             </div>
+          )}
 
-            <div>
-              <label className="text-sm">Título *</label>
-              <input required className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                value={titulo} onChange={(e) => setTitulo(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-sm">Ubicación *</label>
-              <input required className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-sm">Descripción</label>
-              <textarea rows={3} className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+            {/* Columna izquierda */}
+            <div className="md:col-span-7 space-y-4">
               <div>
-                <label className="text-sm">Tipo de propiedad *</label>
-                <select className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                  value={tipoDePropiedad} onChange={(e) => setTipoDePropiedad(e.target.value as any)}>
-                  <option value="casa">Casa</option>
-                  <option value="departamento">Departamento</option>
-                  <option value="hotel">Hotel</option>
+                <label className="text-sm">Código *</label>
+                <input
+                  required
+                  className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm">Título *</label>
+                <input
+                  required
+                  className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                  value={titulo}
+                  onChange={(e) => setTitulo(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm">Ubicación *</label>
+                <input
+                  required
+                  className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                  value={ubicacion}
+                  onChange={(e) => setUbicacion(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm">Descripción</label>
+                <textarea
+                  rows={3}
+                  className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm">Tipo de propiedad *</label>
+                  <select
+                    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    value={tipoDePropiedad}
+                    onChange={(e) => setTipoDePropiedad(e.target.value as any)}
+                  >
+                    <option value="casa">Casa</option>
+                    <option value="departamento">Departamento</option>
+                    <option value="hotel">Hotel</option>
+                  </select>
+                </div>
+
+                {/* SELECT requerido para disponibilidad */}
+                <div>
+                  <label className="text-sm">Disponibilidad *</label>
+                  <select
+                    required
+                    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    value={disponibilidad}
+                    onChange={(e) => setDisponibilidad(e.target.value as Disponibilidad)}
+                  >
+                    <option value="">— Seleccionar —</option>
+                    <option value="venta">Venta</option>
+                    <option value="alquiler">Alquiler</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm">Precio *</label>
+                  <input
+                    required
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    value={precio}
+                    onChange={(e) => setPrecio(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm">Moneda *</label>
+                  <select
+                    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    value={moneda}
+                    onChange={(e) => setMoneda(e.target.value as any)}
+                  >
+                    <option value="USD">USD</option>
+                    <option value="ARS">ARS</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-sm">Ambiente</label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    value={ambiente}
+                    onChange={(e) => setAmbiente(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm">Baños</label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    value={banos}
+                    onChange={(e) => setBanos(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm">Antigüedad</label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    value={antiguedad}
+                    onChange={(e) => setAntiguedad(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm">Superficie (m²)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    value={superficie}
+                    onChange={(e) => setSuperficie(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm">Estado *</label>
+                <select
+                  className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                  value={estado}
+                  onChange={(e) => setEstado(e.target.value as any)}
+                >
+                  <option value="disponible">Disponible</option>
+                  <option value="vendido">Vendido</option>
+                  <option value="reservado">Reservado</option>
                 </select>
               </div>
-              <div>
-                <label className="text-sm">Disponibilidad</label>
-                <input placeholder="ej: venta / alquiler" className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                  value={disponibilidad} onChange={(e) => setDisponibilidad(e.target.value)} />
-              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm">Precio *</label>
-                <input required type="number" min={0} className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                  value={precio} onChange={(e) => setPrecio(Number(e.target.value))} />
+            {/* Columna derecha: imagen */}
+            <div className="md:col-span-5 space-y-3">
+              <label className="text-sm">Imagen (opcional)</label>
+              <div className="rounded-xl border border-dashed h-48 md:h-56 flex items-center justify-center text-sm dark:border-gray-700 overflow-hidden">
+                {preview ? (
+                  <img src={preview} alt="preview" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-gray-500 px-4 text-center">
+                    Seleccioná una imagen para subir al crear.
+                  </span>
+                )}
               </div>
-              <div>
-                <label className="text-sm">Moneda *</label>
-                <select className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                  value={moneda} onChange={(e) => setMoneda(e.target.value as any)}>
-                  <option value="USD">USD</option>
-                  <option value="ARS">ARS</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label className="text-sm">Ambiente</label>
-                <input type="number" min={0} className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                  value={ambiente} onChange={(e) => setAmbiente(Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="text-sm">Baños</label>
-                <input type="number" min={0} className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                  value={banos} onChange={(e) => setBanos(Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="text-sm">Antigüedad</label>
-                <input type="number" min={0} className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                  value={antiguedad} onChange={(e) => setAntiguedad(Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="text-sm">Superficie (m²)</label>
-                <input type="number" min={0} step="0.01" className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                  value={superficie} onChange={(e) => setSuperficie(Number(e.target.value))} />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm">Estado *</label>
-              <select className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                value={estado} onChange={(e) => setEstado(e.target.value as any)}>
-                <option value="disponible">Disponible</option>
-                <option value="vendido">Vendido</option>
-                <option value="reservado">Reservado</option>
-              </select>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={onChangeFile}
+                className="block w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:bg-gray-100 dark:file:bg-gray-800 file:text-gray-700 dark:file:text-gray-200"
+              />
+              <p className="text-xs text-gray-500">
+                La imagen se sube <strong>después</strong> de crear la propiedad, vía endpoint de imágenes.
+              </p>
             </div>
           </div>
 
-          {/* Columna derecha: subida de imagen (opcional) */}
-          <div className="md:col-span-5 space-y-3">
-            <label className="text-sm">Imagen (opcional)</label>
-            <div className="rounded-xl border border-dashed h-56 flex items-center justify-center text-sm dark:border-gray-700 overflow-hidden">
-              {preview ? (
-                <img src={preview} alt="preview" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-gray-500 px-4 text-center">Seleccioná una imagen para subir al crear.</span>
-              )}
-            </div>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={onChangeFile}
-              className="block w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:bg-gray-100 dark:file:bg-gray-800 file:text-gray-700 dark:file:text-gray-200"
-            />
-            <p className="text-xs text-gray-500">
-              La imagen se sube **después** de crear la propiedad, vía endpoint de imágenes.
-            </p>
+          {/* Footer sticky */}
+          <div className="sticky bottom-0 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-t border-gray-200 dark:border-gray-800 pt-3 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border px-4 py-2 text-sm border-gray-300 dark:border-gray-700"
+            >
+              Cancelar
+            </button>
+            <button
+              disabled={submitting || !codigo || !titulo || !ubicacion || precio === "" || !disponibilidad}
+              className="rounded-md px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+            >
+              {submitting ? "Guardando..." : "Registrar"}
+            </button>
           </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose}
-            className="rounded-md border px-4 py-2 text-sm border-gray-300 dark:border-gray-700">
-            Cancelar
-          </button>
-          <button disabled={submitting || !codigo || !titulo || !ubicacion || !precio}
-            className="rounded-md px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60">
-            {submitting ? "Guardando..." : "Registrar"}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </Modal>
   );
 }

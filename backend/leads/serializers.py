@@ -8,13 +8,20 @@ class EstadoLeadSerializer(serializers.ModelSerializer):
         fields = ["id", "fase", "descripcion"]
 
 class ContactoSerializer(serializers.ModelSerializer):
-    estado = EstadoLeadSerializer(read_only=True)
+    # ✅ Ahora acepta escribir el ID del estado (p.ej. {"estado": 3})
+    estado = serializers.PrimaryKeyRelatedField(
+        queryset=EstadoLead.objects.all(),
+        allow_null=True,
+        required=False,
+    )
+    # ✅ Y sigue devolviendo el objeto expandido para leer
+    estado_detalle = EstadoLeadSerializer(source="estado", read_only=True)
 
     class Meta:
         model = Contacto
-        fields = ["id", "nombre", "apellido", "email", "telefono", "estado"]
+        fields = ["id", "nombre", "apellido", "email", "telefono", "estado", "estado_detalle"]
 
-# === NUEVO ===
+# === EVENTOS ===
 class EventoSerializer(serializers.ModelSerializer):
     contacto = serializers.PrimaryKeyRelatedField(
         queryset=Contacto.objects.all(), allow_null=True, required=False

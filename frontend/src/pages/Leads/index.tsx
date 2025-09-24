@@ -1,3 +1,4 @@
+// index.tsx
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
@@ -170,10 +171,12 @@ export default function LeadsPage() {
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => setPage(1), [q]);
 
-  /* ------------------- Seeder de estados (opcional) -------------------- */
+  /* ------------------- Seeder de estados (FIX) -------------------- */
   async function seedEstados() {
     try {
+      // ⚠️ Crear los 4 estados base
       await Promise.all([
+        axios.post("/api/estados-lead/", { fase: "Nuevo", descripcion: "" }),
         axios.post("/api/estados-lead/", { fase: "En negociación", descripcion: "" }),
         axios.post("/api/estados-lead/", { fase: "Rechazado", descripcion: "" }),
         axios.post("/api/estados-lead/", { fase: "Vendido", descripcion: "" }),
@@ -199,11 +202,11 @@ export default function LeadsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {estados.length < 3 && (
+          {estados.length < 4 && (
             <button
               className="h-9 px-3 rounded-lg border text-sm"
               onClick={seedEstados}
-              title="Crear En negociación / Rechazado / Vendido"
+              title="Crear Nuevo / En negociación / Rechazado / Vendido"
             >
               Cargar estados recomendados
             </button>
@@ -470,12 +473,24 @@ function LeadModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const nuevoId = useMemo(
+    () => estados.find((e) => norm(e.fase) === "nuevo")?.id,
+    [estados]
+  );
+
   async function handleSubmit() {
     setError(null);
     if (!form.nombre && !form.email) {
       setError("Ingresá al menos nombre o email.");
       return;
     }
+    // ✅ Si no eligió, usar por defecto el id de “Nuevo”
+    const estadoElegido = form.estadoId || (nuevoId ? String(nuevoId) : "");
+    if (!estadoElegido) {
+      setError("No hay estados cargados. Hacé clic en “Cargar estados recomendados”.");
+      return;
+    }
+
     setSaving(true);
     try {
       const payload: any = {
@@ -483,8 +498,8 @@ function LeadModal({
         apellido: form.apellido || undefined,
         email: form.email || undefined,
         telefono: form.telefono || undefined,
+        estado: Number(estadoElegido), // enviamos siempre el id
       };
-      if (form.estadoId) payload.estado = Number(form.estadoId);
       await onSubmit(payload);
     } catch {
       setError("Ocurrió un error. Intentá de nuevo.");
@@ -492,8 +507,6 @@ function LeadModal({
       setSaving(false);
     }
   }
-
-  const nuevoId = useMemo(() => estados.find((e) => norm(e.fase) === "nuevo")?.id, [estados]);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
@@ -538,27 +551,16 @@ function LeadModal({
               value={form.estadoId}
               onChange={(e) => setForm((f) => ({ ...f, estadoId: e.target.value }))}
             >
-              <option value="">
-                — Seleccionar —
-              </option>
-              {/* Si no hay estados, sugerimos por lo menos “Nuevo” */}
-              {estados.length === 0 && (
-                <>
-                  <option value={String(nuevoId || "")}>Nuevo</option>
-                  <option value="">Vendido</option>
-                  <option value="">En negociación</option>
-                  <option value="">Rechazado</option>
-                </>
-              )}
+              <option value="">— Seleccionar —</option>
               {estados.map((e) => (
                 <option key={e.id} value={String(e.id)}>
                   {e.fase}
                 </option>
               ))}
             </select>
-            {!form.estadoId && nuevoId && (
-              <div className="mt-1 text-xs text-gray-500">
-                Tip: si dejás vacío, podrás asignarlo luego; si querés por defecto “Nuevo”, seleccioná la opción.
+            {!nuevoId && (
+              <div className="mt-1 text-xs text-amber-500">
+                No encuentro el estado “Nuevo”. Hacé clic en “Cargar estados recomendados”.
               </div>
             )}
           </div>

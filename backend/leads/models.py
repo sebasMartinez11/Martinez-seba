@@ -23,14 +23,14 @@ class Contacto(models.Model):
         return f"{self.nombre} {self.apellido}".strip()
 
 
-TIPO_EVENTO_CHOICES = [
-    ("Reunion", "Reunion"),
-    ("Visita", "Visita"),
-    ("Llamada", "Llamada"),
-]
-
-
 class Evento(models.Model):
+    # 👇 Choices definidos dentro de la clase
+    TIPO_EVENTO_CHOICES = [
+        ("Reunion", "Reunión"),
+        ("Visita", "Visita"),
+        ("Llamada", "Llamada"),
+    ]
+
     nombre = models.CharField(max_length=120, blank=True, default="")
     apellido = models.CharField(max_length=120, blank=True, default="")
     email = models.EmailField(blank=True, null=True)
@@ -38,7 +38,7 @@ class Evento(models.Model):
         Contacto, null=True, blank=True, on_delete=models.SET_NULL, related_name="eventos"
     )
     propiedad = models.ForeignKey(Propiedad, on_delete=models.CASCADE, related_name="eventos")
-    tipo = models.CharField(max_length=20, choices=TIPO_EVENTO_CHOICES)
+    tipo = models.CharField(max_length=20, choices=TIPO_EVENTO_CHOICES)  # ✅ usa el atributo de clase
     fecha_hora = models.DateTimeField()
     notas = models.TextField(blank=True, default="")
     creado_en = models.DateTimeField(auto_now_add=True)
@@ -50,7 +50,6 @@ class Evento(models.Model):
         return f"{self.tipo} {self.fecha_hora:%Y-%m-%d %H:%M}"
 
 
-# ✅ historial de cambios de estado
 class EstadoLeadHistorial(models.Model):
     contacto = models.ForeignKey(Contacto, on_delete=models.CASCADE, related_name="historial_estados")
     estado = models.ForeignKey(EstadoLead, null=True, blank=True, on_delete=models.SET_NULL)

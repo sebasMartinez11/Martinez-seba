@@ -135,8 +135,7 @@ function EventPreview({ evento, onClose }: PreviewProps) {
           {(evento.nombre || evento.apellido || evento.email) && (
             <div className="text-gray-700 dark:text-gray-300">
               <span className="font-medium">Contacto: </span>
-              {[evento.nombre, evento.apellido].filter(Boolean).join(" ") ||
-                "—"}
+              {[evento.nombre, evento.apellido].filter(Boolean).join(" ") || "—"}
               {evento.email ? ` · ${evento.email}` : ""}
             </div>
           )}
@@ -153,6 +152,200 @@ function EventPreview({ evento, onClose }: PreviewProps) {
   );
 }
 
+// ------------------ Create modal ------------------
+type CreateProps = {
+  open: boolean;
+  onClose: () => void;
+  propiedades: Propiedad[];
+  onCreated: (ev: Evento) => void;
+};
+function CreateEventModal({ open, onClose, propiedades, onCreated }: CreateProps) {
+  const nextHourISO = (() => {
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    return d.toISOString().slice(0, 16); // para input datetime-local
+  })();
+
+  const [tipo, setTipo] = useState<Evento["tipo"]>("Visita");
+  const [fechaHora, setFechaHora] = useState<string>(nextHourISO);
+  const [propiedad, setPropiedad] = useState<number | "">(propiedades[0]?.id ?? "");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [email, setEmail] = useState("");
+  const [notas, setNotas] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => {
+    setTipo("Visita");
+    setFechaHora(nextHourISO);
+    setPropiedad(propiedades[0]?.id ?? "");
+    setNombre("");
+    setApellido("");
+    setEmail("");
+    setNotas("");
+    setError(null);
+  };
+
+  useEffect(() => {
+    if (open) reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  if (!open) return null;
+
+  const submit = async () => {
+    setError(null);
+    if (!fechaHora) return setError("Elegí fecha y hora");
+    if (!propiedad || typeof propiedad !== "number")
+      return setError("Seleccioná una propiedad");
+
+    const payload = {
+      tipo,
+      fecha_hora: new Date(fechaHora).toISOString(),
+      propiedad,
+      nombre: nombre || undefined,
+      apellido: apellido || undefined,
+      email: email || undefined,
+      notas: notas || undefined,
+    };
+
+    try {
+      setSaving(true);
+      const { data } = await axios.post("/api/eventos/", payload);
+      // si la API no devuelve el objeto, caemos al payload con id fake (debería devolverlo)
+      onCreated(data?.id ? data : { id: Date.now(), ...payload } as Evento);
+      onClose();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || "No se pudo crear el evento");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-lg font-semibold">Agregar evento</h4>
+          <button
+            className="text-sm px-2 h-8 rounded-md border border-gray-300 dark:border-gray-700"
+            onClick={onClose}
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <label className="flex flex-col gap-1">
+            <span className="text-gray-600 dark:text-gray-300">Tipo</span>
+            <select
+              className="h-9 rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-2"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value as Evento["tipo"])}
+            >
+              <option value="Reunion">Reunión</option>
+              <option value="Visita">Visita</option>
+              <option value="Llamada">Llamada</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-gray-600 dark:text-gray-300">Fecha y hora</span>
+            <input
+              type="datetime-local"
+              className="h-9 rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-2"
+              value={fechaHora}
+              onChange={(e) => setFechaHora(e.target.value)}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 md:col-span-2">
+            <span className="text-gray-600 dark:text-gray-300">Propiedad</span>
+            <select
+              className="h-9 rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-2"
+              value={String(propiedad)}
+              onChange={(e) =>
+                setPropiedad(e.target.value ? Number(e.target.value) : "")
+              }
+            >
+              <option value="">Seleccionar…</option>
+              {propiedades.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.titulo}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-gray-600 dark:text-gray-300">Nombre</span>
+            <input
+              className="h-9 rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-2"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-gray-600 dark:text-gray-300">Apellido</span>
+            <input
+              className="h-9 rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-2"
+              value={apellido}
+              onChange={(e) => setApellido(e.target.value)}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 md:col-span-2">
+            <span className="text-gray-600 dark:text-gray-300">Email</span>
+            <input
+              type="email"
+              className="h-9 rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-2"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 md:col-span-2">
+            <span className="text-gray-600 dark:text-gray-300">Notas</span>
+            <textarea
+              rows={3}
+              className="rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-2 py-2"
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+            />
+          </label>
+        </div>
+
+        {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
+
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="h-9 px-3 rounded-md border border-gray-300 dark:border-gray-700"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving}
+            className="h-9 px-3 rounded-md bg-blue-600 text-white disabled:opacity-60"
+          >
+            {saving ? "Guardando…" : "Guardar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ------------------ Página ------------------
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -163,6 +356,9 @@ export default function DashboardPage() {
 
   // preview seleccionado
   const [preview, setPreview] = useState<(Evento & { propiedad_titulo?: string }) | null>(null);
+
+  // create modal
+  const [createOpen, setCreateOpen] = useState(false);
 
   async function fetchAll() {
     setLoading(true);
@@ -281,7 +477,15 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold">Dashboard</h2>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {/* Botón agregar evento */}
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="hidden md:inline-flex items-center gap-1 rounded-md bg-blue-600 text-white h-9 px-3 text-sm"
+            >
+              + Agregar evento
+            </button>
+
             <button
               onClick={() => setCursor(addMonths(cursor, -1))}
               className="rounded-md border px-3 h-9 text-sm border-gray-300 dark:border-gray-700"
@@ -418,12 +622,32 @@ export default function DashboardPage() {
             );
           })}
         </ul>
+
+        {/* Botón agregar en mobile */}
+        <div className="p-3">
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="w-full inline-flex items-center justify-center gap-1 rounded-md bg-blue-600 text-white h-10 px-3 text-sm"
+          >
+            + Agregar evento
+          </button>
+        </div>
       </section>
 
       {loading && <div className="text-sm text-gray-500">Actualizando…</div>}
 
       {/* PREVIEW */}
       {preview && <EventPreview evento={preview} onClose={() => setPreview(null)} />}
+
+      {/* CREATE */}
+      <CreateEventModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        propiedades={props}
+        onCreated={(ev) => {
+          setEventos((prev) => [...prev, ev]);
+        }}
+      />
     </div>
   );
 }

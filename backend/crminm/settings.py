@@ -29,7 +29,7 @@ INSTALLED_APPS = [
 
     # Apps propias
     'usuarios',
-    'leads',
+    'leads.apps.LeadsConfig',   # ← usar el AppConfig para que se ejecute ready() y registre signals
     'propiedades',
 
     # Terceros

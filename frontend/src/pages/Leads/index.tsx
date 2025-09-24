@@ -19,6 +19,13 @@ type Evento = {
   contacto?: number | null;
   email?: string | null;
 };
+/** ✅ NUEVO: ítem de historial de cambios de estado */
+type HistItem = {
+  id: number;
+  contacto: number;
+  estado: EstadoLead | null;
+  changed_at: string; // ISO
+};
 
 /* --------------------------- Utils / UI --------------------------- */
 const STATE_COLORS: Record<string, string> = {
@@ -57,6 +64,11 @@ export default function LeadsPage() {
   const [editTarget, setEditTarget] = useState<Contacto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Contacto | null>(null);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  /** ✅ NUEVO: estado para modal de historial */
+  const [historyFor, setHistoryFor] = useState<Contacto | null>(null);
+  const [historyItems, setHistoryItems] = useState<HistItem[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const PAGE_SIZE = 10;
 
@@ -191,6 +203,22 @@ export default function LeadsPage() {
     }
   }
 
+  /* ✅ NUEVO: abrir modal y traer historial desde /api/contactos/:id/estado-historial/ */
+  async function openHistory(c: Contacto) {
+    setHistoryFor(c);
+    setHistoryItems(null);
+    setHistoryLoading(true);
+    try {
+      const { data } = await axios.get(`/api/contactos/${c.id}/estado-historial/`);
+      setHistoryItems(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setHistoryItems([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
   /* ----------------------------- UI ------------------------------ */
   return (
     <div className="flex flex-col gap-6">
@@ -229,7 +257,7 @@ export default function LeadsPage() {
       </section>
 
       {/* Search */}
-      <div className="relative w-full md:max-w-md">
+      <div className="relative w/full md:max-w-md">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -291,6 +319,11 @@ export default function LeadsPage() {
                               onClick={() => setDeleteTarget(c)}>
                         Borrar
                       </button>
+                      {/* ✅ NUEVO: botón Historial */}
+                      <button className="h-8 px-2 rounded-md border text-xs"
+                              onClick={() => openHistory(c)}>
+                        Historial
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -333,6 +366,8 @@ export default function LeadsPage() {
               <div className="mt-3 flex gap-2">
                 <button className="h-8 px-3 rounded-md border text-xs" onClick={() => setEditTarget(c)}>Editar</button>
                 <button className="h-8 px-3 rounded-md border border-rose-600/40 text-rose-500 text-xs" onClick={() => setDeleteTarget(c)}>Borrar</button>
+                {/* ✅ NUEVO: botón Historial (mobile) */}
+                <button className="h-8 px-3 rounded-md border text-xs" onClick={() => openHistory(c)}>Historial</button>
               </div>
             </div>
           );
@@ -416,6 +451,16 @@ export default function LeadsPage() {
           ok={result.ok}
           message={result.msg}
           onClose={() => setResult(null)}
+        />
+      )}
+
+      {/* ✅ NUEVO: Modal de Historial */}
+      {historyFor && (
+        <HistoryModal
+          contacto={historyFor}
+          items={historyItems}
+          loading={historyLoading}
+          onClose={() => { setHistoryFor(null); setHistoryItems(null); }}
         />
       )}
     </div>
@@ -655,6 +700,69 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
           <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
             Cerrar
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------- History Modal --------------------------- */
+/** ✅ NUEVO: timeline con chips de color por estado */
+function HistoryModal({
+  contacto,
+  items,
+  loading,
+  onClose,
+}: {
+  contacto: Contacto;
+  items: HistItem[] | null;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-lg font-semibold mb-1">
+          Historial de {contacto.nombre || "—"} {contacto.apellido || ""}
+        </div>
+        <div className="text-xs text-gray-500 mb-4">{contacto.email || "—"}</div>
+
+        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+        {!loading && (items?.length ?? 0) === 0 && (
+          <div className="text-sm text-gray-500">Este lead aún no tiene cambios de estado.</div>
+        )}
+
+        {!loading && !!items && items.length > 0 && (
+          <ul className="relative pl-5">
+            {items.map((h, idx) => {
+              const fase = h.estado?.fase || "—";
+              const key = norm(fase);
+              const chip = STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+              return (
+                <li key={h.id} className="pb-4 last:pb-0">
+                  {/* línea vertical */}
+                  {idx !== items.length - 1 && (
+                    <span className="absolute left-2 top-3 h-full w-px bg-gray-200 dark:bg-gray-800" />
+                  )}
+                  {/* punto */}
+                  <span className="absolute left-0 mt-1 h-2 w-2 rounded-full bg-gray-400" />
+                  <div className="ml-4">
+                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>
+                      {fase}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">{formatDate(h.changed_at, true)}</div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="mt-5 text-right">
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
         </div>
       </div>
     </div>

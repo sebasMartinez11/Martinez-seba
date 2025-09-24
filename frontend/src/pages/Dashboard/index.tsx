@@ -91,7 +91,7 @@ export default function DashboardPage() {
   const [openDayModal, setOpenDayModal] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
-  // ✅ Ajuste automático de altura del calendario
+  //  Ajuste automático de altura del calendario
   const calendarRef = useRef<HTMLDivElement>(null);
   const weekHeaderRef = useRef<HTMLDivElement>(null);
   const [calHeight, setCalHeight] = useState<number | null>(null);
@@ -237,7 +237,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Dashboard</h2>
+        <h2 className="text-xl font-semibold">Bienvenido a Real Connect</h2>
 
         <div className="flex items-center gap-2">
           <button

@@ -91,7 +91,7 @@ export default function DashboardPage() {
   const [openDayModal, setOpenDayModal] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
-  // ✅ Ajuste automático de altura del calendario
+  //  Ajuste automático de altura del calendario
   const calendarRef = useRef<HTMLDivElement>(null);
   const weekHeaderRef = useRef<HTMLDivElement>(null);
   const [calHeight, setCalHeight] = useState<number | null>(null);

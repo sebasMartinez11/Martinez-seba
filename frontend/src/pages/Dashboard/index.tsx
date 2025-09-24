@@ -237,7 +237,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Dashboard</h2>
+        <h2 className="text-xl font-semibold">Bienvenido a Real Connect</h2>
 
         <div className="flex items-center gap-2">
           <button

@@ -1,5 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Building2, Contact, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  LayoutDashboard,
+  Building2,
+  Contact,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+  Bell,
+} from "lucide-react";
 import clsx from "clsx";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -14,7 +22,8 @@ const items: Item[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/leads", label: "Leads", icon: Contact },
   { to: "/app/propiedades", label: "Propiedades", icon: Building2 },
-  { to: "/app/usuarios", label: "Usuarios", icon: Users },
+  { to: "/app/avisos", label: "Recordatorios y avisos", icon: Bell }, // 👈 nuevo
+  { to: "/app/configuracion", label: "Configuración", icon: Settings },
 ];
 
 export default function Sidebar() {

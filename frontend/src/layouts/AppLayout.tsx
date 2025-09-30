@@ -11,6 +11,8 @@ export default function AppLayout() {
     if (pathname.startsWith("/app/leads")) return "Leads";
     if (pathname.startsWith("/app/propiedades")) return "Propiedades";
     if (pathname.startsWith("/app/usuarios")) return "Usuarios";
+    if (pathname.startsWith("/app/avisos")) return "Recordatorios y avisos"; // 👈 NUEVO
+    if (pathname.startsWith("/app/configuracion")) return "Configuración";   // 👈 opcional
     return "Dashboard";
   }, [pathname]);
 

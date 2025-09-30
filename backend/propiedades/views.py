@@ -1,16 +1,33 @@
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Propiedad, PropiedadImagen
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from .models import Propiedad, PropiedadImagen
 from .serializers import PropiedadSerializer, SubirImagenesSerializer, PropiedadImagenSerializer
 
-class PropiedadViewSet(viewsets.ModelViewSet):
+
+# ---------- Mixin multi-tenant ----------
+class OwnedQuerysetMixin:
+    """
+    - Exige autenticación
+    - Filtra el queryset por owner=request.user (salvo staff/súperuser)
+    - Setea owner automáticamente en create
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return qs
+        return qs.filter(owner=user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class PropiedadViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Propiedad.objects.all()
     serializer_class = PropiedadSerializer
 
@@ -23,7 +40,12 @@ class PropiedadViewSet(viewsets.ModelViewSet):
           - 'imagenes' (lista de archivos)
           - 'descripcion' (opcional, misma para todas las subidas)
         """
-        propiedad = self.get_object()
+        # Asegurar ownership antes de subir
+        try:
+            propiedad = self.get_queryset().get(pk=pk)  # respeta filtro de owner
+        except Propiedad.DoesNotExist:
+            return Response({"detail": "Propiedad no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
         serializer = SubirImagenesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -48,4 +70,3 @@ class PropiedadViewSet(viewsets.ModelViewSet):
 
         data = PropiedadImagenSerializer(imagenes_subidas, many=True).data
         return Response({"subidas": len(imagenes_subidas), "imagenes": data}, status=status.HTTP_201_CREATED)
-

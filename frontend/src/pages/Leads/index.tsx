@@ -4,14 +4,30 @@ import { api } from "@/lib/api";
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
+
 type Contacto = {
   id: number;
   nombre?: string;
   apellido?: string;
   email?: string;
   telefono?: string;
+  // estado puede venir como id (number) o como objeto {id,fase,...} en estado_detalle
   estado?: EstadoLead | number | null;
+  estado_detalle?: EstadoLead | null;
+
+  // ✅ Seguimiento desde API
+  last_contact_at?: string | null;
+  next_contact_at?: string | null;
+  next_contact_note?: string | null;
+
+  // ✅ Derivados desde API (read-only)
+  proximo_contacto_estado?: string; // "Pendiente / Por definir" | "Vencido" | "Vence hoy" | "Próximo en N días"
+  dias_sin_seguimiento?: number | null;
+
+  // metadatos
+  creado_en?: string;
 };
+
 type Evento = {
   id: number;
   tipo: "Reunion" | "Visita" | "Llamada";
@@ -19,6 +35,7 @@ type Evento = {
   contacto?: number | null;
   email?: string | null;
 };
+
 /** ✅ Ítem de historial de cambios de estado */
 type HistItem = {
   id: number;
@@ -36,12 +53,20 @@ const STATE_COLORS: Record<string, string> = {
   nuevo: "bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30",
 };
 
+const STATUS_BADGE = {
+  pendiente: "bg-gray-500/15 text-gray-300 ring-1 ring-gray-500/30",
+  vencido: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
+  hoy: "bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/30",
+  proximo: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
+};
+
 const norm = (s?: string | null) =>
   (s || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
 const formatDate = (d?: Date | string | null, withTime = false) => {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
+  if (isNaN(+date)) return "—";
   const base = date.toLocaleDateString("es-AR", {
     day: "2-digit",
     month: "2-digit",
@@ -52,12 +77,29 @@ const formatDate = (d?: Date | string | null, withTime = false) => {
   return `${base} ${h}`;
 };
 
+function statusChipClass(label?: string) {
+  const t = norm(label);
+  if (!t) return STATUS_BADGE.pendiente;
+  if (t.startsWith("pendiente")) return STATUS_BADGE.pendiente;
+  if (t.startsWith("vencido")) return STATUS_BADGE.vencido;
+  if (t.startsWith("vence hoy")) return STATUS_BADGE.hoy;
+  if (t.startsWith("próximo") || t.startsWith("proximo")) return STATUS_BADGE.proximo;
+  return STATUS_BADGE.pendiente;
+}
+
+/* Helpers fecha local → ISO */
+function localISOAt(daysFromToday: number, hour: number, minute = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromToday);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString(); // DRF parsea ISO en UTC; guardás en TZ del server
+}
+
 /* ----------------------------- Page ------------------------------ */
 export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [contactos, setContactos] = useState<Contacto[]>([]);
   const [estados, setEstados] = useState<EstadoLead[]>([]);
-  const [eventos, setEventos] = useState<Evento[]>([]);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [openAdd, setOpenAdd] = useState(false);
@@ -70,34 +112,59 @@ export default function LeadsPage() {
   const [historyItems, setHistoryItems] = useState<HistItem[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // ✅ Filtros remotos (golpean API)
+  const [vencimiento, setVencimiento] = useState<"" | "pendiente" | "vencido" | "hoy" | "proximo">("");
+  const [proximoEnDias, setProximoEnDias] = useState<number>(3);
+  const [sinSegDias, setSinSegDias] = useState<number | "">("");
+  const [ordering, setOrdering] = useState<string>("-next_contact_at");
+
+  // ✅ Busy por acción rápida
+  const [busyId, setBusyId] = useState<number | null>(null);
+
   const PAGE_SIZE = 10;
 
-  async function fetchAll() {
+  async function fetchEstados() {
+    try {
+      const res = await api.get("estados-lead/");
+      const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
+      setEstados(toArr(res.data));
+    } catch (e) {
+      console.error(e);
+      setEstados([]);
+    }
+  }
+
+  async function fetchContactos() {
     setLoading(true);
     try {
-      const [cRes, eRes, evRes] = await Promise.all([
-        api.get("contactos/"),
-        api.get("estados-lead/"),
-        api.get("eventos/"),
-      ]);
-      const toArr = (d: any) =>
-        Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
-      setContactos(toArr(cRes.data));
-      setEstados(toArr(eRes.data));
-      setEventos(toArr(evRes.data));
+      const params: Record<string, any> = {};
+      if (q.trim()) params.q = q.trim();
+      if (vencimiento) params.vencimiento = vencimiento;
+      if (proximoEnDias && vencimiento === "proximo") params.proximo_en_dias = proximoEnDias;
+      if (sinSegDias !== "") params.sin_seguimiento_en_dias = sinSegDias;
+      if (ordering) params.ordering = ordering;
+
+      const res = await api.get("contactos/", { params });
+      const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
+      setContactos(toArr(res.data));
     } catch (e) {
       console.error(e);
       setContactos([]);
-      setEstados([]);
-      setEventos([]);
-      setResult({ ok: false, msg: "No se pudo cargar leads/estados/eventos." });
+      setResult({ ok: false, msg: "No se pudo cargar leads." });
     } finally {
       setLoading(false);
     }
   }
+
   useEffect(() => {
-    fetchAll();
+    fetchEstados();
   }, []);
+
+  // Carga inicial y recargas por filtros
+  useEffect(() => {
+    fetchContactos();
+    setPage(1);
+  }, [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
 
   const estadoById = useMemo(() => {
     const m = new Map<number, EstadoLead>();
@@ -105,60 +172,21 @@ export default function LeadsPage() {
     return m;
   }, [estados]);
 
-  const evByContacto = useMemo(() => {
-    const m = new Map<number, Evento[]>();
-    for (const ev of eventos) {
-      if (ev.contacto != null) {
-        if (!m.has(ev.contacto)) m.set(ev.contacto, []);
-        m.get(ev.contacto)!.push(ev);
-      }
-    }
-    return m;
-  }, [eventos]);
-
-  const evByEmail = useMemo(() => {
-    const m = new Map<string, Evento[]>();
-    for (const ev of eventos) {
-      const key = norm(ev.email || "");
-      if (!key) continue;
-      if (!m.has(key)) m.set(key, []);
-      m.get(key)!.push(ev);
-    }
-    return m;
-  }, [eventos]);
-
-  function getUltimoYProximo(c: Contacto) {
-    const arr =
-      (c.id && evByContacto.get(c.id)) ||
-      (c.email && evByEmail.get(norm(c.email))) ||
-      [];
-    if (!arr.length) return { ultimo: null as Date | null, proximo: null as Date | null };
-    const sorted = [...arr].sort(
-      (a, b) => +new Date(a.fecha_hora) - +new Date(b.fecha_hora)
-    );
-    const now = new Date();
-    let ultimo: Date | null = null;
-    let proximo: Date | null = null;
-    for (const e of sorted) {
-      const d = new Date(e.fecha_hora);
-      if (d <= now) ultimo = d;
-      else {
-        proximo = d;
-        break;
-      }
-    }
-    return { ultimo, proximo };
-  }
-
+  // Enriquecemos rows con fase de estado (para chip)
   const rows = useMemo(() => {
     let base = contactos.map((c) => {
-      const est =
-        typeof c.estado === "number"
-          ? estadoById.get(c.estado)
-          : (c.estado as EstadoLead | undefined);
-      const { ultimo, proximo } = getUltimoYProximo(c);
-      return { ...c, estadoFase: est?.fase || "Nuevo", ultimo, proximo };
+      let fase = "";
+      if (typeof c.estado === "number") {
+        fase = estadoById.get(c.estado)?.fase || "";
+      } else if (c.estado && typeof c.estado === "object" && "fase" in c.estado) {
+        fase = (c.estado as EstadoLead).fase;
+      } else if (c.estado_detalle) {
+        fase = c.estado_detalle.fase;
+      }
+      return { ...c, estadoFase: fase || "Nuevo" };
     });
+
+    // Búsqueda ya se aplica server-side, pero mantenemos un filtro suave si querés complementar
     if (q.trim()) {
       const qq = norm(q);
       base = base.filter((c) =>
@@ -167,14 +195,10 @@ export default function LeadsPage() {
           .some((s) => s.includes(qq))
       );
     }
-    base.sort((a, b) => {
-      if (a.proximo && b.proximo) return +a.proximo - +b.proximo;
-      if (a.proximo) return -1;
-      if (b.proximo) return 1;
-      return 0;
-    });
+
+    // Orden por next_contact_at si server no lo hizo (pero en general ya lo hace)
     return base;
-  }, [contactos, estadoById, q, evByContacto, evByEmail]);
+  }, [contactos, estadoById, q]);
 
   const kpis = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -193,7 +217,7 @@ export default function LeadsPage() {
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  useEffect(() => setPage(1), [q]);
+  useEffect(() => setPage(1), [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
 
   /* ------------------- Seeder de estados (FIX) -------------------- */
   async function seedEstados() {
@@ -204,10 +228,7 @@ export default function LeadsPage() {
         api.post("estados-lead/", { fase: "Rechazado", descripcion: "" }),
         api.post("estados-lead/", { fase: "Vendido", descripcion: "" }),
       ]);
-      const eRes = await api.get("estados-lead/");
-      const toArr = (d: any) =>
-        Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
-      setEstados(toArr(eRes.data));
+      await fetchEstados();
       setResult({ ok: true, msg: "Estados cargados correctamente." });
     } catch (e) {
       console.error(e);
@@ -228,6 +249,48 @@ export default function LeadsPage() {
       setHistoryItems([]);
     } finally {
       setHistoryLoading(false);
+    }
+  }
+
+  /* === Acciones rápidas: próximo contacto === */
+  async function quickSetNext(c: Contacto, daysFromToday: number, hour = 10) {
+    try {
+      setBusyId(c.id);
+      const iso = localISOAt(daysFromToday, hour, 0);
+      const note =
+        daysFromToday === 1
+          ? "Programado rápido: mañana 10:00"
+          : `Programado rápido: +${daysFromToday}d 10:00`;
+      await saveContacto(`contactos/${c.id}/`, "patch", {
+        estado: typeof c.estado === "number" ? c.estado : c.estado_detalle?.id,
+        next_contact_at: iso,
+        next_contact_note: note,
+      });
+      await fetchContactos();
+      setResult({ ok: true, msg: "Próximo contacto programado ✅" });
+    } catch (e) {
+      console.error(e);
+      setResult({ ok: false, msg: "No se pudo programar el próximo contacto." });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function quickClearNext(c: Contacto) {
+    try {
+      setBusyId(c.id);
+      await saveContacto(`contactos/${c.id}/`, "patch", {
+        estado: typeof c.estado === "number" ? c.estado : c.estado_detalle?.id,
+        next_contact_at: null,
+        next_contact_note: null,
+      });
+      await fetchContactos();
+      setResult({ ok: true, msg: "Próximo contacto limpiado ✅" });
+    } catch (e) {
+      console.error(e);
+      setResult({ ok: false, msg: "No se pudo limpiar el próximo contacto." });
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -275,22 +338,75 @@ export default function LeadsPage() {
         ))}
       </section>
 
-      {/* Search */}
-      <div className="relative w/full md:max-w-md">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por nombre, email o teléfono..."
-          className="w-full h-10 rounded-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-        />
-        {q && (
-          <button
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"
-            onClick={() => setQ("")}
-          >
-            Limpiar
-          </button>
-        )}
+      {/* Filtros */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+        <div className="relative w-full md:col-span-2">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por nombre, email o teléfono…"
+            className="w-full h-10 rounded-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+          />
+          {q && (
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"
+              onClick={() => setQ("")}
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+
+        <select
+          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
+          value={vencimiento}
+          onChange={(e) => setVencimiento(e.target.value as any)}
+          title="Vencimiento de próximo contacto"
+        >
+          <option value="">Vencimiento: todos</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="vencido">Vencido</option>
+          <option value="hoy">Vence hoy</option>
+          <option value="proximo">Próximo</option>
+        </select>
+
+        <select
+          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
+          value={String(proximoEnDias)}
+          onChange={(e) => setProximoEnDias(Number(e.target.value))}
+          disabled={vencimiento !== "proximo"}
+          title="Ventana para 'Próximo'"
+        >
+          <option value="3">Próx. en ≤ 3 días</option>
+          <option value="5">Próx. en ≤ 5 días</option>
+          <option value="7">Próx. en ≤ 7 días</option>
+        </select>
+
+        <select
+          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
+          value={String(sinSegDias)}
+          onChange={(e) => setSinSegDias(e.target.value === "" ? "" : Number(e.target.value))}
+          title="Días sin seguimiento (ultimo contacto)"
+        >
+          <option value="">Sin seg.: todos</option>
+          <option value="3">≥ 3 días</option>
+          <option value="5">≥ 5 días</option>
+          <option value="7">≥ 7 días</option>
+        </select>
+
+        <select
+          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
+          value={ordering}
+          onChange={(e) => setOrdering(e.target.value)}
+          title="Orden"
+        >
+          <option value="-next_contact_at">Orden: Próximo (desc)</option>
+          <option value="next_contact_at">Orden: Próximo (asc)</option>
+          <option value="-last_contact_at">Último contacto (desc)</option>
+          <option value="last_contact_at">Último contacto (asc)</option>
+          <option value="-creado_en">Creado (desc)</option>
+          <option value="creado_en">Creado (asc)</option>
+        </select>
       </div>
 
       {/* Tabla (desktop) */}
@@ -329,6 +445,13 @@ export default function LeadsPage() {
                 const badge =
                   STATE_COLORS[stateKey] ||
                   "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+
+                const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
+                const nextChip = statusChipClass(nextLabel);
+                const nextNote = c.next_contact_note || "";
+
+                const isBusy = busyId === c.id;
+
                 return (
                   <tr
                     key={c.id}
@@ -338,11 +461,26 @@ export default function LeadsPage() {
                     <td className="px-4 py-3">{c.apellido || "—"}</td>
                     <td className="px-4 py-3">{c.telefono || "—"}</td>
                     <td className="px-4 py-3">
-                      {formatDate((c as any).ultimo, true)}
+                      {formatDate(c.last_contact_at, true)}
+                      {typeof c.dias_sin_seguimiento === "number" && (
+                        <span className="ml-2 text-xs text-gray-400">
+                          ({c.dias_sin_seguimiento} d)
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">{c.email || "—"}</td>
                     <td className="px-4 py-3">
-                      {formatDate((c as any).proximo, true)}
+                      <div className="flex items-center gap-2">
+                        <span title={nextNote}>
+                          {formatDate(c.next_contact_at, true)}
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${nextChip}`}
+                          title={nextLabel}
+                        >
+                          {nextLabel}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -352,25 +490,54 @@ export default function LeadsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
                         <button
                           className="h-8 px-2 rounded-md border border-gray-300 dark:border-gray-700 text-xs"
                           onClick={() => setEditTarget(c)}
+                          disabled={isBusy}
                         >
                           Editar
                         </button>
                         <button
-                          className="h-8 px-2 rounded-md border border-rose-600/40 text-rose-500 text-xs"
+                          className="h-8 px-2 rounded-md border border-rose-600/40 text-rose-500 text-xs disabled:opacity-60"
                           onClick={() => setDeleteTarget(c)}
+                          disabled={isBusy}
                         >
                           Borrar
                         </button>
                         {/* ✅ Historial */}
                         <button
-                          className="h-8 px-2 rounded-md border text-xs"
+                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
                           onClick={() => openHistory(c)}
+                          disabled={isBusy}
                         >
                           Historial
+                        </button>
+
+                        {/* ✅ Acciones rápidas de seguimiento */}
+                        <button
+                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
+                          onClick={() => quickSetNext(c, 1, 10)}
+                          disabled={isBusy}
+                          title="Programar mañana a las 10:00"
+                        >
+                          Mañana 10:00
+                        </button>
+                        <button
+                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
+                          onClick={() => quickSetNext(c, 3, 10)}
+                          disabled={isBusy}
+                          title="Programar en 3 días a las 10:00"
+                        >
+                          +3d 10:00
+                        </button>
+                        <button
+                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
+                          onClick={() => quickClearNext(c)}
+                          disabled={isBusy}
+                          title="Limpiar próximo contacto"
+                        >
+                          Limpiar próximo
                         </button>
                       </div>
                     </td>
@@ -415,6 +582,12 @@ export default function LeadsPage() {
             const badge =
               STATE_COLORS[stateKey] ||
               "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+
+            const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
+            const nextChip = statusChipClass(nextLabel);
+            const nextNote = c.next_contact_note || "";
+            const isBusy = busyId === c.id;
+
             return (
               <div
                 key={c.id}
@@ -441,23 +614,37 @@ export default function LeadsPage() {
                   </div>
                   <div>
                     <div className="text-gray-400">Último contacto</div>
-                    <div>{formatDate((c as any).ultimo, true)}</div>
+                    <div>
+                      {formatDate(c.last_contact_at, true)}
+                      {typeof c.dias_sin_seguimiento === "number" && (
+                        <span className="ml-1">({c.dias_sin_seguimiento} d)</span>
+                      )}
+                    </div>
                   </div>
-                  <div>
+                  <div title={nextNote}>
                     <div className="text-gray-400">Próximo contacto</div>
-                    <div>{formatDate((c as any).proximo, true)}</div>
+                    <div className="flex items-center gap-1">
+                      <span>{formatDate(c.next_contact_at, true)}</span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] ${nextChip}`}
+                      >
+                        {nextLabel}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     className="h-8 px-3 rounded-md border text-xs"
                     onClick={() => setEditTarget(c)}
+                    disabled={isBusy}
                   >
                     Editar
                   </button>
                   <button
                     className="h-8 px-3 rounded-md border border-rose-600/40 text-rose-500 text-xs"
                     onClick={() => setDeleteTarget(c)}
+                    disabled={isBusy}
                   >
                     Borrar
                   </button>
@@ -465,8 +652,32 @@ export default function LeadsPage() {
                   <button
                     className="h-8 px-3 rounded-md border text-xs"
                     onClick={() => openHistory(c)}
+                    disabled={isBusy}
                   >
                     Historial
+                  </button>
+
+                  {/* ✅ Acciones rápidas (mobile) */}
+                  <button
+                    className="h-8 px-3 rounded-md border text-xs"
+                    onClick={() => quickSetNext(c, 1, 10)}
+                    disabled={isBusy}
+                  >
+                    Mañana 10:00
+                  </button>
+                  <button
+                    className="h-8 px-3 rounded-md border text-xs"
+                    onClick={() => quickSetNext(c, 3, 10)}
+                    disabled={isBusy}
+                  >
+                    +3d 10:00
+                  </button>
+                  <button
+                    className="h-8 px-3 rounded-md border text-xs"
+                    onClick={() => quickClearNext(c)}
+                    disabled={isBusy}
+                  >
+                    Limpiar próximo
                   </button>
                 </div>
               </div>
@@ -483,7 +694,7 @@ export default function LeadsPage() {
           onSubmit={async (payload) => {
             try {
               await saveContacto("contactos/", "post", payload);
-              await fetchAll();
+              await fetchContactos();
               setOpenAdd(false);
               setResult({ ok: true, msg: "Lead creado correctamente." });
             } catch (e) {
@@ -508,13 +719,17 @@ export default function LeadsPage() {
                 ? String(editTarget.estado)
                 : editTarget.estado?.id
                 ? String(editTarget.estado.id)
+                : editTarget.estado_detalle?.id
+                ? String(editTarget.estado_detalle.id)
                 : "") || "",
+            next_contact_at: editTarget.next_contact_at || "",
+            next_contact_note: editTarget.next_contact_note || "",
           }}
           onClose={() => setEditTarget(null)}
           onSubmit={async (payload) => {
             try {
               await saveContacto(`contactos/${editTarget.id}/`, "patch", payload);
-              await fetchAll();
+              await fetchContactos();
               setEditTarget(null);
               setResult({ ok: true, msg: "Lead actualizado correctamente." });
             } catch (e) {
@@ -535,7 +750,7 @@ export default function LeadsPage() {
           onConfirm={async () => {
             try {
               await api.delete(`contactos/${deleteTarget.id}/`);
-              await fetchAll();
+              await fetchContactos();
               setDeleteTarget(null);
               setResult({ ok: true, msg: "Lead eliminado." });
             } catch (e) {
@@ -567,7 +782,7 @@ export default function LeadsPage() {
 }
 
 /* ------------------------ Guardado robusto ------------------------ */
-/** Intenta enviar {estado}; si 400, reintenta con {estado_id}. */
+/** Envía {estado} (id), y opcionalmente {next_contact_at, next_contact_note}. */
 async function saveContacto(
   url: string,
   method: "post" | "patch",
@@ -577,6 +792,8 @@ async function saveContacto(
     email?: string;
     telefono?: string;
     estado?: number | null;
+    next_contact_at?: string | null;
+    next_contact_note?: string | null;
   }
 ) {
   try {
@@ -613,12 +830,22 @@ function LeadModal({
     email: string;
     telefono: string;
     estadoId: string;
+    next_contact_at?: string;
+    next_contact_note?: string;
   };
   onClose: () => void;
   onSubmit: (payload: any) => void | Promise<void>;
 }) {
   const [form, setForm] = useState(
-    defaultValues || { nombre: "", apellido: "", email: "", telefono: "", estadoId: "" }
+    defaultValues || {
+      nombre: "",
+      apellido: "",
+      email: "",
+      telefono: "",
+      estadoId: "",
+      next_contact_at: "",
+      next_contact_note: "",
+    }
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -627,6 +854,16 @@ function LeadModal({
     () => estados.find((e) => norm(e.fase) === "nuevo")?.id,
     [estados]
   );
+
+  // transform datetime-local -> ISO string (sin segundos está ok)
+  function dtLocalToISO(v: string | undefined) {
+    if (!v) return undefined;
+    // El input "datetime-local" viene en hora local (YYYY-MM-DDTHH:mm)
+    // Creamos Date asumiendo local y lo pasamos a ISO UTC (backend DRF lo parsea).
+    const d = new Date(v);
+    if (isNaN(+d)) return undefined;
+    return d.toISOString();
+  }
 
   async function handleSubmit() {
     setError(null);
@@ -649,6 +886,11 @@ function LeadModal({
         telefono: form.telefono || undefined,
         estado: Number(estadoElegido),
       };
+
+      // opcionales
+      if (form.next_contact_at) payload.next_contact_at = dtLocalToISO(form.next_contact_at);
+      if (form.next_contact_note) payload.next_contact_note = form.next_contact_note;
+
       await onSubmit(payload);
     } catch {
       setError("Ocurrió un error. Intentá de nuevo.");
@@ -713,6 +955,25 @@ function LeadModal({
               </div>
             )}
           </div>
+
+          {/* ✅ Próximo contacto (opcional) */}
+          <Field label="Próximo contacto (opcional)">
+            <input
+              type="datetime-local"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              value={form.next_contact_at || ""}
+              onChange={(e) => setForm((f) => ({ ...f, next_contact_at: e.target.value }))}
+            />
+          </Field>
+          <Field label="Nota del próximo contacto (opcional)">
+            <input
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              value={form.next_contact_note || ""}
+              onChange={(e) => setForm((f) => ({ ...f, next_contact_note: e.target.value }))}
+              placeholder="Ej: Llamar para confirmar visita"
+              maxLength={255}
+            />
+          </Field>
         </div>
 
         {error && <div className="mt-4 text-sm text-rose-500">{error}</div>}
@@ -759,7 +1020,7 @@ function ConfirmModal({
   }
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w/full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
         <div className="text-lg font-semibold mb-2">{title}</div>
         <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
@@ -789,7 +1050,7 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
-        className={`w/full max-w-md rounded-2xl border p-5 shadow-lg ${
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
           ok
             ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"

@@ -14,6 +14,11 @@ class Usuario(models.Model):
     telefono = models.CharField(max_length=15, blank=True)
     dni = models.CharField(max_length=20, blank=True)
 
+    # ✅ Preferencia de recordatorios (en días: 3, 5, 7…)
+    reminder_every_days = models.PositiveSmallIntegerField(
+        default=3,
+        help_text="Cada cuántos días recordar al usuario hacer seguimiento (ej. 3, 5, 7)."
+    )
 
     def save(self, *args, **kwargs):
         if not self.token:
@@ -22,4 +27,3 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.email})"
-

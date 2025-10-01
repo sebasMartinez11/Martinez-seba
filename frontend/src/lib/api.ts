@@ -18,18 +18,15 @@ export const api = axios.create({
 /** Normaliza SOLO rutas relativas. Las absolutas (http/https) NO se tocan. */
 function normalizeUrl(u?: string) {
   if (!u) return u;
-  // si es absoluta, no tocar
-  if (/^https?:\/\//i.test(u)) return u;
+  if (/^https?:\/\//i.test(u)) return u; // absoluta => no tocar
 
   let url = u;
-
   // quita prefijo /api/ o api/ para evitar /api/api
   if (url.startsWith("/api/")) url = url.slice(5);
   else if (url.startsWith("api/")) url = url.slice(4);
 
-  // compacta slashes múltiples (pero ya NO aplicamos a absolutas)
+  // compacta slashes múltiples
   url = url.replace(/\/{2,}/g, "/");
-
   return url;
 }
 
@@ -49,14 +46,13 @@ axios.defaults.timeout = 15000;
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem("access");
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  // importante: no tocar absolutas
   if (config.url && !/^https?:\/\//i.test(config.url)) {
     config.url = normalizeUrl(config.url);
   }
   return config;
 });
 
-/* ----- Helpers que ya usabas (opcionales) ----- */
+/* ----- Leads ----- */
 export type Contacto = {
   id: number;
   nombre: string;
@@ -74,6 +70,7 @@ export async function fetchLeads(params: Record<string, any> = {}) {
   return data.results ?? data;
 }
 
+/* ----- Propiedades ----- */
 export type Propiedad = {
   id: number;
   codigo: string;
@@ -97,6 +94,7 @@ export async function fetchPropiedades(params: Record<string, any> = {}) {
   return data.results ?? data;
 }
 
+/* ----- Usuarios ----- */
 export type Usuario = {
   id: number;
   username?: string;
@@ -112,5 +110,33 @@ export async function fetchUsuarios() {
   return data.results ?? data;
 }
 
-export default api;
+/* ----- Eventos ----- */
+export type Evento = {
+  id: number;
+  owner?: number; // read-only (puede no venir en todas las vistas)
+  nombre?: string;
+  apellido?: string;
+  email?: string | null;
+  contacto: number | null;
+  propiedad: number;
+  tipo: "Reunion" | "Visita" | "Llamada";
+  fecha_hora: string; // ISO
+  notas?: string;
+  creado_en?: string;
+};
 
+export type EventoFilters = {
+  date?: string;       // YYYY-MM-DD (día exacto)
+  from?: string;       // YYYY-MM-DD (inicio, inclusive)
+  to?: string;         // YYYY-MM-DD (fin, exclusivo)
+  types?: string;      // "Reunion" | "Llamada" | "Visita"
+  ordering?: string;   // ej: "fecha_hora"
+  [k: string]: any;    // permitir extras sin romper TS
+};
+
+export async function fetchEventos(params: EventoFilters = {}) {
+  const { data } = await api.get("eventos/", { params });
+  return data.results ?? data;
+}
+
+export default api;

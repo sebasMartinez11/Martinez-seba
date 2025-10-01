@@ -107,6 +107,10 @@ class ExportView(APIView):
             start_dt = _parse_dt(date_from)
             end_dt = _parse_dt(date_to)
 
+        # ⚠️ Normalizar a aware (evita vacíos por naive vs aware)
+        start_dt = _to_aware(start_dt)
+        end_dt = _to_aware(end_dt)
+
         user = request.user
 
         # ==== Querys ====
@@ -169,7 +173,7 @@ class ExportView(APIView):
         resp = HttpResponse(buffer.getvalue(), content_type="text/csv")
         filename = "export.csv"
         if year and month:
-            filename = f"export_{year:04d}_{month:02d}.csv"
+            filename = f"export_{int(year):04d}_{int(month):02d}.csv"
         resp["Content-Disposition"] = f'attachment; filename="{filename}"'
         return resp
 

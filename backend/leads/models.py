@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from propiedades.models import Propiedad
 
 
@@ -11,6 +12,15 @@ class EstadoLead(models.Model):
 
 
 class Contacto(models.Model):
+    # === Multi-tenant ===
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="contactos",
+        null=True,
+        blank=True,
+    )
+
     nombre = models.CharField(max_length=120, blank=True, default="")
     apellido = models.CharField(max_length=120, blank=True, default="")
     email = models.EmailField(blank=True, default="")
@@ -18,6 +28,9 @@ class Contacto(models.Model):
     estado = models.ForeignKey(
         EstadoLead, null=True, blank=True, on_delete=models.SET_NULL, related_name="contactos"
     )
+
+    # ✅ NUEVO: timestamp de creación real del lead
+    creado_en = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}".strip()
@@ -31,6 +44,15 @@ TIPO_EVENTO_CHOICES = [
 
 
 class Evento(models.Model):
+    # === Multi-tenant ===
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="eventos",
+        null=True,
+        blank=True,
+    )
+
     nombre = models.CharField(max_length=120, blank=True, default="")
     apellido = models.CharField(max_length=120, blank=True, default="")
     email = models.EmailField(blank=True, null=True)

@@ -1,32 +1,125 @@
-import { FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { api, API_BASE } from "@/lib/api";
+
+type JwtResponse = { access: string; refresh?: string };
 
 export default function Login() {
   const navigate = useNavigate();
+  const [userOrEmail, setUserOrEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function onSubmit(e: FormEvent) {
+  useEffect(() => {
+    // limpiar restos para que no “ensucien” el flujo
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    localStorage.removeItem("rc_user_id");
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: llamar /api/auth/token (JWT). Por ahora redirige a la app.
-    navigate("/app");
+    setError(null);
+    setLoading(true);
+    try {
+      // ===== 1) TOKEN (llamada directa, fuera del api con interceptores) =====
+      const url = API_BASE + "auth/token/"; // p.ej. http://127.0.0.1:8000/api/auth/token/
+      const res = await axios.post<JwtResponse>(
+        url,
+        { username: userOrEmail.trim(), password },
+        { headers: { "Content-Type": "application/json", Accept: "application/json" } }
+      );
+
+      // si llegamos acá, es 200
+      const { access, refresh } = res.data;
+      if (!access) throw new Error("No llegó el access token");
+
+      localStorage.setItem("access", access);
+      if (refresh) localStorage.setItem("refresh", refresh);
+      if (!localStorage.getItem("rc_theme")) localStorage.setItem("rc_theme", "dark");
+
+      // ===== 2) ME (ahora sí con api, ya que el interceptor pondrá el Bearer) =====
+      const me = await api.get<{ id: number }>("usuarios/me/");
+      localStorage.setItem("rc_user_id", String(me.data.id));
+
+      // listo
+      navigate("/app", { replace: true });
+    } catch (err: any) {
+      // Mostrar el mensaje real del backend para saber POR QUÉ devuelve 401
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      console.error("LOGIN ERROR", status, data ?? err);
+      const msg =
+        (data && (data.detail || data.message || JSON.stringify(data))) ||
+        err?.message ||
+        "Credenciales inválidas";
+      setError(String(msg));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="max-w-md mx-auto py-12">
-      <h1 className="text-2xl font-semibold mb-6">Iniciar sesión</h1>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label className="text-sm">Email</label>
-          <input className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700" />
-        </div>
-        <div>
-          <label className="text-sm">Contraseña</label>
-          <input type="password" className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700" />
-        </div>
-        <button className="w-full rounded-md px-4 py-2 bg-blue-600 text-white hover:bg-blue-700">Entrar</button>
-      </form>
-      <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-        ¿No tenés cuenta? <Link to="/register" className="underline">Registrate</Link>
-      </p>
-    </div>
+    <main className="relative min-h-[100svh] overflow-hidden">
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0b1220] via-[#0a0f1a] to-[#0b1220]" />
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.06]
+                   [background-image:radial-gradient(#ffffff_1px,transparent_1px)]
+                   [background-size:22px_22px]"
+      />
+      <div className="grid min-h-[100svh] place-items-center px-4 py-10">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-md rounded-2xl border border-white/10 bg-white/10 backdrop-blur
+                     shadow-2xl p-6 md:p-7 text-gray-100"
+        >
+          <h1 className="text-xl font-semibold mb-4">Iniciar sesión</h1>
+
+          {error && (
+            <div className="mb-4 text-sm rounded-md border border-red-400/40 bg-red-500/10 text-red-200 p-3 whitespace-pre-wrap">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className="text-sm text-gray-300">Email o usuario</label>
+            <input
+              type="text"
+              required
+              value={userOrEmail}
+              onChange={(e) => setUserOrEmail(e.target.value)}
+              className="w-full h-10 rounded-lg border border-white/15 bg-white/5
+                         px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400/50"
+              placeholder="tu@mail.com o username"
+              autoComplete="username"
+            />
+          </div>
+
+          <div className="space-y-1 mt-4">
+            <label className="text-sm text-gray-300">Contraseña</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full h-10 rounded-lg border border-white/15 bg-white/5
+                         px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400/50"
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button
+            disabled={loading}
+            className="mt-5 w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60
+                       text-white text-sm font-medium shadow-lg shadow-blue-900/30"
+          >
+            {loading ? "Ingresando..." : "Ingresar"}
+          </button>
+        </form>
+      </div>
+    </main>
   );
 }

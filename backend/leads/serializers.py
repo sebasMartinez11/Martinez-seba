@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import AnonymousUser
+
 from .models import EstadoLead, Contacto, Evento, EstadoLeadHistorial
 from propiedades.models import Propiedad
 
@@ -21,6 +22,16 @@ class ContactoSerializer(serializers.ModelSerializer):
     # lectura expandida
     estado_detalle = EstadoLeadSerializer(source="estado", read_only=True)
 
+    # === Seguimiento: campos expuestos ===
+    last_contact_at = serializers.DateTimeField(required=False, allow_null=True)
+    next_contact_at = serializers.DateTimeField(required=False, allow_null=True)
+    next_contact_note = serializers.CharField(required=False, allow_blank=True, max_length=255)
+
+    # === Derivados del modelo (solo lectura) ===
+    # Nota: si el nombre del field coincide con el atributo/property del modelo, no uses `source`
+    proximo_contacto_estado = serializers.ReadOnlyField()
+    dias_sin_seguimiento = serializers.ReadOnlyField()
+
     class Meta:
         model = Contacto
         fields = [
@@ -32,7 +43,50 @@ class ContactoSerializer(serializers.ModelSerializer):
             "telefono",
             "estado",
             "estado_detalle",
+            # seguimiento
+            "last_contact_at",
+            "next_contact_at",
+            "next_contact_note",
+            # derivados
+            "proximo_contacto_estado",
+            "dias_sin_seguimiento",
+            # metadatos
+            "creado_en",
         ]
+        read_only_fields = [
+            "id",
+            "owner",
+            "estado_detalle",
+            "proximo_contacto_estado",
+            "dias_sin_seguimiento",
+            "creado_en",
+        ]
+
+    # ---- Validaciones suaves de coherencia ----
+    def validate(self, attrs):
+        note = attrs.get("next_contact_note", getattr(self.instance, "next_contact_note", ""))
+        if note and len(note) > 255:
+            raise serializers.ValidationError({"next_contact_note": "Máximo 255 caracteres."})
+        return attrs
+
+    # ---- Create / Update con historial de estado ----
+    def create(self, validated_data):
+        contacto = Contacto.objects.create(**validated_data)
+        # Si viene estado inicial, lo registramos en historial
+        if contacto.estado_id:
+            EstadoLeadHistorial.objects.create(contacto=contacto, estado_id=contacto.estado_id)
+        return contacto
+
+    def update(self, instance, validated_data):
+        old_estado_id = instance.estado_id
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+
+        # Si cambió el estado, registramos en historial
+        if "estado" in validated_data and instance.estado_id != old_estado_id:
+            EstadoLeadHistorial.objects.create(contacto=instance, estado_id=instance.estado_id)
+        return instance
 
 
 class EstadoLeadHistorialSerializer(serializers.ModelSerializer):
@@ -80,7 +134,7 @@ class EventoSerializer(serializers.ModelSerializer):
             self.fields["propiedad"].queryset = Propiedad.objects.filter(owner=user)
 
     # ----- Validaciones anti cross-tenant (por si cambian el ID a mano) -----
-    def validate_contacto(self, value: Contacto | None):
+    def validate_contacto(self, value):
         if value is None:
             return value
         request = self.context.get("request")
@@ -90,7 +144,7 @@ class EventoSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Contacto no pertenece al usuario autenticado.")
         return value
 
-    def validate_propiedad(self, value: Propiedad):
+    def validate_propiedad(self, value):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if user and not (user.is_staff or user.is_superuser):

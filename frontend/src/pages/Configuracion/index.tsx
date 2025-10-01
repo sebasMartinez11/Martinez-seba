@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "@/lib/api"; // ← tu cliente axios con interceptors
 
 // =============================================
@@ -41,6 +41,16 @@ type ImportResult = {
   created: number;
   updated: number;
   errors: Array<{ row: number; error: string }>;
+};
+
+type MeResponse = {
+  id: number;
+  nombre?: string;
+  apellido?: string;
+  email: string;
+  telefono?: string;
+  dni?: string;
+  reminder_every_days?: number;
 };
 
 // =============================================
@@ -203,7 +213,7 @@ class Boundary extends React.Component<
 }
 
 // =============================================
-// Exportar + Métricas + Importar + Cuenta
+// Exportar + Métricas + Importar + Cuenta + Preferencias
 // =============================================
 export default function ConfiguracionPage() {
   const now = thisYearMonth();
@@ -247,6 +257,53 @@ export default function ConfiguracionPage() {
   const [delPwd, setDelPwd] = useState("");
   const [delMsg, setDelMsg] = useState<string | null>(null);
   const [delLoading, setDelLoading] = useState(false);
+
+  // Preferencias (recordatorios)
+  const [reminderDays, setReminderDays] = useState<number>(3);
+  const [prefLoading, setPrefLoading] = useState<boolean>(false);
+  const [prefSaving, setPrefSaving] = useState<boolean>(false);
+  const [prefMsg, setPrefMsg] = useState<string | null>(null);
+  const [prefErr, setPrefErr] = useState<string | null>(null);
+
+  // Cargar preferencia actual
+  useEffect(() => {
+    let mounted = true;
+    async function loadMe() {
+      setPrefLoading(true);
+      setPrefErr(null);
+      try {
+        const { data } = await api.get<MeResponse>("/api/usuarios/me/");
+        if (!mounted) return;
+        const v = data?.reminder_every_days;
+        if (typeof v === "number" && v > 0) setReminderDays(v);
+      } catch (e: any) {
+        if (!mounted) return;
+        setPrefErr(e?.response?.data?.detail || e?.message || "No se pudo cargar tu preferencia.");
+      } finally {
+        if (mounted) setPrefLoading(false);
+      }
+    }
+    loadMe();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function savePrefs() {
+    setPrefSaving(true);
+    setPrefMsg(null);
+    setPrefErr(null);
+    try {
+      const value = Number(reminderDays);
+      if (!Number.isFinite(value) || value <= 0) throw new Error("Ingresá un número válido (p. ej. 3, 5 o 7).");
+      await api.patch("/api/usuarios/me/", { reminder_every_days: value });
+      setPrefMsg("Preferencia guardada ✅");
+    } catch (e: any) {
+      setPrefErr(e?.response?.data?.detail || e?.message || "No se pudo guardar la preferencia.");
+    } finally {
+      setPrefSaving(false);
+    }
+  }
 
   // ================= Export =================
   async function handleExport() {
@@ -397,6 +454,43 @@ export default function ConfiguracionPage() {
     <Boundary>
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <h1 className="text-2xl font-bold mb-2">Configuración</h1>
+
+        {/* Preferencias de recordatorios */}
+        <Section title="Preferencias de recordatorios">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+            <div>
+              <Label>Recordarme cada (días)</Label>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={reminderDays}
+                onChange={(e) => setReminderDays(Number(e.target.value))}
+              />
+              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Recomendado: <b>3</b>, <b>5</b> o <b>7</b> días.
+              </div>
+            </div>
+            <div className="flex items-end gap-2">
+              <Button onClick={savePrefs} disabled={prefSaving || prefLoading}>
+                {prefSaving ? "Guardando…" : "Guardar preferencia"}
+              </Button>
+              {prefLoading && (
+                <span className="text-sm text-gray-500 dark:text-gray-400">Cargando…</span>
+              )}
+            </div>
+          </div>
+          {prefMsg && (
+            <div className="mt-3">
+              <Alert kind="success">{prefMsg}</Alert>
+            </div>
+          )}
+          {prefErr && (
+            <div className="mt-3">
+              <Alert kind="error">{prefErr}</Alert>
+            </div>
+          )}
+        </Section>
 
         {/* Exportar datos */}
         <Section title="Exportar datos (CSV/JSON)">

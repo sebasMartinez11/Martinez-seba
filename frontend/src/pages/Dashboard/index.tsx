@@ -1,9 +1,10 @@
 // src/pages/Dashboard/index.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
+  fetchLeads,                 // 👈 NEW: para autocompletar
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
@@ -99,7 +100,7 @@ export default function DashboardPage() {
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
   /* ------------------------ Fetch data ------------------------ */
-  // Datos “estáticos” (contactos/propiedades) — una sola vez
+  // Datos “estáticos” (contactos/propiedades) — una sola vez (lista base para selects)
   async function fetchStatic() {
     try {
       const [cRes, pRes] = await Promise.all([api.get("contactos/"), api.get("propiedades/")]);
@@ -515,6 +516,18 @@ function DayEventsModal({
                   <div className="text-sm font-medium truncate">
                     {formatHour(ev.fecha_hora)} · {ev.tipo}
                   </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 truncate">
+                    {typeof (ev as any).propiedad_titulo === "string"
+                      ? (ev as any).propiedad_titulo
+                      : ev.propiedad
+                      ? `Propiedad #${ev.propiedad}`
+                      : "—"}
+                    {(ev as any).contacto_nombre
+                      ? ` • ${(ev as any).contacto_nombre}`
+                      : ev.contacto
+                      ? ` • Lead #${ev.contacto}`
+                      : ""}
+                  </div>
                   {ev.notas && <div className="text-xs text-gray-500 mt-0.5 truncate">{ev.notas}</div>}
                 </div>
                 <div className="flex items-center gap-2">
@@ -646,19 +659,22 @@ function EventModal({
             </select>
           </Field>
 
+          {/* 👇 Autocompletado de Contacto (Lead) */}
           <Field label="Contacto (opcional)">
-            <select
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-              value={form.contacto == null ? "" : String(form.contacto)}
-              onChange={(e) => set("contacto", e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">— Ninguno —</option>
-              {contactos.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {(c.nombre || "") + " " + (c.apellido || "")} {c.email ? `• ${c.email}` : ""}
-                </option>
-              ))}
-            </select>
+            <ContactAutocomplete
+              valueId={form.contacto == null ? null : Number(form.contacto)}
+              initialList={contactos}
+              onChange={(id, item) => {
+                set("contacto", id);
+                // Limpio visitante si hay lead
+                if (id) {
+                  set("nombre", "");
+                  set("apellido", "");
+                  set("email", null);
+                }
+              }}
+              onClear={() => set("contacto", null)}
+            />
           </Field>
 
           <Field label="Nombre (visitante)">
@@ -714,6 +730,159 @@ function EventModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ======================= Autocomplete Contacto ======================= */
+function useDebounced<T>(value: T, delay = 300) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return v;
+}
+
+function ContactAutocomplete({
+  valueId,
+  initialList,
+  onChange,
+  onClear,
+}: {
+  valueId: number | null;
+  initialList: Contacto[];
+  onChange: (id: number | null, item?: Contacto | null) => void;
+  onClear: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const debounced = useDebounced(query, 300);
+  const [items, setItems] = useState<Contacto[]>(initialList || []);
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const selected = useMemo(
+    () => (valueId ? items.find((i) => i.id === valueId) : null),
+    [valueId, items]
+  );
+
+  // Buscar cuando cambia el query debounced
+  useEffect(() => {
+    let done = false;
+    (async () => {
+      try {
+        const q = debounced.trim();
+        // si no hay query, mostramos los primeros 10 de initialList
+        if (!q) {
+          setItems(initialList.slice(0, 10));
+          return;
+        }
+        const res = await fetchLeads({ q, limit: 10 });
+        if (!done) setItems(Array.isArray(res) ? res : res?.results ?? []);
+      } catch (e) {
+        // no romper el input
+      }
+    })();
+    return () => { done = true; };
+  }, [debounced, initialList]);
+
+  // Cerrar al click fuera
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  function pick(it: Contacto | null) {
+    onChange(it ? it.id : null, it || null);
+    setOpen(false);
+  }
+
+  function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      setOpen(true);
+      return;
+    }
+    if (!open) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => Math.min(h + 1, items.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const it = items[highlight];
+      if (it) pick(it);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      {/* Input + estado seleccionado */}
+      <div className="flex gap-2">
+        <input
+          className="flex-1 h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+          placeholder="Escribí nombre/apellido/email del lead…"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); setHighlight(0); }}
+          onKeyDown={onKey}
+          onFocus={() => setOpen(true)}
+        />
+        {valueId != null ? (
+          <button
+            type="button"
+            className="h-10 px-3 rounded-lg border text-sm"
+            onClick={() => { onClear(); }}
+            title="Quitar contacto"
+          >
+            Limpiar
+          </button>
+        ) : null}
+      </div>
+
+      {/* hint seleccionado */}
+      {valueId != null && selected && (
+        <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+          Seleccionado: <strong>{(selected.nombre || "") + " " + (selected.apellido || "")}</strong>
+          {selected.email ? ` • ${selected.email}` : ""}
+        </div>
+      )}
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-xl">
+          {items.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-500">Sin resultados…</div>
+          ) : (
+            items.map((it, idx) => {
+              const full = `${it.nombre || ""} ${it.apellido || ""}`.trim() || `Lead #${it.id}`;
+              return (
+                <button
+                  key={it.id}
+                  type="button"
+                  onClick={() => pick(it)}
+                  className={`w-full text-left px-3 py-2 text-sm ${
+                    idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                  }`}
+                  onMouseEnter={() => setHighlight(idx)}
+                >
+                  <div className="font-medium truncate">{full}</div>
+                  <div className={`text-xs truncate ${idx === highlight ? "opacity-90" : "text-gray-500 dark:text-gray-400"}`}>
+                    {it.email || it.telefono || "—"}
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }

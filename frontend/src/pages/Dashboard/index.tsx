@@ -1,5 +1,6 @@
 // src/pages/Dashboard/index.tsx
-import { useEffect, useMemo, useState, useRef, useLayoutEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import axios from "axios";
 
 /* ============================== Types ============================== */
@@ -9,6 +10,7 @@ type Contacto = {
   apellido?: string;
   email?: string | null;
 };
+
 type Propiedad = {
   id: number;
   titulo?: string;
@@ -17,6 +19,7 @@ type Propiedad = {
   vendida?: boolean | null; // compat con back existente
   disponibilidad?: "venta" | "alquiler" | string | null; // <-- NUEVO
 };
+
 type Evento = {
   id: number;
   nombre?: string;
@@ -32,8 +35,8 @@ type Evento = {
 
 /* ============================ Utilities ============================ */
 const MONTHS = [
-  "enero","febrero","marzo","abril","mayo","junio",
-  "julio","agosto","septiembre","octubre","noviembre","diciembre",
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ];
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -66,11 +69,7 @@ const toLocalInputValue = (d?: string | Date | null) => {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 };
 
-const chipByTipo: Record<Evento["tipo"], string> = {
-  Reunion: "bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30",
-  Visita: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
-  Llamada: "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
-};
+const plural = (n: number, uno: string, muchos: string) => (n === 1 ? uno : muchos);
 
 /* ============================== Page =============================== */
 export default function DashboardPage() {
@@ -91,6 +90,7 @@ export default function DashboardPage() {
   const [openDayModal, setOpenDayModal] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
+<<<<<<< HEAD
   //  Ajuste automático de altura del calendario
   const calendarRef = useRef<HTMLDivElement>(null);
   const weekHeaderRef = useRef<HTMLDivElement>(null);
@@ -113,6 +113,8 @@ export default function DashboardPage() {
     return () => window.removeEventListener("resize", recompute);
   }, []);
 
+=======
+>>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
   async function fetchAll() {
     setLoading(true);
     try {
@@ -127,33 +129,29 @@ export default function DashboardPage() {
       setPropiedades(toArr(pRes.data));
     } catch (e) {
       console.error(e);
-      setEventos([]);
-      setContactos([]);
-      setPropiedades([]);
+      setEventos([]); setContactos([]); setPropiedades([]);
       setResult({ ok: false, msg: "No se pudo cargar información del dashboard." });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
   useEffect(() => { fetchAll(); }, []);
 
   /* ------------------------ Calendar helpers ------------------------ */
   const monthLabel = `${MONTHS[cursor.getMonth()]} de ${cursor.getFullYear()}`;
 
-  // Lunes como primer día
+  // Lunes como primer día (grilla 7x6)
   const monthGrid = useMemo(() => {
     const start = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const end = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
     const startDay = (start.getDay() + 6) % 7; // 0..6 con 0 = Lunes
     const gridStart = new Date(start);
     gridStart.setDate(start.getDate() - startDay);
+
     const days: Date[] = [];
     for (let i = 0; i < 42; i++) {
       const d = new Date(gridStart);
       d.setDate(gridStart.getDate() + i);
       days.push(d);
     }
-    return { start, end, days };
+    return { days };
   }, [cursor]);
 
   const eventsByDay = useMemo(() => {
@@ -167,6 +165,21 @@ export default function DashboardPage() {
     for (const list of map.values()) list.sort(sortByDateAsc);
     return map;
   }, [eventos]);
+
+  // Resumen por día
+  const summaryByDay = useMemo(() => {
+    const m = new Map<string, { r: number; l: number; v: number; total: number }>();
+    for (const [k, list] of eventsByDay.entries()) {
+      let r = 0, l = 0, v = 0;
+      for (const ev of list) {
+        if (ev.tipo === "Reunion") r++;
+        else if (ev.tipo === "Llamada") l++;
+        else if (ev.tipo === "Visita") v++;
+      }
+      m.set(k, { r, l, v, total: list.length });
+    }
+    return m;
+  }, [eventsByDay]);
 
   /* ------------------------------ KPIs ------------------------------ */
   const kpis = useMemo(() => {
@@ -191,7 +204,7 @@ export default function DashboardPage() {
     return [
       { label: "Leads", value: totalLeads, hint: "Totales" },
       { label: "Propiedades en venta", value: enVenta, hint: "" },
-      { label: "Propiedades en alquiler", value: enAlquiler, hint: "" }, // <-- NUEVO
+      { label: "Propiedades en alquiler", value: enAlquiler, hint: "" },
       { label: "Propiedades vendidas", value: vendidas, hint: "" },
       { label: "Reuniones programadas", value: evInMonth, hint: "" },
     ];
@@ -265,76 +278,78 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      {/* Calendar (altura encajada al viewport) */}
-      <div
-        ref={calendarRef}
-        className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden"
-        style={calHeight ? { height: `${calHeight}px` } : undefined}
-      >
+      {/* Calendar (filas fluidas que se estiran si hace falta) */}
+      <div className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden">
         {/* header week days */}
-        <div
-          ref={weekHeaderRef}
-          className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500"
-        >
+        <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500">
           {WEEKDAYS.map((w) => (
             <div key={w} className="px-3 py-2">{w}</div>
           ))}
         </div>
 
-        {/* month grid */}
-        <div className="grid grid-cols-7">
+        {/* month grid con alto mínimo y expansión automática */}
+        <div className="grid grid-cols-7 auto-rows-[minmax(7rem,auto)]">
           {monthGrid.days.map((d, i) => {
             const inMonth = d.getMonth() === cursor.getMonth();
             const key = toKey(d);
-            const dayEvents = (eventsByDay.get(key) || []).slice(0, 3);
             const isToday = sameDay(d, today);
+            const allEvents = inMonth ? (eventsByDay.get(key) || []) : [];
+            const sum = summaryByDay.get(key) || { r: 0, l: 0, v: 0, total: 0 };
+
+            const dd = String(d.getDate()).padStart(2, "0");
+            const monthAbbr = MONTHS[d.getMonth()].slice(0, 3);
+            const dayLabel = inMonth ? (d.getDate() === 1 ? `${dd}-${monthAbbr}` : dd) : "";
+
             return (
               <div
                 key={i}
                 className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
-                style={dayHeight ? { height: `${dayHeight}px` } : { height: "9rem" /* fallback h-36 */ }}
+                title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
               >
-                <div className="flex items-center justify-between">
-                  <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
-                    {String(d.getDate()).padStart(2, "0")}-{MONTHS[d.getMonth()].slice(0,3)}
-                  </div>
-                  {isToday && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>}
-                </div>
-
-                {/* events */}
-                <div className="mt-1 space-y-1">
-                  {dayEvents.map((ev) => (
-                    <div
-                      key={ev.id}
-                      className={`truncate text-[11px] px-2 py-1 rounded ${chipByTipo[ev.tipo]}`}
-                      title={`${formatHour(ev.fecha_hora)} • ${ev.tipo}`}
-                      onClick={() => setOpenDayModal(d)}
-                    >
-                      {formatHour(ev.fecha_hora)} · {ev.tipo}{ev.notas ? ` — ${ev.notas}` : ""}
+                {/* Contenedor columna + evitar desborde */}
+                <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
+                  {/* header mini */}
+                  <div className="flex items-center justify-between shrink-0">
+                    <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
+                      {dayLabel}
                     </div>
-                  ))}
-                  {(eventsByDay.get(key)?.length || 0) > 3 && (
-                    <button className="text-[11px] text-blue-500 underline" onClick={() => setOpenDayModal(d)}>
-                      Ver {(eventsByDay.get(key)!.length - 3)} más…
+                    {inMonth && isToday && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>
+                    )}
+                  </div>
+
+                  {/* Resumen compacto en una sola línea */}
+                  {inMonth && sum.total > 0 && (
+                    <button
+                      className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100/60 dark:hover:bg-gray-900/60 truncate"
+                      onClick={() => setOpenDayModal(d)}
+                      title={`${sum.r} ${plural(sum.r, "reunión", "reuniones")} · ${sum.l} ${plural(sum.l, "llamada", "llamadas")} · ${sum.v} ${plural(sum.v, "visita", "visitas")}`}
+                    >
+                      {sum.r} {plural(sum.r, "reunión", "reuniones")} · {sum.l} {plural(sum.l, "llamada", "llamadas")} · {sum.v} {plural(sum.v, "visita", "visitas")}
                     </button>
                   )}
-                </div>
 
-                {/* quick actions */}
-                <div className="mt-2">
-                  <button
-                    className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                    onClick={() => openCreateOnDay(d)}
-                  >
-                    + nuevo
-                  </button>
-                  {(eventsByDay.get(key)?.length || 0) > 0 && (
-                    <button
-                      className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                      onClick={() => setOpenDayModal(d)}
-                    >
-                      ver
-                    </button>
+                  {/* Espaciador para empujar acciones abajo */}
+                  <div className="flex-1 min-h-0" />
+
+                  {/* Acciones rápidas ancladas abajo */}
+                  {inMonth && (
+                    <div className="pt-2 shrink-0">
+                      <button
+                        className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                        onClick={() => openCreateOnDay(d)}
+                      >
+                        + nuevo
+                      </button>
+                      {allEvents.length > 0 && (
+                        <button
+                          className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                          onClick={() => setOpenDayModal(d)}
+                        >
+                          ver
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -348,6 +363,7 @@ export default function DashboardPage() {
         <DayEventsModal
           date={openDayModal}
           eventos={(eventsByDay.get(toKey(openDayModal)) || []).slice().sort(sortByDateAsc)}
+          resumen={summaryByDay.get(toKey(openDayModal)) || { r: 0, l: 0, v: 0, total: 0 }}
           onClose={() => setOpenDayModal(null)}
           onEdit={(ev) => setOpenEventModal({ mode: "edit", evento: ev })}
           onDelete={(ev) => setDeleting(ev)}
@@ -392,6 +408,7 @@ export default function DashboardPage() {
 function DayEventsModal({
   date,
   eventos,
+  resumen,
   onClose,
   onEdit,
   onDelete,
@@ -399,6 +416,7 @@ function DayEventsModal({
 }: {
   date: Date;
   eventos: Evento[];
+  resumen: { r: number; l: number; v: number; total: number };
   onClose: () => void;
   onEdit: (ev: Evento) => void;
   onDelete: (ev: Evento) => void;
@@ -418,6 +436,20 @@ function DayEventsModal({
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCreate}>+ Nuevo</button>
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
           </div>
+        </div>
+
+        {/* Resumen del día */}
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-300 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30">
+            {resumen.r} {plural(resumen.r, "reunión", "reuniones")}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30">
+            {resumen.l} {plural(resumen.l, "llamada", "llamadas")}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30">
+            {resumen.v} {plural(resumen.v, "visita", "visitas")}
+          </span>
+          <span className="ml-auto text-xs opacity-70">Total: {resumen.total}</span>
         </div>
 
         {eventos.length === 0 ? (
@@ -504,9 +536,7 @@ function EventModal({
       );
     } catch {
       setError("Ocurrió un error. Intentá otra vez.");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   return (
@@ -529,9 +559,11 @@ function EventModal({
 
           <Field label="Fecha y hora">
             <input type="datetime-local" className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={ form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
-                           ? toLocalInputValue(new Date(form.fecha_hora))
-                           : String(form.fecha_hora || "") }
+                   value={
+                     form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
+                       ? toLocalInputValue(new Date(form.fecha_hora))
+                       : String(form.fecha_hora || "")
+                   }
                    onChange={(e) => set("fecha_hora", e.target.value)} />
           </Field>
 
@@ -598,14 +630,29 @@ function EventModal({
 }
 
 /* ============================ Confirm Modal ============================ */
+type ConfirmModalProps = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  confirmType?: "primary" | "danger";
+  onCancel: () => void;
+  onConfirm: () => void | Promise<void>;
+};
+
 function ConfirmModal({
-  title, message, confirmLabel = "Confirmar", confirmType = "primary", onCancel, onConfirm,
-}: {
-  title: string; message: string; confirmLabel?: string; confirmType?: "primary" | "danger";
-  onCancel: () => void; onConfirm: () => void | Promise<void>;
-}) {
+  title,
+  message,
+  confirmLabel = "Confirmar",
+  confirmType = "primary",
+  onCancel,
+  onConfirm,
+}: ConfirmModalProps) {
   const [working, setWorking] = useState(false);
-  async function go() { setWorking(true); await onConfirm(); setWorking(false); }
+  async function go() {
+    setWorking(true);
+    await onConfirm();
+    setWorking(false);
+  }
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
       <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
@@ -613,10 +660,15 @@ function ConfirmModal({
         <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
           <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>Cancelar</button>
-          <button className={ confirmType === "danger"
-                    ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
-                    : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60" }
-                  onClick={go} disabled={working}>
+          <button
+            className={
+              confirmType === "danger"
+                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
+                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+            }
+            onClick={go}
+            disabled={working}
+          >
             {working ? "Procesando..." : confirmLabel}
           </button>
         </div>
@@ -646,7 +698,7 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
 }
 
 /* ================================ UI bits ================================ */
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <label className="block text-xs mb-1">{label}</label>

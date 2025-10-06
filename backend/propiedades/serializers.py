@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from .models import Propiedad, PropiedadImagen
+<<<<<<< HEAD
 
+=======
+>>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
 
 class PropiedadImagenSerializer(serializers.ModelSerializer):
     imagen = serializers.ImageField(read_only=True)
@@ -12,6 +15,8 @@ class PropiedadImagenSerializer(serializers.ModelSerializer):
 
 
 class PropiedadSerializer(serializers.ModelSerializer):
+    # multi-tenant (solo lectura): id del auth.User dueño
+    owner = serializers.ReadOnlyField(source="owner.id")
     imagenes = PropiedadImagenSerializer(many=True, read_only=True)
 
     # 🔹 Campos con choices definidos explícitamente
@@ -32,6 +37,7 @@ class PropiedadSerializer(serializers.ModelSerializer):
         model = Propiedad
         fields = [
             "id",
+            "owner",
             "codigo",
             "titulo",
             "descripcion",
@@ -49,7 +55,11 @@ class PropiedadSerializer(serializers.ModelSerializer):
             "imagenes",
         ]
         read_only_fields = ["id", "fecha_alta"]
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
 
 class SubirImagenesSerializer(serializers.Serializer):
     imagenes = serializers.ListField(

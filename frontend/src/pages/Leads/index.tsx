@@ -1,6 +1,6 @@
-// index.tsx
+// src/pages/Leads/index.tsx
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { api } from "@/lib/api";
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
@@ -19,7 +19,7 @@ type Evento = {
   contacto?: number | null;
   email?: string | null;
 };
-/** ✅ NUEVO: ítem de historial de cambios de estado */
+/** ✅ Ítem de historial de cambios de estado */
 type HistItem = {
   id: number;
   contacto: number;
@@ -65,7 +65,7 @@ export default function LeadsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Contacto | null>(null);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  /** ✅ NUEVO: estado para modal de historial */
+  /** ✅ Modal de historial */
   const [historyFor, setHistoryFor] = useState<Contacto | null>(null);
   const [historyItems, setHistoryItems] = useState<HistItem[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -76,11 +76,12 @@ export default function LeadsPage() {
     setLoading(true);
     try {
       const [cRes, eRes, evRes] = await Promise.all([
-        axios.get("/api/contactos/"),
-        axios.get("/api/estados-lead/"),
-        axios.get("/api/eventos/"),
+        api.get("contactos/"),
+        api.get("estados-lead/"),
+        api.get("eventos/"),
       ]);
-      const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
+      const toArr = (d: any) =>
+        Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
       setContactos(toArr(cRes.data));
       setEstados(toArr(eRes.data));
       setEventos(toArr(evRes.data));
@@ -132,7 +133,9 @@ export default function LeadsPage() {
       (c.email && evByEmail.get(norm(c.email))) ||
       [];
     if (!arr.length) return { ultimo: null as Date | null, proximo: null as Date | null };
-    const sorted = [...arr].sort((a, b) => +new Date(a.fecha_hora) - +new Date(b.fecha_hora));
+    const sorted = [...arr].sort(
+      (a, b) => +new Date(a.fecha_hora) - +new Date(b.fecha_hora)
+    );
     const now = new Date();
     let ultimo: Date | null = null;
     let proximo: Date | null = null;
@@ -150,14 +153,18 @@ export default function LeadsPage() {
   const rows = useMemo(() => {
     let base = contactos.map((c) => {
       const est =
-        typeof c.estado === "number" ? estadoById.get(c.estado) : (c.estado as EstadoLead | undefined);
+        typeof c.estado === "number"
+          ? estadoById.get(c.estado)
+          : (c.estado as EstadoLead | undefined);
       const { ultimo, proximo } = getUltimoYProximo(c);
       return { ...c, estadoFase: est?.fase || "Nuevo", ultimo, proximo };
     });
     if (q.trim()) {
       const qq = norm(q);
       base = base.filter((c) =>
-        [c.nombre, c.apellido, c.email, c.telefono].map((x) => norm(String(x || ""))).some((s) => s.includes(qq))
+        [c.nombre, c.apellido, c.email, c.telefono]
+          .map((x) => norm(String(x || "")))
+          .some((s) => s.includes(qq))
       );
     }
     base.sort((a, b) => {
@@ -171,9 +178,14 @@ export default function LeadsPage() {
 
   const kpis = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const r of rows) counts[norm((r as any).estadoFase)] = (counts[norm((r as any).estadoFase)] || 0) + 1;
+    for (const r of rows)
+      counts[norm((r as any).estadoFase)] =
+        (counts[norm((r as any).estadoFase)] || 0) + 1;
     return [
-      { label: "Lead en negociación", value: counts["en negociacion"] || counts["negociacion"] || 0 },
+      {
+        label: "Lead en negociación",
+        value: counts["en negociacion"] || counts["negociacion"] || 0,
+      },
       { label: "Lead rechazados", value: counts["rechazado"] || 0 },
       { label: "Lead vendidos", value: counts["vendido"] || 0 },
     ];
@@ -186,15 +198,15 @@ export default function LeadsPage() {
   /* ------------------- Seeder de estados (FIX) -------------------- */
   async function seedEstados() {
     try {
-      // ⚠️ Crear los 4 estados base
       await Promise.all([
-        axios.post("/api/estados-lead/", { fase: "Nuevo", descripcion: "" }),
-        axios.post("/api/estados-lead/", { fase: "En negociación", descripcion: "" }),
-        axios.post("/api/estados-lead/", { fase: "Rechazado", descripcion: "" }),
-        axios.post("/api/estados-lead/", { fase: "Vendido", descripcion: "" }),
+        api.post("estados-lead/", { fase: "Nuevo", descripcion: "" }),
+        api.post("estados-lead/", { fase: "En negociación", descripcion: "" }),
+        api.post("estados-lead/", { fase: "Rechazado", descripcion: "" }),
+        api.post("estados-lead/", { fase: "Vendido", descripcion: "" }),
       ]);
-      const eRes = await axios.get("/api/estados-lead/");
-      const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
+      const eRes = await api.get("estados-lead/");
+      const toArr = (d: any) =>
+        Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
       setEstados(toArr(eRes.data));
       setResult({ ok: true, msg: "Estados cargados correctamente." });
     } catch (e) {
@@ -203,13 +215,13 @@ export default function LeadsPage() {
     }
   }
 
-  /* ✅ NUEVO: abrir modal y traer historial desde /api/contactos/:id/estado-historial/ */
+  /* ✅ Abrir modal y traer historial */
   async function openHistory(c: Contacto) {
     setHistoryFor(c);
     setHistoryItems(null);
     setHistoryLoading(true);
     try {
-      const { data } = await axios.get(`/api/contactos/${c.id}/estado-historial/`);
+      const { data } = await api.get(`contactos/${c.id}/estado-historial/`);
       setHistoryItems(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
@@ -239,8 +251,10 @@ export default function LeadsPage() {
               Cargar estados recomendados
             </button>
           )}
-          <button className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
-                  onClick={() => setOpenAdd(true)}>
+          <button
+            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
+            onClick={() => setOpenAdd(true)}
+          >
             + Añadir
           </button>
         </div>
@@ -249,9 +263,14 @@ export default function LeadsPage() {
       {/* KPIs */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
+          <div
+            key={k.label}
+            className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4"
+          >
             <div className="text-3xl font-semibold">{k.value}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">{k.label}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {k.label}
+            </div>
           </div>
         ))}
       </section>
@@ -265,7 +284,10 @@ export default function LeadsPage() {
           className="w-full h-10 rounded-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
         />
         {q && (
-          <button className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500" onClick={() => setQ("")}>
+          <button
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"
+            onClick={() => setQ("")}
+          >
             Limpiar
           </button>
         )}
@@ -288,90 +310,168 @@ export default function LeadsPage() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">Cargando…</td></tr>
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  Cargando…
+                </td>
+              </tr>
             )}
             {!loading && pageRows.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">Sin resultados.</td></tr>
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  Sin resultados.
+                </td>
+              </tr>
             )}
-            {!loading && pageRows.map((c) => {
-              const stateKey = norm((c as any).estadoFase);
-              const badge = STATE_COLORS[stateKey] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
-              return (
-                <tr key={c.id} className="border-t border-gray-100 dark:border-gray-900">
-                  <td className="px-4 py-3">{c.nombre || "—"}</td>
-                  <td className="px-4 py-3">{c.apellido || "—"}</td>
-                  <td className="px-4 py-3">{c.telefono || "—"}</td>
-                  <td className="px-4 py-3">{formatDate((c as any).ultimo, true)}</td>
-                  <td className="px-4 py-3">{c.email || "—"}</td>
-                  <td className="px-4 py-3">{formatDate((c as any).proximo, true)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${badge}`}>
-                      {(c as any).estadoFase}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <button className="h-8 px-2 rounded-md border border-gray-300 dark:border-gray-700 text-xs"
-                              onClick={() => setEditTarget(c)}>
-                        Editar
-                      </button>
-                      <button className="h-8 px-2 rounded-md border border-rose-600/40 text-rose-500 text-xs"
-                              onClick={() => setDeleteTarget(c)}>
-                        Borrar
-                      </button>
-                      {/* ✅ NUEVO: botón Historial */}
-                      <button className="h-8 px-2 rounded-md border text-xs"
-                              onClick={() => openHistory(c)}>
-                        Historial
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {!loading &&
+              pageRows.map((c) => {
+                const stateKey = norm((c as any).estadoFase);
+                const badge =
+                  STATE_COLORS[stateKey] ||
+                  "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+                return (
+                  <tr
+                    key={c.id}
+                    className="border-t border-gray-100 dark:border-gray-900"
+                  >
+                    <td className="px-4 py-3">{c.nombre || "—"}</td>
+                    <td className="px-4 py-3">{c.apellido || "—"}</td>
+                    <td className="px-4 py-3">{c.telefono || "—"}</td>
+                    <td className="px-4 py-3">
+                      {formatDate((c as any).ultimo, true)}
+                    </td>
+                    <td className="px-4 py-3">{c.email || "—"}</td>
+                    <td className="px-4 py-3">
+                      {formatDate((c as any).proximo, true)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${badge}`}
+                      >
+                        {(c as any).estadoFase}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          className="h-8 px-2 rounded-md border border-gray-300 dark:border-gray-700 text-xs"
+                          onClick={() => setEditTarget(c)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          className="h-8 px-2 rounded-md border border-rose-600/40 text-rose-500 text-xs"
+                          onClick={() => setDeleteTarget(c)}
+                        >
+                          Borrar
+                        </button>
+                        {/* ✅ Historial */}
+                        <button
+                          className="h-8 px-2 rounded-md border text-xs"
+                          onClick={() => openHistory(c)}
+                        >
+                          Historial
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
 
         {/* Paginación */}
         <div className="flex items-center justify-center gap-2 p-3 border-t border-gray-100 dark:border-gray-900">
-          <button className="h-8 px-3 rounded-md border text-sm disabled:opacity-50"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}>‹</button>
-          <div className="text-sm">Página <span className="font-medium">{page}</span> de <span className="font-medium">{totalPages}</span></div>
-          <button className="h-8 px-3 rounded-md border text-sm disabled:opacity-50"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}>›</button>
+          <button
+            className="h-8 px-3 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            ‹
+          </button>
+          <div className="text-sm">
+            Página <span className="font-medium">{page}</span> de{" "}
+            <span className="font-medium">{totalPages}</span>
+          </div>
+          <button
+            className="h-8 px-3 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            ›
+          </button>
         </div>
       </div>
 
       {/* Cards (mobile) */}
       <div className="md:hidden space-y-3">
         {loading && <div className="text-sm text-gray-500">Cargando…</div>}
-        {!loading && rows.length === 0 && <div className="text-sm text-gray-500">Sin resultados.</div>}
-        {!loading && rows.map((c) => {
-          const stateKey = norm((c as any).estadoFase);
-          const badge = STATE_COLORS[stateKey] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
-          return (
-            <div key={c.id} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="font-medium">{(c.nombre || "—") + " " + (c.apellido || "")}</div>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${badge}`}>{(c as any).estadoFase}</span>
+        {!loading && rows.length === 0 && (
+          <div className="text-sm text-gray-500">Sin resultados.</div>
+        )}
+        {!loading &&
+          rows.map((c) => {
+            const stateKey = norm((c as any).estadoFase);
+            const badge =
+              STATE_COLORS[stateKey] ||
+              "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+            return (
+              <div
+                key={c.id}
+                className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-medium">
+                    {(c.nombre || "—") + " " + (c.apellido || "")}
+                  </div>
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${badge}`}
+                  >
+                    {(c as any).estadoFase}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500">
+                  <div>
+                    <div className="text-gray-400">Teléfono</div>
+                    <div className="dark:text-gray-300/90">{c.telefono || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Email</div>
+                    <div className="truncate">{c.email || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Último contacto</div>
+                    <div>{formatDate((c as any).ultimo, true)}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Próximo contacto</div>
+                    <div>{formatDate((c as any).proximo, true)}</div>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    className="h-8 px-3 rounded-md border text-xs"
+                    onClick={() => setEditTarget(c)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    className="h-8 px-3 rounded-md border border-rose-600/40 text-rose-500 text-xs"
+                    onClick={() => setDeleteTarget(c)}
+                  >
+                    Borrar
+                  </button>
+                  {/* ✅ Historial (mobile) */}
+                  <button
+                    className="h-8 px-3 rounded-md border text-xs"
+                    onClick={() => openHistory(c)}
+                  >
+                    Historial
+                  </button>
+                </div>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500">
-                <div><div className="text-gray-400">Teléfono</div><div className="dark:text-gray-300/90">{c.telefono || "—"}</div></div>
-                <div><div className="text-gray-400">Email</div><div className="truncate">{c.email || "—"}</div></div>
-                <div><div className="text-gray-400">Último contacto</div><div>{formatDate((c as any).ultimo, true)}</div></div>
-                <div><div className="text-gray-400">Próximo contacto</div><div>{formatDate((c as any).proximo, true)}</div></div>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button className="h-8 px-3 rounded-md border text-xs" onClick={() => setEditTarget(c)}>Editar</button>
-                <button className="h-8 px-3 rounded-md border border-rose-600/40 text-rose-500 text-xs" onClick={() => setDeleteTarget(c)}>Borrar</button>
-                {/* ✅ NUEVO: botón Historial (mobile) */}
-                <button className="h-8 px-3 rounded-md border text-xs" onClick={() => openHistory(c)}>Historial</button>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
 
       {/* Modales */}
@@ -382,7 +482,7 @@ export default function LeadsPage() {
           onClose={() => setOpenAdd(false)}
           onSubmit={async (payload) => {
             try {
-              await saveContacto("/api/contactos/", "post", payload);
+              await saveContacto("contactos/", "post", payload);
               await fetchAll();
               setOpenAdd(false);
               setResult({ ok: true, msg: "Lead creado correctamente." });
@@ -413,7 +513,7 @@ export default function LeadsPage() {
           onClose={() => setEditTarget(null)}
           onSubmit={async (payload) => {
             try {
-              await saveContacto(`/api/contactos/${editTarget.id}/`, "patch", payload);
+              await saveContacto(`contactos/${editTarget.id}/`, "patch", payload);
               await fetchAll();
               setEditTarget(null);
               setResult({ ok: true, msg: "Lead actualizado correctamente." });
@@ -434,7 +534,7 @@ export default function LeadsPage() {
           onCancel={() => setDeleteTarget(null)}
           onConfirm={async () => {
             try {
-              await axios.delete(`/api/contactos/${deleteTarget.id}/`);
+              await api.delete(`contactos/${deleteTarget.id}/`);
               await fetchAll();
               setDeleteTarget(null);
               setResult({ ok: true, msg: "Lead eliminado." });
@@ -447,20 +547,19 @@ export default function LeadsPage() {
       )}
 
       {result && (
-        <ResultModal
-          ok={result.ok}
-          message={result.msg}
-          onClose={() => setResult(null)}
-        />
+        <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />
       )}
 
-      {/* ✅ NUEVO: Modal de Historial */}
+      {/* ✅ Modal de Historial */}
       {historyFor && (
         <HistoryModal
           contacto={historyFor}
           items={historyItems}
           loading={historyLoading}
-          onClose={() => { setHistoryFor(null); setHistoryItems(null); }}
+          onClose={() => {
+            setHistoryFor(null);
+            setHistoryItems(null);
+          }}
         />
       )}
     </div>
@@ -468,14 +567,20 @@ export default function LeadsPage() {
 }
 
 /* ------------------------ Guardado robusto ------------------------ */
-/** Intenta enviar {estado}, si 400 reintenta con {estado_id}. */
+/** Intenta enviar {estado}; si 400, reintenta con {estado_id}. */
 async function saveContacto(
   url: string,
   method: "post" | "patch",
-  data: { nombre?: string; apellido?: string; email?: string; telefono?: string; estado?: number | null }
+  data: {
+    nombre?: string;
+    apellido?: string;
+    email?: string;
+    telefono?: string;
+    estado?: number | null;
+  }
 ) {
   try {
-    await axios({ url, method, data });
+    await api({ url, method, data });
   } catch (err: any) {
     const status = err?.response?.status;
     if (status === 400) {
@@ -484,7 +589,7 @@ async function saveContacto(
         alt.estado_id = (data as any).estado;
         delete alt.estado;
       }
-      await axios({ url, method, data: alt });
+      await api({ url, method, data: alt });
     } else {
       throw err;
     }
@@ -529,7 +634,6 @@ function LeadModal({
       setError("Ingresá al menos nombre o email.");
       return;
     }
-    // ✅ Si no eligió, usar por defecto el id de “Nuevo”
     const estadoElegido = form.estadoId || (nuevoId ? String(nuevoId) : "");
     if (!estadoElegido) {
       setError("No hay estados cargados. Hacé clic en “Cargar estados recomendados”.");
@@ -543,7 +647,7 @@ function LeadModal({
         apellido: form.apellido || undefined,
         email: form.email || undefined,
         telefono: form.telefono || undefined,
-        estado: Number(estadoElegido), // enviamos siempre el id
+        estado: Number(estadoElegido),
       };
       await onSubmit(payload);
     } catch {
@@ -614,11 +718,7 @@ function LeadModal({
         {error && <div className="mt-4 text-sm text-rose-500">{error}</div>}
 
         <div className="mt-6 flex items-center justify-end gap-2">
-          <button
-            className="h-10 px-4 rounded-lg border text-sm"
-            onClick={onClose}
-            disabled={saving}
-          >
+          <button className="h-10 px-4 rounded-lg border text-sm" onClick={onClose} disabled={saving}>
             Cancelar
           </button>
           <button
@@ -659,11 +759,13 @@ function ConfirmModal({
   }
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
+      <div className="w/full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
         <div className="text-lg font-semibold mb-2">{title}</div>
         <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>Cancelar</button>
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
+            Cancelar
+          </button>
           <button
             className={
               confirmType === "danger"
@@ -687,7 +789,7 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
+        className={`w/full max-w-md rounded-2xl border p-5 shadow-lg ${
           ok
             ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
@@ -707,7 +809,7 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
 }
 
 /* --------------------------- History Modal --------------------------- */
-/** ✅ NUEVO: timeline con chips de color por estado */
+
 function HistoryModal({
   contacto,
   items,
@@ -722,7 +824,7 @@ function HistoryModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
+        className="w/full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold mb-1">
@@ -740,14 +842,13 @@ function HistoryModal({
             {items.map((h, idx) => {
               const fase = h.estado?.fase || "—";
               const key = norm(fase);
-              const chip = STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+              const chip =
+                STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
               return (
                 <li key={h.id} className="pb-4 last:pb-0">
-                  {/* línea vertical */}
                   {idx !== items.length - 1 && (
                     <span className="absolute left-2 top-3 h-full w-px bg-gray-200 dark:bg-gray-800" />
                   )}
-                  {/* punto */}
                   <span className="absolute left-0 mt-1 h-2 w-2 rounded-full bg-gray-400" />
                   <div className="ml-4">
                     <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>
@@ -762,7 +863,9 @@ function HistoryModal({
         )}
 
         <div className="mt-5 text-right">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>
+            Cerrar
+          </button>
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django.contrib.auth import get_user_model
 
-# ⚠️ Importá SIEMPRE tu modelo de dominio con otro alias para no pisar auth.User
+# Importá SIEMPRE tu modelo de dominio con otro alias para no pisar auth.User
 from .models import Usuario as UsuarioModel
 from .serializers import UsuarioSerializer
 

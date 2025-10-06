@@ -1,6 +1,8 @@
 import { FormEvent, useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "@/lib/api";
+import { onlyDigits } from "@/utils/onlyDigits"
+
 
 export default function Register() {
   const navigate = useNavigate();
@@ -110,18 +112,36 @@ export default function Register() {
           <label className="text-sm">Teléfono (opcional)</label>
           <input
             value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
+            onChange={(e) => setTelefono(onlyDigits(e.target.value))}   // filtra no-digitos
+            onPaste={(e) => {                                           // limpia pegado
+              e.preventDefault();
+              const text = (e.clipboardData || (window as any).clipboardData).getData("text");
+              setTelefono(onlyDigits(text));
+            }}
+            inputMode="numeric"     //  teclado numérico en móviles
+            pattern="\d*"           //  hint de validación nativa
+            maxLength={15}          // mismo longitud que backend
+            placeholder="Ej: 3472438055"
             className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
           />
         </div>
         <div>
-          <label className="text-sm">DNI (opcional)</label>
-          <input
-            value={dni}
-            onChange={(e) => setDni(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-          />
-        </div>
+  <label className="text-sm">DNI (opcional)</label>
+  <input
+    value={dni}
+    onChange={(e) => setDni(onlyDigits(e.target.value))}        // filtra no-dígitos
+    onPaste={(e) => {                                           // limpia pegado
+      e.preventDefault();
+      const text = (e.clipboardData || (window as any).clipboardData).getData("text");
+      setDni(onlyDigits(text));
+    }}
+    inputMode="numeric"
+    pattern="^\d{7,8}$"     // 7 u 8 dígitos
+    maxLength={8}
+    placeholder="Ej: 40973728"
+    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+  />
+</div>
 
         <button
           disabled={loading}

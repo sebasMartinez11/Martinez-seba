@@ -1,37 +1,22 @@
 // src/pages/Dashboard/index.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import axios from "axios";
+import {
+  api,
+  fetchEventos,
+  type Evento as EventoApi,
+  type Propiedad as PropiedadApi,
+  type Contacto as ContactoApi,
+} from "../../lib/api";
+import TopFilters from "./TopFilter";
 
 /* ============================== Types ============================== */
-type Contacto = {
-  id: number;
-  nombre?: string;
-  apellido?: string;
-  email?: string | null;
-};
+// Reutilizo los tipos del cliente API para alinear con el back
+type Contacto = ContactoApi;
+type Propiedad = PropiedadApi;
+type Evento = EventoApi;
 
-type Propiedad = {
-  id: number;
-  titulo?: string;
-  direccion?: string;
-  estado?: string | null; // ej: "disponible", "vendido", etc.
-  vendida?: boolean | null; // compat con back existente
-  disponibilidad?: "venta" | "alquiler" | string | null; // <-- NUEVO
-};
-
-type Evento = {
-  id: number;
-  nombre?: string;
-  apellido?: string;
-  email?: string | null;
-  contacto?: number | null;
-  propiedad: number;
-  tipo: "Reunion" | "Visita" | "Llamada";
-  fecha_hora: string;
-  notas?: string;
-  creado_en?: string;
-};
+type Filters = { date?: string; from?: string; to?: string; types?: string };
 
 /* ============================ Utilities ============================ */
 const MONTHS = [
@@ -41,7 +26,9 @@ const MONTHS = [
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 const sameDay = (a: Date, b: Date) =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
 
 const toKey = (d: Date) => {
   const y = d.getFullYear();
@@ -50,10 +37,14 @@ const toKey = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 const fromISO = (s: string) => new Date(s);
-const sortByDateAsc = (a: Evento, b: Evento) => +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
+const sortByDateAsc = (a: Evento, b: Evento) =>
+  +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
 
 const formatHour = (d: string | Date) =>
-  (typeof d === "string" ? new Date(d) : d).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  (typeof d === "string" ? new Date(d) : d).toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 const formatDate = (d: Date, opts: Intl.DateTimeFormatOptions = {}) =>
   d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", ...opts });
@@ -69,7 +60,21 @@ const toLocalInputValue = (d?: string | Date | null) => {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 };
 
-const plural = (n: number, uno: string, muchos: string) => (n === 1 ? uno : muchos);
+const plural = (n: number, uno: string, muchos: string) =>
+  n === 1 ? uno : muchos;
+
+// Helpers de rango mensual para el fetch del backend
+function ymd(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function monthRange(d: Date) {
+  const start = new Date(d.getFullYear(), d.getMonth(), 1);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 1); // exclusivo
+  return { from: ymd(start), to: ymd(end) };
+}
 
 /* ============================== Page =============================== */
 export default function DashboardPage() {
@@ -79,6 +84,9 @@ export default function DashboardPage() {
   const [propiedades, setPropiedades] = useState<Propiedad[]>([]);
   const [today] = useState(new Date());
   const [cursor, setCursor] = useState(new Date()); // mes mostrado
+
+  // filtros activos (si hay algo acá, se prioriza sobre la vista mensual)
+  const [activeFilters, setActiveFilters] = useState<Filters | null>(null);
 
   // UI/Modals
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -90,6 +98,7 @@ export default function DashboardPage() {
   const [openDayModal, setOpenDayModal] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   //  Ajuste automático de altura del calendario
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -117,23 +126,71 @@ export default function DashboardPage() {
 >>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
   async function fetchAll() {
     setLoading(true);
+=======
+  /* ------------------------ Fetch data ------------------------ */
+  // Datos “estáticos” (contactos/propiedades) — una sola vez
+  async function fetchStatic() {
+>>>>>>> fc791a81db1bbf7da1b799525546b7ec8e1bb2a1
     try {
-      const [evRes, cRes, pRes] = await Promise.all([
-        axios.get("/api/eventos/"),
-        axios.get("/api/contactos/"),
-        axios.get("/api/propiedades/"),
-      ]);
-      const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
-      setEventos(toArr(evRes.data));
+      const [cRes, pRes] = await Promise.all([api.get("contactos/"), api.get("propiedades/")]);
+      const toArr = (d: any) => Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
       setContactos(toArr(cRes.data));
       setPropiedades(toArr(pRes.data));
     } catch (e) {
       console.error(e);
-      setEventos([]); setContactos([]); setPropiedades([]);
-      setResult({ ok: false, msg: "No se pudo cargar información del dashboard." });
-    } finally { setLoading(false); }
+      setContactos([]); setPropiedades([]);
+      setResult({ ok: false, msg: "No se pudieron cargar contactos/propiedades." });
+    }
   }
-  useEffect(() => { fetchAll(); }, []);
+
+  // Eventos según el MES visible (cursor)
+  async function fetchMonthEvents(d = cursor) {
+    const { from, to } = monthRange(d);
+    const data = await fetchEventos({ from, to, ordering: "fecha_hora" });
+    setEventos(Array.isArray(data) ? data : data?.results ?? []);
+  }
+
+  // Eventos con filtros activos (hoy/mañana/semana/tipo)
+  async function fetchWithFilters(filters: Filters) {
+    const data = await fetchEventos({ ...filters, ordering: "fecha_hora" });
+    setEventos(Array.isArray(data) ? data : data?.results ?? []);
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    fetchStatic().finally(() => setLoading(false));
+  }, []);
+
+  // si hay filtros → traer con filtros; si no → traer por mes cuando cambie cursor
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        if (activeFilters) await fetchWithFilters(activeFilters);
+        else await fetchMonthEvents();
+      } catch (e) {
+        console.error(e);
+        setEventos([]);
+        setResult({ ok: false, msg: activeFilters ? "No se pudieron cargar los eventos filtrados." : "No se pudieron cargar los eventos del mes." });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursor, activeFilters]);
+
+  /* 🔔 Auto-refresh cuando el asistente crea algo */
+  useEffect(() => {
+    const handler = () => {
+      if (activeFilters) fetchWithFilters(activeFilters);
+      else fetchMonthEvents();
+    };
+    window.addEventListener("assistant:refresh-calendar", handler as EventListener);
+    return () => window.removeEventListener("assistant:refresh-calendar", handler as EventListener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilters, cursor]);
 
   /* ------------------------ Calendar helpers ------------------------ */
   const monthLabel = `${MONTHS[cursor.getMonth()]} de ${cursor.getFullYear()}`;
@@ -184,9 +241,8 @@ export default function DashboardPage() {
   /* ------------------------------ KPIs ------------------------------ */
   const kpis = useMemo(() => {
     const totalLeads = contactos.length;
-
     const norm = (s?: string | null) => (s || "").trim().toLowerCase();
-    const isVendida = (p: Propiedad) => p.vendida === true || norm(p.estado).includes("vendid");
+    const isVendida = (p: Propiedad) => norm(p.estado).includes("vendid");
 
     let enVenta = 0, enAlquiler = 0, vendidas = 0;
     for (const p of propiedades) {
@@ -196,11 +252,7 @@ export default function DashboardPage() {
       else if (d === "alquiler") enAlquiler++;
     }
 
-    const evInMonth = eventos.filter((e) => {
-      const d = new Date(e.fecha_hora);
-      return d.getFullYear() === cursor.getFullYear() && d.getMonth() === cursor.getMonth();
-    }).length;
-
+    const evInMonth = eventos.length; // ya traemos solo el mes o filtros
     return [
       { label: "Leads", value: totalLeads, hint: "Totales" },
       { label: "Propiedades en venta", value: enVenta, hint: "" },
@@ -208,7 +260,7 @@ export default function DashboardPage() {
       { label: "Propiedades vendidas", value: vendidas, hint: "" },
       { label: "Reuniones programadas", value: evInMonth, hint: "" },
     ];
-  }, [contactos, propiedades, eventos, cursor]);
+  }, [contactos, propiedades, eventos]);
 
   /* ---------------------------- Handlers ---------------------------- */
   const prevMonth = () => { const d = new Date(cursor); d.setMonth(cursor.getMonth() - 1); setCursor(d); };
@@ -222,9 +274,11 @@ export default function DashboardPage() {
       .forEach((k) => { const v = (data as any)[k]; if (v !== undefined) payload[k] = v; });
 
     try {
-      if (mode === "create") await axios.post("/api/eventos/", payload);
-      else if (id) await axios.patch(`/api/eventos/${id}/`, payload);
-      await fetchAll();
+      if (mode === "create") await api.post("eventos/", payload);
+      else if (id) await api.patch(`eventos/${id}/`, payload);
+      // refrescar según contexto
+      if (activeFilters) await fetchWithFilters(activeFilters);
+      else await fetchMonthEvents();
       setOpenEventModal(null);
       setOpenDayModal(null);
       setResult({ ok: true, msg: "Evento guardado correctamente." });
@@ -236,8 +290,9 @@ export default function DashboardPage() {
 
   async function deleteEvento(ev: Evento) {
     try {
-      await axios.delete(`/api/eventos/${ev.id}/`);
-      await fetchAll();
+      await api.delete(`eventos/${ev.id}/`);
+      if (activeFilters) await fetchWithFilters(activeFilters);
+      else await fetchMonthEvents();
       setDeleting(null);
       setResult({ ok: true, msg: "Evento eliminado." });
     } catch (e) {
@@ -246,161 +301,191 @@ export default function DashboardPage() {
     }
   }
 
+  function applyFilters(f: Filters) {
+    setActiveFilters((prev) => {
+      // si cambian filtros, no dependemos del mes; igualmente movemos el cursor al día de 'date' si viene
+      if (f.date) {
+        const [y, m, d] = f.date.split("-").map(Number);
+        setCursor(new Date(y, (m ?? 1) - 1, d ?? 1));
+      } else if (f.from) {
+        const [y, m] = f.from.split("-").map(Number);
+        setCursor(new Date(y, (m ?? 1) - 1, 1));
+      }
+      return { ...f };
+    });
+  }
+
+  function clearFilters() {
+    setActiveFilters(null);
+  }
+
   /* ------------------------------- UI ------------------------------- */
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Bienvenido a Real Connect</h2>
+    <>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Bienvenido a Real Connect</h2>
 
-        <div className="flex items-center gap-2">
-          <button
-            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
-            onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
-          >
-            + Agregar evento
-          </button>
           <div className="flex items-center gap-2">
-            <button className="h-9 w-9 rounded-lg border text-lg" onClick={prevMonth}>←</button>
-            <div className="min-w-[200px] text-center font-medium">{monthLabel}</div>
-            <button className="h-9 w-9 rounded-lg border text-lg" onClick={nextMonth}>→</button>
+            <button
+              className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
+              onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
+            >
+              + Agregar evento
+            </button>
+            <div className="flex items-center gap-2">
+              <button className="h-9 w-9 rounded-lg border text-lg" onClick={prevMonth}>←</button>
+              <div className="min-w-[200px] text-center font-medium">{monthLabel}</div>
+              <button className="h-9 w-9 rounded-lg border text-lg" onClick={nextMonth}>→</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* KPIs */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-        {kpis.map((k) => (
-          <div key={k.label} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
-            <div className="text-3xl font-semibold">{k.value}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">{k.label}</div>
-            {k.hint && <div className="text-xs text-gray-400 mt-1">{k.hint}</div>}
-          </div>
-        ))}
-      </section>
+        {/* Filtros rápidos */}
+        <div className="flex items-center gap-3">
+          <TopFilters onChange={applyFilters} />
+          {activeFilters && (
+            <button className="h-9 px-3 rounded-lg border text-sm" onClick={clearFilters}>
+              Limpiar filtros
+            </button>
+          )}
+        </div>
 
-      {/* Calendar (filas fluidas que se estiran si hace falta) */}
-      <div className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden">
-        {/* header week days */}
-        <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500">
-          {WEEKDAYS.map((w) => (
-            <div key={w} className="px-3 py-2">{w}</div>
+        {/* KPIs */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          {kpis.map((k) => (
+            <div key={k.label} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
+              <div className="text-3xl font-semibold">{k.value}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{k.label}</div>
+              {k.hint && <div className="text-xs text-gray-400 mt-1">{k.hint}</div>}
+            </div>
           ))}
-        </div>
+        </section>
 
-        {/* month grid con alto mínimo y expansión automática */}
-        <div className="grid grid-cols-7 auto-rows-[minmax(7rem,auto)]">
-          {monthGrid.days.map((d, i) => {
-            const inMonth = d.getMonth() === cursor.getMonth();
-            const key = toKey(d);
-            const isToday = sameDay(d, today);
-            const allEvents = inMonth ? (eventsByDay.get(key) || []) : [];
-            const sum = summaryByDay.get(key) || { r: 0, l: 0, v: 0, total: 0 };
+        {/* Calendar */}
+        <div className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden">
+          {/* header week days */}
+          <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500">
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="px-3 py-2">{w}</div>
+            ))}
+          </div>
 
-            const dd = String(d.getDate()).padStart(2, "0");
-            const monthAbbr = MONTHS[d.getMonth()].slice(0, 3);
-            const dayLabel = inMonth ? (d.getDate() === 1 ? `${dd}-${monthAbbr}` : dd) : "";
+          {/* month grid con alto mínimo y expansión automática */}
+          <div className="grid grid-cols-7 auto-rows-[minmax(7rem,auto)]">
+            {monthGrid.days.map((d, i) => {
+              const inMonth = d.getMonth() === cursor.getMonth();
+              const key = toKey(d);
+              const isToday = sameDay(d, today);
+              const allEvents = inMonth ? (eventsByDay.get(key) || []) : [];
+              const sum = summaryByDay.get(key) || { r: 0, l: 0, v: 0, total: 0 };
 
-            return (
-              <div
-                key={i}
-                className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
-                title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
-              >
-                {/* Contenedor columna + evitar desborde */}
-                <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
-                  {/* header mini */}
-                  <div className="flex items-center justify-between shrink-0">
-                    <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
-                      {dayLabel}
-                    </div>
-                    {inMonth && isToday && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>
-                    )}
-                  </div>
+              const dd = String(d.getDate()).padStart(2, "0");
+              const monthAbbr = MONTHS[d.getMonth()].slice(0, 3);
+              const dayLabel = inMonth ? (d.getDate() === 1 ? `${dd}-${monthAbbr}` : dd) : "";
 
-                  {/* Resumen compacto en una sola línea */}
-                  {inMonth && sum.total > 0 && (
-                    <button
-                      className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100/60 dark:hover:bg-gray-900/60 truncate"
-                      onClick={() => setOpenDayModal(d)}
-                      title={`${sum.r} ${plural(sum.r, "reunión", "reuniones")} · ${sum.l} ${plural(sum.l, "llamada", "llamadas")} · ${sum.v} ${plural(sum.v, "visita", "visitas")}`}
-                    >
-                      {sum.r} {plural(sum.r, "reunión", "reuniones")} · {sum.l} {plural(sum.l, "llamada", "llamadas")} · {sum.v} {plural(sum.v, "visita", "visitas")}
-                    </button>
-                  )}
-
-                  {/* Espaciador para empujar acciones abajo */}
-                  <div className="flex-1 min-h-0" />
-
-                  {/* Acciones rápidas ancladas abajo */}
-                  {inMonth && (
-                    <div className="pt-2 shrink-0">
-                      <button
-                        className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                        onClick={() => openCreateOnDay(d)}
-                      >
-                        + nuevo
-                      </button>
-                      {allEvents.length > 0 && (
-                        <button
-                          className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                          onClick={() => setOpenDayModal(d)}
-                        >
-                          ver
-                        </button>
+              return (
+                <div
+                  key={i}
+                  className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
+                  title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
+                >
+                  {/* Contenedor columna + evitar desborde */}
+                  <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
+                    {/* header mini */}
+                    <div className="flex items-center justify-between shrink-0">
+                      <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
+                        {dayLabel}
+                      </div>
+                      {inMonth && isToday && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>
                       )}
                     </div>
-                  )}
+
+                    {/* Resumen compacto en una sola línea */}
+                    {inMonth && sum.total > 0 && (
+                      <button
+                        className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100/60 dark:hover:bg-gray-900/60 truncate"
+                        onClick={() => setOpenDayModal(d)}
+                        title={`${sum.r} ${plural(sum.r, "reunión", "reuniones")} · ${sum.l} ${plural(sum.l, "llamada", "llamadas")} · ${sum.v} ${plural(sum.v, "visita", "visitas")}`}
+                      >
+                        {sum.r} {plural(sum.r, "reunión", "reuniones")} · {sum.l} {plural(sum.l, "llamada", "llamadas")} · {sum.v} {plural(sum.v, "visita", "visitas")}
+                      </button>
+                    )}
+
+                    {/* Espaciador */}
+                    <div className="flex-1 min-h-0" />
+
+                    {/* Acciones rápidas ancladas abajo */}
+                    {inMonth && (
+                      <div className="pt-2 shrink-0">
+                        <button
+                          className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                          onClick={() => openCreateOnDay(d)}
+                        >
+                          + nuevo
+                        </button>
+                        {allEvents.length > 0 && (
+                          <button
+                            className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                            onClick={() => setOpenDayModal(d)}
+                          >
+                            ver
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
+
+        {/* Day Events Modal */}
+        {openDayModal && (
+          <DayEventsModal
+            date={openDayModal}
+            eventos={(eventsByDay.get(toKey(openDayModal)) || []).slice().sort(sortByDateAsc)}
+            resumen={summaryByDay.get(toKey(openDayModal)) || { r: 0, l: 0, v: 0, total: 0 }}
+            onClose={() => setOpenDayModal(null)}
+            onEdit={(ev) => setOpenEventModal({ mode: "edit", evento: ev })}
+            onDelete={(ev) => setDeleting(ev)}
+            onCreate={() => setOpenEventModal({ mode: "create", baseDate: openDayModal })}
+          />
+        )}
+
+        {/* Create/Edit Event Modal */}
+        {openEventModal && (
+          <EventModal
+            mode={openEventModal.mode}
+            baseDate={openEventModal.baseDate}
+            evento={openEventModal.evento}
+            contactos={contactos}
+            propiedades={propiedades}
+            onCancel={() => setOpenEventModal(null)}
+            onSave={saveEvento}
+          />
+        )}
+
+        {/* Delete confirm */}
+        {deleting && (
+          <ConfirmModal
+            title="Eliminar evento"
+            message={`¿Seguro que querés eliminar el evento de ${formatHour(deleting.fecha_hora)} (${deleting.tipo})?`}
+            confirmLabel="Eliminar"
+            confirmType="danger"
+            onCancel={() => setDeleting(null)}
+            onConfirm={() => deleteEvento(deleting)}
+          />
+        )}
+
+        {/* Result toast modal */}
+        {result && <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />}
+
+        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
       </div>
-
-      {/* Day Events Modal */}
-      {openDayModal && (
-        <DayEventsModal
-          date={openDayModal}
-          eventos={(eventsByDay.get(toKey(openDayModal)) || []).slice().sort(sortByDateAsc)}
-          resumen={summaryByDay.get(toKey(openDayModal)) || { r: 0, l: 0, v: 0, total: 0 }}
-          onClose={() => setOpenDayModal(null)}
-          onEdit={(ev) => setOpenEventModal({ mode: "edit", evento: ev })}
-          onDelete={(ev) => setDeleting(ev)}
-          onCreate={() => setOpenEventModal({ mode: "create", baseDate: openDayModal })}
-        />
-      )}
-
-      {/* Create/Edit Event Modal */}
-      {openEventModal && (
-        <EventModal
-          mode={openEventModal.mode}
-          baseDate={openEventModal.baseDate}
-          evento={openEventModal.evento}
-          contactos={contactos}
-          propiedades={propiedades}
-          onCancel={() => setOpenEventModal(null)}
-          onSave={saveEvento}
-        />
-      )}
-
-      {/* Delete confirm */}
-      {deleting && (
-        <ConfirmModal
-          title="Eliminar evento"
-          message={`¿Seguro que querés eliminar el evento de ${formatHour(deleting.fecha_hora)} (${deleting.tipo})?`}
-          confirmLabel="Eliminar"
-          confirmType="danger"
-          onCancel={() => setDeleting(null)}
-          onConfirm={() => deleteEvento(deleting)}
-        />
-      )}
-
-      {/* Result toast modal */}
-      {result && <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />}
-
-      {loading && <div className="text-sm text-gray-500">Cargando…</div>}
-    </div>
+    </>
   );
 }
 
@@ -429,9 +514,7 @@ function DayEventsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold">
-            Eventos del {formatDate(date, { year: "numeric" })}
-          </div>
+          <div className="text-lg font-semibold">Eventos del {formatDate(date, { year: "numeric" })}</div>
           <div className="flex gap-2">
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCreate}>+ Nuevo</button>
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
@@ -508,7 +591,9 @@ function EventModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function set<K extends keyof Evento>(k: K, v: Evento[K] | any) { setForm((f) => ({ ...f, [k]: v })); }
+  function set<K extends keyof Evento>(k: K, v: Evento[K] | any) {
+    setForm((f) => ({ ...f, [k]: v }));
+  }
 
   async function handleSubmit() {
     setError(null);
@@ -525,7 +610,7 @@ function EventModal({
         {
           ...form,
           fecha_hora: fechaISO,
-          contacto: form.contacto === ("" as any) ? null : form.contacto,
+          contacto: (form as any).contacto === "" ? null : form.contacto,
           email: form.email || undefined,
           nombre: form.nombre || undefined,
           apellido: form.apellido || undefined,
@@ -536,7 +621,9 @@ function EventModal({
       );
     } catch {
       setError("Ocurrió un error. Intentá otra vez.");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -545,12 +632,17 @@ function EventModal({
         className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-xl font-semibold mb-4">{mode === "create" ? "Nuevo evento" : "Editar evento"}</div>
+        <div className="text-xl font-semibold mb-4">
+          {mode === "create" ? "Nuevo evento" : "Editar evento"}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Tipo">
-            <select className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                    value={form.tipo || "Reunion"} onChange={(e) => set("tipo", e.target.value as Evento["tipo"])}>
+            <select
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.tipo || "Reunion"}
+              onChange={(e) => set("tipo", e.target.value as Evento["tipo"])}
+            >
               <option value="Reunion">Reunión</option>
               <option value="Visita">Visita</option>
               <option value="Llamada">Llamada</option>
@@ -558,31 +650,38 @@ function EventModal({
           </Field>
 
           <Field label="Fecha y hora">
-            <input type="datetime-local" className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={
-                     form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
-                       ? toLocalInputValue(new Date(form.fecha_hora))
-                       : String(form.fecha_hora || "")
-                   }
-                   onChange={(e) => set("fecha_hora", e.target.value)} />
+            <input
+              type="datetime-local"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={
+                form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
+                  ? toLocalInputValue(new Date(form.fecha_hora))
+                  : String(form.fecha_hora || "")
+              }
+              onChange={(e) => set("fecha_hora", e.target.value)}
+            />
           </Field>
 
           <Field label="Propiedad">
-            <select className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                    value={String(form.propiedad || "")}
-                    onChange={(e) => set("propiedad", Number(e.target.value))}>
+            <select
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={String(form.propiedad || "")}
+              onChange={(e) => set("propiedad", Number(e.target.value))}
+            >
               {propiedades.map((p) => (
                 <option key={p.id} value={String(p.id)}>
-                  {p.titulo || p.direccion || `Propiedad #${p.id}`}
+                  {p.titulo || (p as any).direccion || `Propiedad #${p.id}`}
                 </option>
               ))}
             </select>
           </Field>
 
           <Field label="Contacto (opcional)">
-            <select className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                    value={form.contacto == null ? "" : String(form.contacto)}
-                    onChange={(e) => set("contacto", e.target.value ? Number(e.target.value) : null)}>
+            <select
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.contacto == null ? "" : String(form.contacto)}
+              onChange={(e) => set("contacto", e.target.value ? Number(e.target.value) : null)}
+            >
               <option value="">— Ninguno —</option>
               {contactos.map((c) => (
                 <option key={c.id} value={String(c.id)}>
@@ -593,24 +692,39 @@ function EventModal({
           </Field>
 
           <Field label="Nombre (visitante)">
-            <input className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={form.nombre || ""} onChange={(e) => set("nombre", e.target.value)} placeholder="Si no es contacto registrado" />
+            <input
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.nombre || ""}
+              onChange={(e) => set("nombre", e.target.value)}
+              placeholder="Si no es contacto registrado"
+            />
           </Field>
 
           <Field label="Apellido (visitante)">
-            <input className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={form.apellido || ""} onChange={(e) => set("apellido", e.target.value)} />
+            <input
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.apellido || ""}
+              onChange={(e) => set("apellido", e.target.value)}
+            />
           </Field>
 
           <Field label="Email (visitante)">
-            <input type="email" className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={form.email || ""} onChange={(e) => set("email", e.target.value)} />
+            <input
+              type="email"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.email || ""}
+              onChange={(e) => set("email", e.target.value)}
+            />
           </Field>
 
           <div className="md:col-span-2">
             <Field label="Notas">
-              <textarea rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
-                        value={form.notas || ""} onChange={(e) => set("notas", e.target.value)} />
+              <textarea
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                value={form.notas || ""}
+                onChange={(e) => set("notas", e.target.value)}
+              />
             </Field>
           </div>
         </div>
@@ -618,9 +732,14 @@ function EventModal({
         {error && <div className="mt-3 text-sm text-rose-500">{error}</div>}
 
         <div className="mt-6 flex items-center justify-end gap-2">
-          <button className="h-10 px-4 rounded-lg border text-sm" onClick={onCancel} disabled={saving}>Cancelar</button>
-          <button className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-                  onClick={handleSubmit} disabled={saving}>
+          <button className="h-10 px-4 rounded-lg border text-sm" onClick={onCancel} disabled={saving}>
+            Cancelar
+          </button>
+          <button
+            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+            onClick={handleSubmit}
+            disabled={saving}
+          >
             {saving ? "Guardando..." : "Guardar"}
           </button>
         </div>
@@ -659,7 +778,9 @@ function ConfirmModal({
         <div className="text-lg font-semibold mb-2">{title}</div>
         <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>Cancelar</button>
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
+            Cancelar
+          </button>
           <button
             className={
               confirmType === "danger"
@@ -681,10 +802,12 @@ function ConfirmModal({
 function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
-      <div className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
+      <div
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
           ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
              : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
-           onClick={(e) => e.stopPropagation()}>
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
         <div className="mt-4 text-right">

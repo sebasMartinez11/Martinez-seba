@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'propiedades',
     'avisos',
     'exportacion',
+    'asistente.apps.AsistenteConfig',  # ← agregado
 
     'rest_framework',
     'rest_framework_simplejwt',
@@ -80,7 +81,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+# Zona horaria local (Córdoba)
+TIME_ZONE = 'America/Argentina/Cordoba'
 USE_I18N = True
 USE_TZ = True
 
@@ -104,7 +106,7 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
-# <<< CLAVE: backend de autenticación que acepta email o username >>>
+# Backend de autenticación que acepta email o username
 AUTHENTICATION_BACKENDS = [
     "usuarios.auth_backends.EmailOrUsernameModelBackend",
     "django.contrib.auth.backends.ModelBackend",

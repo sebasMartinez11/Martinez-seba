@@ -53,6 +53,7 @@ class ContactoSerializer(serializers.ModelSerializer):
             # metadatos
             "creado_en",
         ]
+    # ...
         read_only_fields = [
             "id",
             "owner",
@@ -69,23 +70,17 @@ class ContactoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"next_contact_note": "Máximo 255 caracteres."})
         return attrs
 
-    # ---- Create / Update con historial de estado ----
+    # ---- Create / Update (el historial lo maneja la signal) ----
     def create(self, validated_data):
         contacto = Contacto.objects.create(**validated_data)
-        # Si viene estado inicial, lo registramos en historial
-        if contacto.estado_id:
-            EstadoLeadHistorial.objects.create(contacto=contacto, estado_id=contacto.estado_id)
+        # ⛔️ No crear historial acá: lo hace la signal post_save(Contacto).
         return contacto
 
     def update(self, instance, validated_data):
-        old_estado_id = instance.estado_id
+        # Guardamos cambios; si cambió 'estado', la signal generará el historial.
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
         instance.save()
-
-        # Si cambió el estado, registramos en historial
-        if "estado" in validated_data and instance.estado_id != old_estado_id:
-            EstadoLeadHistorial.objects.create(contacto=instance, estado_id=instance.estado_id)
         return instance
 
 

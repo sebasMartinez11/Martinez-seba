@@ -1,5 +1,5 @@
 # leads/views.py
-from datetime import timedelta
+from datetime import datetime, timedelta, time as dt_time
 from django.db.models import Q
 from django.utils import timezone
 
@@ -15,6 +15,44 @@ from .serializers import (
     EventoSerializer,
     EstadoLeadHistorialSerializer,
 )
+
+
+# ---------- Helpers de fecha/hora (sin dependencias externas) ----------
+def _to_local_aware(dt: datetime) -> datetime:
+    """Asegura datetimes conscientes en la tz local."""
+    if dt.tzinfo is None:
+        return timezone.make_aware(dt)
+    return timezone.localtime(dt)
+
+def _parse_date_or_datetime(s: str, end_of_day: bool = False) -> datetime | None:
+    """
+    Admite:
+      - 'YYYY-MM-DD'  -> 00:00 (o fin de día si end_of_day=True)
+      - ISO parcial/total 'YYYY-MM-DDTHH:MM[:SS]' (sin tz): se asume local tz
+      - ISO con tz: se normaliza a tz local
+    """
+    if not s:
+        return None
+    s = s.strip()
+    # Solo fecha
+    if len(s) == 10 and s[4] == "-" and s[7] == "-":
+        try:
+            d = datetime.strptime(s, "%Y-%m-%d").date()
+            base = datetime.combine(d, dt_time.max if end_of_day else dt_time.min)
+            return _to_local_aware(base)
+        except Exception:
+            return None
+    # ISO con hora (permite sin segundos)
+    try:
+        dt = datetime.fromisoformat(s)
+        return _to_local_aware(dt)
+    except Exception:
+        # Intento sin tz HH:MM
+        try:
+            dt = datetime.strptime(s, "%Y-%m-%d %H:%M")
+            return _to_local_aware(dt)
+        except Exception:
+            return None
 
 
 # ---------- Mixin multi-tenant ----------
@@ -34,6 +72,7 @@ class OwnedQuerysetMixin:
         return qs.filter(owner=user)
 
     def perform_create(self, serializer):
+        # Solo seteamos el owner; el historial lo crean las signals
         serializer.save(owner=self.request.user)
 
 
@@ -87,17 +126,17 @@ class ContactoViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
         elif vencimiento == "vencido":
             qs = qs.filter(
                 next_contact_at__lt=timezone.make_aware(
-                    timezone.datetime.combine(hoy, timezone.datetime.min.time())
+                    datetime.combine(hoy, dt_time.min)
                 )
             )
         elif vencimiento == "hoy":
-            inicio_hoy = timezone.make_aware(timezone.datetime.combine(hoy, timezone.datetime.min.time()))
+            inicio_hoy = timezone.make_aware(datetime.combine(hoy, dt_time.min))
             fin_hoy = inicio_hoy + timedelta(days=1)
             qs = qs.filter(next_contact_at__gte=inicio_hoy, next_contact_at__lt=fin_hoy)
         elif vencimiento == "proximo":
-            inicio_manana = timezone.make_aware(timezone.datetime.combine(manana, timezone.datetime.min.time()))
+            inicio_manana = timezone.make_aware(datetime.combine(manana, dt_time.min))
             fin_limite = timezone.make_aware(
-                timezone.datetime.combine(limite_proximo + timedelta(days=1), timezone.datetime.min.time())
+                datetime.combine(limite_proximo + timedelta(days=1), dt_time.min)
             )
             qs = qs.filter(next_contact_at__gte=inicio_manana, next_contact_at__lt=fin_limite)
 
@@ -107,7 +146,7 @@ class ContactoViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
             try:
                 dias = int(sin_seg_dias)
                 borde = hoy - timedelta(days=dias)
-                borde_dt = timezone.make_aware(timezone.datetime.combine(borde, timezone.datetime.min.time()))
+                borde_dt = timezone.make_aware(datetime.combine(borde, dt_time.min))
                 qs = qs.filter(Q(last_contact_at__lt=borde_dt) | Q(last_contact_at__isnull=True))
             except ValueError:
                 pass
@@ -127,17 +166,6 @@ class ContactoViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
                 qs = qs.order_by(*safe_fields)
 
         return qs
-
-    # ----- Guardar historial de estado -----
-    def perform_create(self, serializer):
-        contacto = serializer.save(owner=self.request.user)
-        if contacto.estado:
-            EstadoLeadHistorial.objects.create(contacto=contacto, estado=contacto.estado)
-
-    def perform_update(self, serializer):
-        contacto = serializer.save()
-        if contacto.estado:
-            EstadoLeadHistorial.objects.create(contacto=contacto, estado=contacto.estado)
 
     # GET /api/contactos/{id}/estado-historial/
     @action(detail=True, methods=["get"], url_path="estado-historial")
@@ -194,14 +222,14 @@ class ContactoViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
 
         now = timezone.localtime()
         hoy = now.date()
-        inicio_hoy = timezone.make_aware(timezone.datetime.combine(hoy, timezone.datetime.min.time()))
+        inicio_hoy = timezone.make_aware(datetime.combine(hoy, dt_time.min))
         fin_hoy = inicio_hoy + timedelta(days=1)
         inicio_manana = fin_hoy
         fin_proximos = timezone.make_aware(
-            timezone.datetime.combine(hoy + timedelta(days=proximo_en_dias + 1), timezone.datetime.min.time())
+            datetime.combine(hoy + timedelta(days=proximo_en_dias + 1), dt_time.min)
         )
         borde_sin_seg = hoy - timedelta(days=recordame_cada)
-        borde_sin_seg_dt = timezone.make_aware(timezone.datetime.combine(borde_sin_seg, timezone.datetime.min.time()))
+        borde_sin_seg_dt = timezone.make_aware(datetime.combine(borde_sin_seg, dt_time.min))
 
         base_qs = self.get_queryset()
 
@@ -250,3 +278,65 @@ class ContactoViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
 class EventoViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Evento.objects.all().select_related("contacto", "propiedad").order_by("-fecha_hora", "-id")
     serializer_class = EventoSerializer
+
+    # --------- Filtros / Orden para listar agenda (Paso 1) ----------
+    def get_queryset(self):
+        qs = super().get_queryset()
+        p = self.request.query_params
+
+        # Rango de fechas:
+        # - from=... (inclusive)   - to=... (exclusivo si es fecha + 1 día, inclusivo si datetime)
+        # - date=YYYY-MM-DD (atajo para todo ese día)
+        date_only = p.get("date")
+        if date_only and not p.get("from") and not p.get("to"):
+            start = _parse_date_or_datetime(date_only, end_of_day=False)
+            if start:
+                end = _parse_date_or_datetime(date_only, end_of_day=True)
+                end = end + timedelta(microseconds=1)  # evitar colisión max time
+                qs = qs.filter(fecha_hora__gte=start, fecha_hora__lt=end)
+
+        else:
+            start_s = p.get("from")
+            end_s = p.get("to")
+            if start_s:
+                start = _parse_date_or_datetime(start_s, end_of_day=False)
+                if start:
+                    qs = qs.filter(fecha_hora__gte=start)
+            if end_s:
+                # Si viene solo fecha, interpretamos fin de día (exclusivo -> +1 día)
+                if len(end_s.strip()) == 10:
+                    end = _parse_date_or_datetime(end_s, end_of_day=True)
+                    end = end + timedelta(microseconds=1)
+                else:
+                    end = _parse_date_or_datetime(end_s, end_of_day=False)
+                if end:
+                    qs = qs.filter(fecha_hora__lt=end)
+
+        # Filtro por tipos (CSV o repetido ?types=Reunion&types=Visita)
+        types_param = p.getlist("types") or ([p.get("types")] if p.get("types") else [])
+        tipos = []
+        for t in types_param:
+            if not t:
+                continue
+            for piece in t.split(","):
+                val = piece.strip()
+                if val:
+                    tipos.append(val)
+        if tipos:
+            qs = qs.filter(tipo__in=tipos)
+
+        # Orden seguro
+        allowed = {"id", "fecha_hora", "tipo", "creado_en"}
+        ordering = p.get("ordering")
+        if ordering:
+            raw = ordering.split(",")
+            safe = []
+            for f in raw:
+                f = f.strip()
+                base = f[1:] if f.startswith("-") else f
+                if base in allowed:
+                    safe.append(f)
+            if safe:
+                qs = qs.order_by(*safe)
+
+        return qs

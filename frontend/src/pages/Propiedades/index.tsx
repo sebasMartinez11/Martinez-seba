@@ -274,7 +274,7 @@ export default function PropiedadesPage() {
                   <h3 className="font-semibold leading-snug">{p.titulo}</h3>
                   <div className="text-sm">{money(p.precio, p.moneda)}</div>
                   {p.disponibilidad ? (
-                    <div className="text-xs text-gray-500">{p.disponibilidad}</div>
+                    <div className="text-xs text-gray-500 capitalize">{p.disponibilidad}</div>
                   ) : null}
                   {p.descripcion ? (
                     <p className="text-xs text-gray-500 line-clamp-2">
@@ -283,30 +283,50 @@ export default function PropiedadesPage() {
                   ) : null}
                 </div>
 
-                {/* Footer */}
-                <div className="mt-auto px-3 py-2 text-[11px] text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                  <div className="flex gap-4">
-                    <span>Amb: {p.ambiente}</span>
-                    <span>Baños: {p.banos}</span>
-                    <span>Sup: {p.superficie} m²</span>
-                    <span>Cód: {p.codigo}</span>
+                {/* Footer: dos filas (datos arriba, botones abajo) */}
+                <div className="mt-auto px-3 py-3 text-[11px] text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
+                  {/* fila 1: datos en grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
+                      <div className="text-[10px] text-gray-400">Ambientes</div>
+                      <div className="font-medium">{p.ambiente}</div>
+                    </div>
+                    <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
+                      <div className="text-[10px] text-gray-400">Baños</div>
+                      <div className="font-medium">{p.banos}</div>
+                    </div>
+                    <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
+                      <div className="text-[10px] text-gray-400">Superficie</div>
+                      <div className="font-medium">{p.superficie} m²</div>
+                    </div>
+                    <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
+                      <div className="text-[10px] text-gray-400">Cód</div>
+                      <div className="font-medium">{p.codigo}</div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="h-7 px-2 rounded-md border text-[11px]" onClick={() => setDetail(p)}>
+
+                  {/* fila 2: botones */}
+                  <div className="flex items-center justify-end gap-2 flex-wrap">
+                    <button
+                      className="h-8 px-3 rounded-md border text-[11px] whitespace-nowrap"
+                      onClick={() => setDetail(p)}
+                    >
                       Ver
                     </button>
-                    <button className="h-7 px-2 rounded-md border text-[11px]" onClick={() => setEditTarget(p)}>
+                    <button
+                      className="h-8 px-3 rounded-md border text-[11px] whitespace-nowrap"
+                      onClick={() => setEditTarget(p)}
+                    >
                       Editar
                     </button>
                     <button
-                      className="h-7 px-2 rounded-md border border-rose-600/40 text-rose-500 text-[11px]"
+                      className="h-8 px-3 rounded-md border border-rose-600/40 text-rose-500 text-[11px] whitespace-nowrap"
                       onClick={() => setDeleteTarget(p)}
                     >
                       Borrar
                     </button>
-                    {/* Copiar @Propiedad <id> */}
                     <button
-                      className="h-7 px-2 rounded-md border text-[11px] hover:bg-gray-50 dark:hover:bg-gray-900"
+                      className="h-8 px-3 rounded-md border text-[11px] hover:bg-gray-50 dark:hover:bg-gray-900 whitespace-nowrap"
                       title="Copiar etiqueta para pegar en el asistente"
                       onClick={() => copyPropTag(p)}
                     >

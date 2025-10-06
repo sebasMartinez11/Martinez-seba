@@ -21,6 +21,7 @@ from propiedades.models import Propiedad  # type: ignore
 # =========================
 DATE_DDMMYYYY = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b")
 DATE_YYYYMMDD = re.compile(r"\b(\d{4})[/-](\d{1,2})[/-](\d{1,2})\b")
+DATE_DDMM = re.compile(r"\b(\d{1,2})[/-](\d{1,2})\b")  # NUEVO: dd/mm o d/m sin año
 TIME_HHMM = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\b")
 
 TIPO_ALIASES = {
@@ -46,8 +47,16 @@ def _day_bounds_local(d: datetime) -> Tuple[datetime, datetime]:
     return start, end
 
 def _parse_date_from_text(text: str) -> Optional[datetime]:
+    """
+    Reconoce:
+      - 'hoy', 'mañana', 'pasado mañana'
+      - dd/mm/yyyy  (o con '-')
+      - yyyy-mm-dd  (o con '/')
+      - dd/mm       (o d/m) sin año -> asume año actual; si ya pasó, próximo año
+    """
     t = text.lower().strip()
     now = timezone.localtime()
+
     if "hoy" in t:
         return now
     if "mañana" in t or "manana" in t:
@@ -55,6 +64,7 @@ def _parse_date_from_text(text: str) -> Optional[datetime]:
     if "pasado mañana" in t or "pasado manana" in t:
         return now + timedelta(days=2)
 
+    # dd/mm/yyyy
     m = DATE_DDMMYYYY.search(t)
     if m:
         dd, mm, yyyy = map(int, m.groups())
@@ -63,6 +73,7 @@ def _parse_date_from_text(text: str) -> Optional[datetime]:
         except ValueError:
             return None
 
+    # yyyy-mm-dd
     m = DATE_YYYYMMDD.search(t)
     if m:
         yyyy, mm, dd = map(int, m.groups())
@@ -70,6 +81,20 @@ def _parse_date_from_text(text: str) -> Optional[datetime]:
             return _local_aware(datetime(year=yyyy, month=mm, day=dd))
         except ValueError:
             return None
+
+    # dd/mm (sin año) -> asume año actual; si ya pasó esa fecha, usa el próximo año
+    m = DATE_DDMM.search(t)
+    if m:
+        dd, mm = map(int, m.groups())
+        yyyy = now.year
+        try:
+            candidate = datetime(year=yyyy, month=mm, day=dd)
+            if candidate.date() < now.date():
+                candidate = datetime(year=yyyy + 1, month=mm, day=dd)
+            return _local_aware(candidate)
+        except ValueError:
+            return None
+
     return None
 
 def _parse_time_from_text(text: str) -> Optional[Tuple[int, int]]:
@@ -337,9 +362,15 @@ class AskAssistantAPIView(APIView):
 
         parts = []
         if propiedad:
-            parts.append(f"Propiedad #{propiedad.id}" + (f" · {getattr(propiedad, 'titulo', '')}" if getattr(propiedad, "titulo", "") else ""))
+            parts.append(
+                f"Propiedad #{propiedad.id}" +
+                (f" · {getattr(propiedad, 'titulo', '')}" if getattr(propiedad, "titulo", "") else "")
+            )
         if contacto:
-            parts.append(f"Lead #{contacto.id}" + (f" · {contacto.nombre} {contacto.apellido}".strip() if (contacto.nombre or contacto.apellido) else ""))
+            parts.append(
+                f"Lead #{contacto.id}" +
+                (f" · {contacto.nombre} {contacto.apellido}".strip() if (contacto.nombre or contacto.apellido) else "")
+            )
 
         en_txt = " en " + " y ".join(parts) if parts else ""
         answer = f"Listo, agendé una {tipo_label} para el {fecha_txt}{en_txt}."

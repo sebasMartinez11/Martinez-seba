@@ -125,10 +125,20 @@ export type Evento = {
   creado_en?: string;
 };
 
+export type EventoCreate = {
+  contacto?: number | null;          // 👈 ahora puede asignarse un lead (o dejar null)
+  propiedad: number;
+  tipo: "Reunion" | "Visita" | "Llamada";
+  fecha_hora: string;                // ISO: "2025-10-05T15:00:00" o "2025-10-05 15:00"
+  notas?: string;
+};
+
+export type EventoUpdate = Partial<EventoCreate>;
+
 export type EventoFilters = {
   date?: string;       // YYYY-MM-DD (día exacto)
   from?: string;       // YYYY-MM-DD (inicio, inclusive)
-  to?: string;         // YYYY-MM-DD (fin, exclusivo)
+  to?: string;         // YYYY-MM-DD (fin, exclusivo si solo fecha)
   types?: string;      // "Reunion" | "Llamada" | "Visita"
   ordering?: string;   // ej: "fecha_hora"
   [k: string]: any;    // permitir extras sin romper TS
@@ -137,6 +147,23 @@ export type EventoFilters = {
 export async function fetchEventos(params: EventoFilters = {}) {
   const { data } = await api.get("eventos/", { params });
   return data.results ?? data;
+}
+
+/** Crear evento (permite contacto opcional) */
+export async function createEvento(payload: EventoCreate): Promise<Evento> {
+  const { data } = await api.post("eventos/", payload);
+  return data;
+}
+
+/** Actualizar evento */
+export async function updateEvento(id: number, payload: EventoUpdate): Promise<Evento> {
+  const { data } = await api.patch(`eventos/${id}/`, payload);
+  return data;
+}
+
+/** Borrar evento */
+export async function deleteEvento(id: number): Promise<void> {
+  await api.delete(`eventos/${id}/`);
 }
 
 export default api;

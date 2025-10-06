@@ -38,7 +38,8 @@ urlpatterns = [
     path("api/", include(router.urls)),
 
     # Usuarios CRUD + perfil
-    path("api/usuarios/", ListaYCreaUsuario.as_view(), name="usuarios-lista"),
+    path("api/usuarios/", ListaYCreaUsuario.as_view(), name="usuarios-lista")
+,
     path("api/usuarios/<int:pk>/", DetalleUsuario.as_view(), name="usuario-detalle"),
     path("api/usuarios/me/", MeUsuarioView.as_view(), name="usuarios-me"),
 

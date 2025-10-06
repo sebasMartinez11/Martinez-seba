@@ -1,11 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 # from django.contrib.auth.password_validation import validate_password  # si querés validadores avanzados
 
 from .models import Usuario
+
 
 def _sync_auth_user(email: str, first_name: str, last_name: str, raw_password: str):
     user, _ = User.objects.get_or_create(
@@ -47,6 +47,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "token",
             "creado", "actualizado",
             "telefono", "dni",
+            "reminder_every_days",
         ]
         read_only_fields = ["id", "token", "creado", "actualizado"]
 
@@ -61,6 +62,20 @@ class UsuarioSerializer(serializers.ModelSerializer):
         if qs.exists():
             raise serializers.ValidationError("Ya existe un usuario con ese email.")
         return email
+
+    def validate_reminder_every_days(self, value):
+        # Aceptamos números positivos pequeños; default del modelo es 3
+        if value is None:
+            return 3
+        try:
+            v = int(value)
+        except (TypeError, ValueError):
+            raise serializers.ValidationError("Debe ser un número entero.")
+        if v <= 0:
+            raise serializers.ValidationError("Debe ser mayor a 0.")
+        if v > 365:
+            raise serializers.ValidationError("Debe ser ≤ 365 días.")
+        return v
 
     def _validate_password_rules(self, raw_password: str):
         if len(raw_password) < 8:

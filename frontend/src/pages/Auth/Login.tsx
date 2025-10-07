@@ -47,19 +47,32 @@ export default function Login() {
       // listo
       navigate("/app", { replace: true });
     } catch (err: any) {
-      // Mostrar el mensaje real del backend para saber POR QUÉ devuelve 401
       const status = err?.response?.status;
       const data = err?.response?.data;
       console.error("LOGIN ERROR", status, data ?? err);
-      const msg =
-        (data && (data.detail || data.message || JSON.stringify(data))) ||
-        err?.message ||
-        "Credenciales inválidas";
-      setError(String(msg));
+
+      // Mensaje por defecto en español
+      let msg = "Correo o contraseña incorrectos.";
+
+      // Si el backend envía detalle, lo normalizamos
+      const detail = data?.detail || data?.message || (typeof data === "string" ? data : "");
+
+      // Si viene el mensaje de SimpleJWT en inglés, lo traducimos
+      if (/No active account found with the given credentials\.?/.test(detail || "")) {
+        msg = "Correo o contraseña incorrectos.";
+      } else if (detail) {
+        // Para otros errores específicos del backend
+        msg = detail;
+      } else if (status && status !== 401) {
+        // Errores no-auth (timeout, 5xx, etc.)
+        msg = `Error ${status}: no se pudo iniciar sesión.`;
+      }
+
+      setError(msg);
     } finally {
       setLoading(false);
     }
-  }
+  } // 👈 ESTA LLAVE FALTABA
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden">

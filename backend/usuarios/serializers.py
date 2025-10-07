@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 import re
 from .models import Usuario
 
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed
 
 def _sync_auth_user(email: str, first_name: str, last_name: str, raw_password: str):
     user, _ = User.objects.get_or_create(
@@ -152,3 +154,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
             raw_password=password or "",
         )
         return instance
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except AuthenticationFailed:
+            # Mensaje en español:
+            raise AuthenticationFailed("Correo o contraseña incorrectos.")

@@ -1,8 +1,7 @@
 import { FormEvent, useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "@/lib/api";
-import { onlyDigits } from "@/utils/onlyDigits"
-
+import { onlyDigits } from "@/utils/onlyDigits";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -52,12 +51,17 @@ export default function Register() {
 
       navigate("/app", { replace: true });
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.detail ||
-        err?.response?.data?.errors ||
-        err?.message ||
-        "Error al registrar";
-      setError(String(msg));
+      const data = err?.response?.data;
+      console.error("REGISTER ERROR:", data || err);
+
+      // DRF suele devolver {campo: ["mensaje"]} o {detail: "..."} o string
+      let msg = "Error al registrar";
+      if (data) {
+        if (typeof data === "string") msg = data;
+        else if (data.detail) msg = data.detail;
+        else msg = Object.values(data).flat().join(" · ");
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -126,22 +130,22 @@ export default function Register() {
           />
         </div>
         <div>
-  <label className="text-sm">DNI (opcional)</label>
-  <input
-    value={dni}
-    onChange={(e) => setDni(onlyDigits(e.target.value))}        // filtra no-dígitos
-    onPaste={(e) => {                                           // limpia pegado
-      e.preventDefault();
-      const text = (e.clipboardData || (window as any).clipboardData).getData("text");
-      setDni(onlyDigits(text));
-    }}
-    inputMode="numeric"
-    pattern="^\d{7,8}$"     // 7 u 8 dígitos
-    maxLength={8}
-    placeholder="Ej: 40973728"
-    className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-  />
-</div>
+          <label className="text-sm">DNI (opcional)</label>
+          <input
+            value={dni}
+            onChange={(e) => setDni(onlyDigits(e.target.value))}        // filtra no-dígitos
+            onPaste={(e) => {                                           // limpia pegado
+              e.preventDefault();
+              const text = (e.clipboardData || (window as any).clipboardData).getData("text");
+              setDni(onlyDigits(text));
+            }}
+            inputMode="numeric"
+            pattern="^\d{7,8}$"     // 7 u 8 dígitos
+            maxLength={8}
+            placeholder="Ej: 40973728"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+          />
+        </div>
 
         <button
           disabled={loading}

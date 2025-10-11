@@ -3,8 +3,10 @@ import api from "../../lib/api";
 
 type Aviso = {
   id: number;
-  titulo?: string;
+  titulo: string;
   descripcion?: string;
+  fecha?: string;
+  estado?: string;
   creado_en?: string;
 };
 
@@ -18,32 +20,28 @@ export default function AvisosPage() {
     let mounted = true;
     (async () => {
       setLoading(true);
-      setError(null);
       try {
         const { data } = await api.get("/api/avisos/");
-        // Normaliza: si la API devuelve array directo o {results: [...]}
         const list: unknown =
           Array.isArray(data) ? data : (data && (data.results ?? data.data));
         const safeArray: Aviso[] = Array.isArray(list) ? list : [];
         if (mounted) setAvisos(safeArray);
       } catch (e: any) {
-        if (mounted) setError(e?.response?.data?.detail || e?.message || "Error cargando avisos");
+        if (mounted)
+          setError(e?.response?.data?.detail || e?.message || "Error cargando avisos");
       } finally {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => { mounted = false };
   }, []);
 
-  // Siempre trabajar con array
-  const items = Array.isArray(avisos) ? avisos : [];
-
   const filtered = q
-    ? items.filter(a =>
+    ? avisos.filter(a =>
         (a.titulo || "").toLowerCase().includes(q.toLowerCase()) ||
         (a.descripcion || "").toLowerCase().includes(q.toLowerCase())
       )
-    : items;
+    : avisos;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
@@ -75,10 +73,16 @@ export default function AvisosPage() {
                 Creado: {new Date(a.creado_en).toLocaleString()}
               </div>
             )}
+            <div className="mt-2 text-xs text-gray-500 flex gap-3">
+              {a.fecha && <>📅 {new Date(a.fecha).toLocaleString()}</>}
+              {a.estado && <span>• Estado: {a.estado}</span>}
+              {a.creado_en && (
+                <span>• Creado: {new Date(a.creado_en).toLocaleDateString()}</span>
+              )}
+            </div>
           </li>
         ))}
       </ul>
     </div>
   );
 }
-   

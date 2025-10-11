@@ -26,6 +26,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [email, setEmail] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [propiedadId, setPropiedadId] = useState<number | "">("");
   const [fechaHora, setFechaHora] = useState("");
   const [tipo, setTipo] = useState<"Reunion" | "Visita" | "Llamada" | "">("");
@@ -46,7 +47,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
 
     setSubmitting(true);
     try {
-      // ⚠️ Ajustá los nombres de campos a tu serializer de Eventos
+      // Ajustá los nombres de campos a tu serializer de Eventos
       // Ejemplo esperado por backend:
       // { nombre, apellido, email, propiedad: propiedadId, fecha_hora: ISO, tipo }
       await axios.post("/api/eventos/", {
@@ -60,8 +61,12 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
       onCreated?.();
       onClose();
       // reset
-      setNombre(""); setApellido(""); setEmail("");
-      setPropiedadId(""); setFechaHora(""); setTipo("");
+      setNombre("");
+      setApellido("");
+      setEmail("");
+      setPropiedadId("");
+      setFechaHora("");
+      setTipo("");
     } catch (err) {
       alert("No se pudo crear el evento. Revisá el mapeo de campos del backend.");
     } finally {
@@ -75,20 +80,59 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-sm">Nombre</label>
-            <input className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
-              value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            <input
+              className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+            />
           </div>
           <div>
             <label className="text-sm">Apellido</label>
-            <input className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
-              value={apellido} onChange={(e) => setApellido(e.target.value)} />
+            <input
+              className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+              value={apellido}
+              onChange={(e) => setApellido(e.target.value)}
+            />
           </div>
         </div>
 
         <div>
           <label className="text-sm">Email</label>
-          <input type="email" className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
-            value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            type="email"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm">Teléfono</label>
+          <input
+            type="tel"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-text"
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value.replace(/\D/g, ""))} // solo dígitos
+            onPaste={(e) => {
+              const pasted = (e.clipboardData || (window as any).clipboardData).getData("text");
+              if (/\D/.test(pasted)) {
+                e.preventDefault();
+                const digits = pasted.replace(/\D/g, "");
+                setTelefono((prev) => prev + digits);
+              }
+            }}
+            onKeyDown={(e) => {
+              const allowed = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"];
+              if (allowed.includes(e.key)) return;
+              if ((e.ctrlKey || e.metaKey) && ["a", "c", "v", "x"].includes(e.key.toLowerCase())) return;
+              if (!/^\d$/.test(e.key)) e.preventDefault();
+            }}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={15} 
+            placeholder="Sólo números"
+            aria-label="Teléfono"
+          />
         </div>
 
         <div>
@@ -133,12 +177,17 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose}
-            className="rounded-md border px-4 py-2 text-sm rc-border rc-border">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border px-4 py-2 text-sm rc-border rc-border"
+          >
             Cancelar
           </button>
-          <button disabled={submitting || !propiedadId || !fechaHora || !tipo}
-            className="rounded-md px-4 py-2 text-sm rc-text rc-text bg-blue-600 hover:bg-blue-700 disabled:opacity-60">
+          <button
+            disabled={submitting || !propiedadId || !fechaHora || !tipo}
+            className="rounded-md px-4 py-2 text-sm rc-text rc-text bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+          >
             {submitting ? "Guardando..." : "Registrar"}
           </button>
         </div>

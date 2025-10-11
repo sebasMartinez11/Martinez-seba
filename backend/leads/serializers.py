@@ -21,7 +21,7 @@ class ContactoSerializer(serializers.ModelSerializer):
     )
     # lectura expandida
     estado_detalle = EstadoLeadSerializer(source="estado", read_only=True)
-
+    telefono = serializers.CharField(required=False, allow_blank=True, max_length=15)
     # === Seguimiento: campos expuestos ===
     last_contact_at = serializers.DateTimeField(required=False, allow_null=True)
     next_contact_at = serializers.DateTimeField(required=False, allow_null=True)
@@ -62,7 +62,16 @@ class ContactoSerializer(serializers.ModelSerializer):
             "dias_sin_seguimiento",
             "creado_en",
         ]
-
+        
+    def validate_telefono(self, v: str):
+        # permitir vacío
+        if not v:
+            return v
+        digits = "".join(ch for ch in v if ch.isdigit())
+        # Si querés forzar exactamente lo mismo que el Regex del modelo:
+        if not (1 <= len(digits) <= 15):
+            raise serializers.ValidationError("Ingrese solo dígitos (1–15).")
+        return digits
     # ---- Validaciones suaves de coherencia ----
     def validate(self, attrs):
         note = attrs.get("next_contact_note", getattr(self.instance, "next_contact_note", ""))
@@ -73,7 +82,7 @@ class ContactoSerializer(serializers.ModelSerializer):
     # ---- Create / Update (el historial lo maneja la signal) ----
     def create(self, validated_data):
         contacto = Contacto.objects.create(**validated_data)
-        # ⛔️ No crear historial acá: lo hace la signal post_save(Contacto).
+        #  No crear historial acá: lo hace la signal post_save(Contacto).
         return contacto
 
     def update(self, instance, validated_data):

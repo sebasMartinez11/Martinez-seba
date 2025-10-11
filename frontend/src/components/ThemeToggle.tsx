@@ -3,24 +3,24 @@ import { FiMoon, FiSun } from "react-icons/fi";
 
 const LS_KEY = "rc-theme"; // 'light' | 'dark'
 
-function applyTheme(next: "light" | "dark") {
-  const root = document.documentElement;
-  if (next === "dark") root.classList.add("dark");
-  else root.classList.remove("dark");
-  localStorage.setItem(LS_KEY, next);
-}
-
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
-  // Montaje: leer localStorage (o default "dark") y aplicar
+  // Función única para aplicar el tema
+  const applyTheme = (mode: "light" | "dark") => {
+    document.documentElement.classList.toggle("dark", mode === "dark");
+    localStorage.setItem(LS_KEY, mode);
+  };
+
+  // Al montar, aplicar el guardado o usar "dark" por defecto
   useEffect(() => {
-    const saved = (localStorage.getItem(LS_KEY) as "light" | "dark" | null) || "dark";
-    setTheme(saved);
-    applyTheme(saved);
+    const saved = localStorage.getItem(LS_KEY) as "light" | "dark" | null;
+    const initial = saved === "light" || saved === "dark" ? saved : "dark";
+    setTheme(initial);
+    applyTheme(initial);
   }, []);
 
-  // Sincronizar entre pestañas/ventanas
+  // Sincronizar entre pestañas ( se mantiene)
   useEffect(() => {
     function onStorage(e: StorageEvent) {
       if (e.key === LS_KEY && (e.newValue === "light" || e.newValue === "dark")) {
@@ -32,19 +32,21 @@ export default function ThemeToggle() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  function toggle() {
+  // Al hacer click
+  const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     applyTheme(next);
-  }
+  };
 
   return (
     <button
       type="button"
       onClick={toggle}
-      className="h-9 w-9 grid place-items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900"
+      className="h-9 w-9 grid place-items-center rounded-lg border rc-border rc-border 
+                 rc-card hover:bg-gray-100 dark:hover:bg-gray-800 
+                 transition-colors duration-200"
       title={theme === "dark" ? "Cambiar a claro" : "Cambiar a oscuro"}
-      aria-label="Cambiar tema"
     >
       {theme === "dark" ? <FiSun className="text-yellow-400" /> : <FiMoon className="text-gray-700" />}
     </button>

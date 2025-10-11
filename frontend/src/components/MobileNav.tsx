@@ -18,8 +18,8 @@ export default function MobileNav() {
     <nav
       className={clsx(
         "fixed bottom-0 inset-x-0 z-50 md:hidden",
-        "border-t border-gray-200 dark:border-gray-800",
-        "bg-white/95 dark:bg-gray-950/95 backdrop-blur"
+        "border-t rc-border rc-border",
+        "bg-white/95  dark:bg-gray-950/95 backdrop-blur"
       )}
       style={{
         paddingBottom:
@@ -39,7 +39,7 @@ export default function MobileNav() {
                   "text-xs select-none",
                   isActive
                     ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-600 dark:text-gray-300"
+                    : "rc-muted dark:text-gray-300"
                 )
               }
               aria-label={label}

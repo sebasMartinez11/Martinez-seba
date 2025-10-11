@@ -33,7 +33,7 @@ export default function Modal({ open, title, onClose, children, maxWidth = "md" 
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div
           className={clsx(
-            "w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-xl",
+            "w-full rounded-2xl border rc-border rc-border rc-card shadow-xl",
             maxWidth === "sm" && "max-w-sm",
             maxWidth === "md" && "max-w-lg",
             maxWidth === "lg" && "max-w-2xl"
@@ -41,7 +41,7 @@ export default function Modal({ open, title, onClose, children, maxWidth = "md" 
           role="dialog"
           aria-modal="true"
         >
-          <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800">
+          <div className="px-5 py-3 border-b rc-border rc-border">
             <h3 className="text-lg font-semibold">{title}</h3>
           </div>
           <div className="p-5">{children}</div>

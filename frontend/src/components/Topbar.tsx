@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiSearch, FiBell, FiAlertCircle, FiCalendar, FiClock } from "react-icons/fi";
 import ThemeToggle from "@/components/ThemeToggle";
 
+/* ===================== Tipos de datos usados en la búsqueda y avisos ===================== */
 type Evento = {
   id: number;
   tipo?: string;
@@ -56,6 +57,7 @@ type AvisosPayload = {
   sin_seguimiento: Bucket;
 };
 
+/* ===================== Hook simple para “debounce” (evita disparar fetch por cada tecla) ===================== */
 function useDebouncedValue<T>(value: T, delay = 300) {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -65,8 +67,11 @@ function useDebouncedValue<T>(value: T, delay = 300) {
   return v;
 }
 
+/* ===================================== Componente ===================================== */
 export default function Topbar({ title }: { title: string }) {
   const navigate = useNavigate();
+
+  // Tomamos token si existe para pasar Authorization en fetch (memo para no recrear obj)
   const token = localStorage.getItem("rc_token") || "";
   const headers = useMemo(
     () => ({
@@ -75,22 +80,22 @@ export default function Topbar({ title }: { title: string }) {
     [token]
   );
 
-  // ------- Search -------
-  const [query, setQuery] = useState("");
-  const q = useDebouncedValue(query, 300);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<SearchItem[]>([]);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  /* ------------------------ Estado del buscador ------------------------ */
+  const [query, setQuery] = useState("");       // texto del input
+  const q = useDebouncedValue(query, 300);      // texto con debounce
+  const [open, setOpen] = useState(false);      // si el dropdown está abierto
+  const [loading, setLoading] = useState(false);// spinner de búsqueda
+  const [results, setResults] = useState<SearchItem[]>([]); // resultados
+  const wrapRef = useRef<HTMLDivElement | null>(null); // ref para detectar click afuera
 
-  // ------- Avisos (campana) -------
-  const [openBell, setOpenBell] = useState(false);
+  /* ------------------------ Estado de la campana (avisos) ------------------------ */
+  const [openBell, setOpenBell] = useState(false); // popover abierto/cerrado
   const bellWrapRef = useRef<HTMLDivElement | null>(null);
-  const [avisos, setAvisos] = useState<AvisosPayload | null>(null);
-  const [loadingAvisos, setLoadingAvisos] = useState(false);
+  const [avisos, setAvisos] = useState<AvisosPayload | null>(null); // payload de avisos
+  const [loadingAvisos, setLoadingAvisos] = useState(false);        // spinner de avisos
   const [errorAvisos, setErrorAvisos] = useState<string | null>(null);
 
-  // Cerrar popovers al click fuera / Esc
+  /* ------------------------ Cerrar popovers con click afuera o Escape ------------------------ */
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
@@ -110,7 +115,7 @@ export default function Topbar({ title }: { title: string }) {
     };
   }, []);
 
-  // Buscar cuando q cambia (mín 2 chars)
+  /* ------------------------ Buscar cuando cambia q (mín 2 chars) ------------------------ */
   useEffect(() => {
     async function run() {
       const text = q.trim();
@@ -120,19 +125,19 @@ export default function Topbar({ title }: { title: string }) {
         return;
       }
       setLoading(true);
-
-      // Intento de server-side search (?search=) y si no, filtro en front
       try {
+        // Pedimos en paralelo: eventos, propiedades y usuarios
         const [evRes, prRes, usRes] = await Promise.all([
           fetch(`/api/eventos/?search=${encodeURIComponent(text)}`, { headers }),
           fetch(`/api/propiedades/?search=${encodeURIComponent(text)}`, { headers }),
-          fetch(`/api/usuarios/`, { headers }), // tu vista quizá no expone ?search=: filtro en front
+          fetch(`/api/usuarios/`, { headers }),
         ]);
 
         const eventos: Evento[] = evRes.ok ? await evRes.json() : [];
         const propiedades: Propiedad[] = prRes.ok ? await prRes.json() : [];
         const usuarios: Usuario[] = usRes.ok ? await usRes.json() : [];
 
+        // Normalizamos a “items” homogéneos para el dropdown
         const needle = text.toLowerCase();
 
         const eventosF = (Array.isArray(eventos) ? eventos : [])
@@ -187,16 +192,17 @@ export default function Topbar({ title }: { title: string }) {
     run();
   }, [q, headers]);
 
+  // Navegación al elegir un resultado
   function onSelect(item: SearchItem) {
     setOpen(false);
     if (item.type === "propiedad") navigate("/app/propiedades");
     else if (item.type === "usuario") navigate("/app/usuarios");
-    else navigate("/app"); // eventos → dashboard (por ahora)
+    else navigate("/app"); // eventos → por ahora al dashboard
   }
 
-  // --------- Fetch avisos + auto-refresh ---------
+  /* ------------------------ Avisos: fetch inicial + auto-refresh cada 60s ------------------------ */
   async function fetchAvisos() {
-    if (!token) return; // si no hay token, no golpeamos
+    if (!token) return; // sin token, no llamamos al backend
     setLoadingAvisos(true);
     setErrorAvisos(null);
     try {
@@ -204,7 +210,7 @@ export default function Topbar({ title }: { title: string }) {
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data: AvisosPayload = await res.json();
       setAvisos(data);
-    } catch (e) {
+    } catch {
       setErrorAvisos("No se pudieron cargar los avisos.");
       setAvisos(null);
     } finally {
@@ -214,11 +220,12 @@ export default function Topbar({ title }: { title: string }) {
 
   useEffect(() => {
     fetchAvisos();
-    const id = setInterval(fetchAvisos, 60_000); // refresco cada 60s
+    const id = setInterval(fetchAvisos, 60_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // Total para el badge de la campana
   const totalAvisos =
     (avisos?.pendientes.count ?? 0) +
     (avisos?.vencidos.count ?? 0) +
@@ -226,12 +233,11 @@ export default function Topbar({ title }: { title: string }) {
     (avisos?.proximos.count ?? 0) +
     (avisos?.sin_seguimiento.count ?? 0);
 
+  // Atajos de navegación
   function goAvisos() {
     setOpenBell(false);
     navigate("/app/avisos");
   }
-
-  // ------ NUEVO: deeplink hacia Leads con filtros ------
   function goLeadsWith(opts: {
     vencimiento?: "pendiente" | "vencido" | "hoy" | "proximo";
     sin?: number | string;
@@ -240,69 +246,68 @@ export default function Topbar({ title }: { title: string }) {
     const params = new URLSearchParams();
     if (opts.vencimiento) params.set("vencimiento", String(opts.vencimiento));
     if (typeof opts.sin !== "undefined" && opts.sin !== "") params.set("sin", String(opts.sin));
-    if (typeof opts.proximo_en_dias !== "undefined")
-      params.set("proximo_en_dias", String(opts.proximo_en_dias));
+    if (typeof opts.proximo_en_dias !== "undefined") params.set("proximo_en_dias", String(opts.proximo_en_dias));
     setOpenBell(false);
     navigate(`/app/leads?${params.toString()}`);
   }
 
+  /* ------------------------ Render ------------------------ */
   return (
-    <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-      <h1 className="text-xl font-semibold">{title}</h1>
+    // Topbar con borde inferior; colores vienen de la paleta rc-*
+    <header className="flex items-center justify-between p-4 border-b rc-border">
+      {/* Título de sección */}
+      <h1 className="text-xl font-semibold rc-text">{title}</h1>
+
       <div className="flex items-center gap-3">
         {/* ------- Search ------- */}
         <div className="relative" ref={wrapRef}>
           <div className="relative">
-            <FiSearch className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500 pointer-events-none" />
+            {/* Ícono del buscador (posición absoluta) */}
+            <FiSearch className="absolute left-3 top-2.5 rc-muted pointer-events-none" />
+
+            {/* Input del buscador: rc-input usa las variables del tema (bg/texto/borde/ring) */}
             <input
               placeholder="Buscar (eventos, propiedades, usuarios)…"
-              className="w-72 h-9 rounded-lg border border-gray-300 dark:border-gray-700 pl-9 pr-3 text-sm bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-500"
+              className="rc-input w-72 pl-9 pr-3"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setOpen(true);
+                setOpen(true); // abre el dropdown al empezar a tipear
               }}
               onFocus={() => setOpen(true)}
             />
           </div>
 
-          {/* Dropdown de resultados */}
+          {/* Dropdown de resultados del buscador */}
           {open && (loading || results.length > 0 || q.trim().length >= 2) && (
-            <div className="absolute z-50 mt-1 w-[28rem] rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-lg">
+            <div className="absolute z-50 mt-1 w-[28rem] rounded-lg rc-card shadow-lg">
               <div className="max-h-80 overflow-auto">
-                {loading && (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Buscando…</div>
-                )}
+                {loading && <div className="px-3 py-2 text-sm rc-muted">Buscando…</div>}
 
                 {!loading && q.trim().length >= 2 && results.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                    Sin coincidencias
-                  </div>
+                  <div className="px-3 py-2 text-sm rc-muted">Sin coincidencias</div>
                 )}
 
+                {/* Lista de resultados */}
                 {!loading &&
                   results.map((r) => (
                     <button
                       key={`${r.type}-${r.id}`}
                       onClick={() => onSelect(r)}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-900"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">{r.title}</span>
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          {r.type}
-                        </span>
+                        <span className="font-medium rc-text">{r.title}</span>
+                        <span className="text-[10px] uppercase tracking-wide rc-muted">{r.type}</span>
                       </div>
-                      {r.subtitle && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{r.subtitle}</div>
-                      )}
+                      {r.subtitle && <div className="text-xs rc-muted">{r.subtitle}</div>}
                     </button>
                   ))}
               </div>
-              <div className="border-t border-gray-200 dark:border-gray-800 p-2 text-right">
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Mínimo 2 caracteres • Enter para buscar
-                </span>
+
+              {/* Pie del dropdown */}
+              <div className="border-t rc-border p-2 text-right">
+                <span className="text-[11px] rc-muted">Mínimo 2 caracteres • Enter para buscar</span>
               </div>
             </div>
           )}
@@ -310,12 +315,14 @@ export default function Topbar({ title }: { title: string }) {
 
         {/* ------- Campana de avisos ------- */}
         <div className="relative" ref={bellWrapRef}>
+          {/* Botón que abre/cierra el popover de avisos */}
           <button
-            className="relative h-9 w-9 grid place-items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950"
+            className="relative h-9 w-9 grid place-items-center rounded-lg border rc-border bg-[rgb(var(--card))]"
             onClick={() => setOpenBell((v) => !v)}
             title="Recordatorios y avisos"
           >
-            <FiBell className="text-lg" />
+            <FiBell className="text-lg rc-text" />
+            {/* Badge rojo con total de avisos */}
             {totalAvisos > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] grid place-items-center">
                 {totalAvisos > 99 ? "99+" : totalAvisos}
@@ -323,28 +330,25 @@ export default function Topbar({ title }: { title: string }) {
             )}
           </button>
 
+          {/* Popover con buckets de avisos */}
           {openBell && (
-            <div className="absolute right-0 z-50 mt-1 w-[26rem] rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-lg">
-              <div className="p-2 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                <div className="text-sm font-medium">Recordatorios y avisos</div>
-                <button
-                  className="text-xs underline text-blue-600 dark:text-blue-400"
-                  onClick={goAvisos}
-                >
+            <div className="absolute right-0 z-50 mt-1 w-[26rem] rounded-lg rc-card shadow-lg">
+              <div className="p-2 border-b rc-border flex items-center justify-between">
+                <div className="text-sm font-medium rc-text">Recordatorios y avisos</div>
+                <button className="text-xs underline rc-text" onClick={goAvisos}>
                   Ver todos
                 </button>
               </div>
 
               <div className="max-h-96 overflow-auto">
-                {loadingAvisos && (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Cargando…</div>
-                )}
+                {loadingAvisos && <div className="px-3 py-2 text-sm rc-muted">Cargando…</div>}
                 {errorAvisos && !loadingAvisos && (
                   <div className="px-3 py-2 text-sm text-rose-500">{errorAvisos}</div>
                 )}
 
+                {/* Listado por buckets (vencidos, hoy, próximos, etc.) */}
                 {!loadingAvisos && !errorAvisos && avisos && (
-                  <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                  <div className="divide-y rc-border/50">
                     <BucketSmall
                       icon={<FiAlertCircle />}
                       label="Vencidos"
@@ -384,25 +388,20 @@ export default function Topbar({ title }: { title: string }) {
                       items={avisos.sin_seguimiento.items}
                       emptyText="Todos con seguimiento reciente"
                       showSinSeg
-                      onSee={() =>
-                        goLeadsWith({ sin: avisos.params.recordame_cada })
-                      }
+                      onSee={() => goLeadsWith({ sin: avisos.params.recordame_cada })}
                     />
                   </div>
                 )}
 
+                {/* Estado sin datos */}
                 {!loadingAvisos && !errorAvisos && !avisos && (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                    No hay datos de avisos.
-                  </div>
+                  <div className="px-3 py-2 text-sm rc-muted">No hay datos de avisos.</div>
                 )}
               </div>
 
-              <div className="border-t border-gray-200 dark:border-gray-800 p-2">
-                <button
-                  className="w-full h-8 rounded-md border text-xs"
-                  onClick={fetchAvisos}
-                >
+              {/* Acción de refrescar */}
+              <div className="border-t rc-border p-2">
+                <button className="w-full h-8 rounded-md border rc-border text-xs" onClick={fetchAvisos}>
                   Actualizar
                 </button>
               </div>
@@ -410,14 +409,14 @@ export default function Topbar({ title }: { title: string }) {
           )}
         </div>
 
+        {/* Toggle claro/oscuro (aplica/quita .dark en <html>) */}
         <ThemeToggle />
       </div>
     </header>
   );
 }
 
-/* ------------------------- Subcomponentes ------------------------- */
-
+/* ===================== Subcomponente: bloque pequeño de avisos ===================== */
 function BucketSmall({
   icon,
   label,
@@ -435,41 +434,38 @@ function BucketSmall({
 }) {
   return (
     <div className="p-2">
-      <div className="flex items-center gap-2 text-sm font-medium mb-1">
-        <span className="text-gray-600 dark:text-gray-300">{icon}</span>
+      <div className="flex items-center gap-2 text-sm font-medium mb-1 rc-text">
+        <span className="rc-muted">{icon}</span>
         <span>{label}</span>
-        <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">{items.length}</span>
+        <span className="ml-auto text-xs rc-muted">{items.length}</span>
+        {/* Link “Ver” que navega con filtros */}
         {onSee && (
-          <button
-            className="ml-2 text-[11px] underline text-blue-600 dark:text-blue-400"
-            onClick={onSee}
-            title="Ver en Leads"
-          >
+          <button className="ml-2 text-[11px] underline rc-text" onClick={onSee} title="Ver en Leads">
             Ver
           </button>
         )}
       </div>
+
+      {/* Lista o mensaje vacío */}
       {items.length === 0 ? (
-        <div className="text-xs text-gray-500 dark:text-gray-400">{emptyText}</div>
+        <div className="text-xs rc-muted">{emptyText}</div>
       ) : (
         <ul className="space-y-1">
           {items.slice(0, 5).map((it) => (
-            <li key={`${label}-${it.id}`} className="text-xs">
+            <li key={`${label}-${it.id}`} className="text-xs rc-text">
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate">
-                  {(it.nombre || "—") + " " + (it.apellido || "")}
-                </span>
-                <span className="text-[11px] text-gray-500">
+                <span className="truncate">{(it.nombre || "—") + " " + (it.apellido || "")}</span>
+                <span className="text-[11px] rc-muted">
                   {it.next_contact_at
                     ? new Date(it.next_contact_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })
                     : "—"}
                 </span>
               </div>
               {showSinSeg && typeof it.dias_sin_seguimiento === "number" && (
-                <div className="text-[11px] text-gray-500">Sin seg.: {it.dias_sin_seguimiento} d</div>
+                <div className="text-[11px] rc-muted">Sin seg.: {it.dias_sin_seguimiento} d</div>
               )}
               {it.next_contact_note && (
-                <div className="text-[11px] text-gray-500 truncate">{it.next_contact_note}</div>
+                <div className="text-[11px] rc-muted truncate">{it.next_contact_note}</div>
               )}
             </li>
           ))}

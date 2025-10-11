@@ -13,7 +13,7 @@ import UsuariosPage from "./pages/Usuarios";
 import ConfiguracionPage from "./pages/Configuracion";
 import AvisosPage from "./pages/Avisos";
 
-// 👇 Importamos el asistente
+//  Importamos el asistente
 import AssistantWidget from "./components/AssistantWidget";
 
 export default function App() {
@@ -41,8 +41,9 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* 👇 Asistente montado globalmente */}
+      {/*  Asistente montado globalmente */}
       <AssistantWidget />
     </>
   );
 }
+

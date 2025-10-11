@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
-  fetchLeads,                 // 👈 NEW: para autocompletar
+  fetchLeads,                 //  NEW: para autocompletar
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
@@ -299,7 +299,7 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2">
             <button
-              className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
+              className="rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm px-3 h-9"
               onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
             >
               + Agregar evento
@@ -325,18 +325,18 @@ export default function DashboardPage() {
         {/* KPIs */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
           {kpis.map((k) => (
-            <div key={k.label} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
+            <div key={k.label} className="rounded-xl border rc-card rc-border rc-border p-4">
               <div className="text-3xl font-semibold">{k.value}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">{k.label}</div>
-              {k.hint && <div className="text-xs text-gray-400 mt-1">{k.hint}</div>}
+              <div className="text-sm rc-muted rc-muted">{k.label}</div>
+              {k.hint && <div className="text-xs rc-muted mt-1">{k.hint}</div>}
             </div>
           ))}
         </section>
 
         {/* Calendar */}
-        <div className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="rounded-2xl border rc-card rc-border rc-border overflow-hidden">
           {/* header week days */}
-          <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500">
+          <div className="grid grid-cols-7 border-b rc-border rc-border text-xs rc-muted">
             {WEEKDAYS.map((w) => (
               <div key={w} className="px-3 py-2">{w}</div>
             ))}
@@ -358,25 +358,25 @@ export default function DashboardPage() {
               return (
                 <div
                   key={i}
-                  className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
+                  className={`border-r border-b rc-border rc-border p-2 ${inMonth ? "" : "bg-gray-50/50  dark:bg-gray-900/30"}`}
                   title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
                 >
                   {/* Contenedor columna + evitar desborde */}
                   <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
                     {/* header mini */}
                     <div className="flex items-center justify-between shrink-0">
-                      <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
+                      <div className={`text-xs ${inMonth ? "rc-muted dark:text-gray-300" : "rc-muted"}`}>
                         {dayLabel}
                       </div>
                       {inMonth && isToday && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 rc-text rc-text">Hoy</span>
                       )}
                     </div>
 
                     {/* Resumen compacto en una sola línea */}
                     {inMonth && sum.total > 0 && (
                       <button
-                        className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100/60 dark:hover:bg-gray-900/60 truncate"
+                        className="mt-2 w-full rounded-lg border rc-border rc-border bg-gray-50/50   dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100 dark:hover:bg-gray-800/60 dark:hover:rc-card/60 truncate"
                         onClick={() => setOpenDayModal(d)}
                         title={`${sum.r} ${plural(sum.r, "reunión", "reuniones")} · ${sum.l} ${plural(sum.l, "llamada", "llamadas")} · ${sum.v} ${plural(sum.v, "visita", "visitas")}`}
                       >
@@ -391,14 +391,14 @@ export default function DashboardPage() {
                     {inMonth && (
                       <div className="pt-2 shrink-0">
                         <button
-                          className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                          className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:rc-card"
                           onClick={() => openCreateOnDay(d)}
                         >
                           + nuevo
                         </button>
                         {allEvents.length > 0 && (
                           <button
-                            className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                            className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:rc-card"
                             onClick={() => setOpenDayModal(d)}
                           >
                             ver
@@ -454,7 +454,7 @@ export default function DashboardPage() {
         {/* Result toast modal */}
         {result && <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />}
 
-        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+        {loading && <div className="text-sm rc-muted">Cargando…</div>}
       </div>
     </>
   );
@@ -481,7 +481,7 @@ function DayEventsModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
+        className="w-full max-w-3xl rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -493,7 +493,7 @@ function DayEventsModal({
         </div>
 
         {/* Resumen del día */}
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-300 flex flex-wrap gap-2">
+        <div className="mt-3 text-sm rc-muted dark:text-gray-300 flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30">
             {resumen.r} {plural(resumen.r, "reunión", "reuniones")}
           </span>
@@ -507,16 +507,16 @@ function DayEventsModal({
         </div>
 
         {eventos.length === 0 ? (
-          <div className="mt-5 text-sm text-gray-500">No hay eventos para este día.</div>
+          <div className="mt-5 text-sm rc-muted">No hay eventos para este día.</div>
         ) : (
           <ul className="mt-4 space-y-2">
             {eventos.map((ev) => (
-              <li key={ev.id} className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 flex items-center justify-between">
+              <li key={ev.id} className="rounded-lg border rc-border rc-border p-3 flex items-center justify-between">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">
                     {formatHour(ev.fecha_hora)} · {ev.tipo}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300 truncate">
+                  <div className="text-xs rc-muted dark:text-gray-300 truncate">
                     {typeof (ev as any).propiedad_titulo === "string"
                       ? (ev as any).propiedad_titulo
                       : ev.propiedad
@@ -528,7 +528,7 @@ function DayEventsModal({
                       ? ` • Lead #${ev.contacto}`
                       : ""}
                   </div>
-                  {ev.notas && <div className="text-xs text-gray-500 mt-0.5 truncate">{ev.notas}</div>}
+                  {ev.notas && <div className="text-xs rc-muted mt-0.5 truncate">{ev.notas}</div>}
                 </div>
                 <div className="flex items-center gap-2">
                   <button className="h-8 px-2 rounded-md border text-xs" onClick={() => onEdit(ev)}>Editar</button>
@@ -612,7 +612,7 @@ function EventModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onCancel}>
       <div
-        className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
+        className="w-full max-w-3xl rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-xl font-semibold mb-4">
@@ -622,7 +622,7 @@ function EventModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Tipo">
             <select
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
               value={form.tipo || "Reunion"}
               onChange={(e) => set("tipo", e.target.value as Evento["tipo"])}
             >
@@ -635,7 +635,7 @@ function EventModal({
           <Field label="Fecha y hora">
             <input
               type="datetime-local"
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
               value={
                 form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
                   ? toLocalInputValue(new Date(form.fecha_hora))
@@ -647,7 +647,7 @@ function EventModal({
 
           <Field label="Propiedad">
             <select
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
               value={String(form.propiedad || "")}
               onChange={(e) => set("propiedad", Number(e.target.value))}
             >
@@ -679,7 +679,7 @@ function EventModal({
 
           <Field label="Nombre (visitante)">
             <input
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
               value={form.nombre || ""}
               onChange={(e) => set("nombre", e.target.value)}
               placeholder="Si no es contacto registrado"
@@ -688,7 +688,7 @@ function EventModal({
 
           <Field label="Apellido (visitante)">
             <input
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
               value={form.apellido || ""}
               onChange={(e) => set("apellido", e.target.value)}
             />
@@ -697,7 +697,7 @@ function EventModal({
           <Field label="Email (visitante)">
             <input
               type="email"
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
               value={form.email || ""}
               onChange={(e) => set("email", e.target.value)}
             />
@@ -707,7 +707,7 @@ function EventModal({
             <Field label="Notas">
               <textarea
                 rows={3}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                className="w-full rounded-lg border rc-border rc-border rc-card px-3 py-2 text-sm"
                 value={form.notas || ""}
                 onChange={(e) => set("notas", e.target.value)}
               />
@@ -722,7 +722,7 @@ function EventModal({
             Cancelar
           </button>
           <button
-            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
             onClick={handleSubmit}
             disabled={saving}
           >
@@ -828,7 +828,7 @@ function ContactAutocomplete({
       {/* Input + estado seleccionado */}
       <div className="flex gap-2">
         <input
-          className="flex-1 h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+          className="flex-1 h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
           placeholder="Escribí nombre/apellido/email del lead…"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); setHighlight(0); }}
@@ -849,7 +849,7 @@ function ContactAutocomplete({
 
       {/* hint seleccionado */}
       {valueId != null && selected && (
-        <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+        <div className="mt-1 text-xs rc-muted dark:text-gray-300">
           Seleccionado: <strong>{(selected.nombre || "") + " " + (selected.apellido || "")}</strong>
           {selected.email ? ` • ${selected.email}` : ""}
         </div>
@@ -857,9 +857,9 @@ function ContactAutocomplete({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-xl">
+        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border rc-border rc-border rc-card shadow-xl">
           {items.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-500">Sin resultados…</div>
+            <div className="px-3 py-2 text-sm rc-muted">Sin resultados…</div>
           ) : (
             items.map((it, idx) => {
               const full = `${it.nombre || ""} ${it.apellido || ""}`.trim() || `Lead #${it.id}`;
@@ -869,12 +869,12 @@ function ContactAutocomplete({
                   type="button"
                   onClick={() => pick(it)}
                   className={`w-full text-left px-3 py-2 text-sm ${
-                    idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                    idx === highlight ? "bg-blue-600 rc-text rc-text" : "hover:bg-gray-50 dark:hover:rc-card"
                   }`}
                   onMouseEnter={() => setHighlight(idx)}
                 >
                   <div className="font-medium truncate">{full}</div>
-                  <div className={`text-xs truncate ${idx === highlight ? "opacity-90" : "text-gray-500 dark:text-gray-400"}`}>
+                  <div className={`text-xs truncate ${idx === highlight ? "opacity-90" : "rc-muted rc-muted"}`}>
                     {it.email || it.telefono || "—"}
                   </div>
                 </button>
@@ -913,9 +913,9 @@ function ConfirmModal({
   }
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
+      <div className="w-full max-w-lg rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl">
         <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
+        <div className="text-sm rc-muted dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
           <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
             Cancelar
@@ -923,8 +923,8 @@ function ConfirmModal({
           <button
             className={
               confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 rc-text rc-text text-sm disabled:opacity-60"
+                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
             }
             onClick={go}
             disabled={working}
@@ -950,7 +950,7 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
         <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
+          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm" onClick={onClose}>
             Cerrar
           </button>
         </div>

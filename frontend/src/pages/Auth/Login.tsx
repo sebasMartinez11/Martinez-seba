@@ -72,7 +72,7 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  } // 👈 ESTA LLAVE FALTABA
+  } 
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden">
@@ -127,7 +127,7 @@ export default function Login() {
           <button
             disabled={loading}
             className="mt-5 w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60
-                       text-white text-sm font-medium shadow-lg shadow-blue-900/30"
+                       rc-text rc-text text-sm font-medium shadow-lg shadow-blue-900/30"
           >
             {loading ? "Ingresando..." : "Ingresar"}
           </button>

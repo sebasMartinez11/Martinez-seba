@@ -67,7 +67,7 @@ function Section({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 ${className}`}
+      className={`rounded-2xl border rc-border rc-border rc-card p-5 ${className}`}
     >
       <h2 className="text-lg font-semibold mb-4">{title}</h2>
       {children}
@@ -103,10 +103,10 @@ function Button({
   const base = "h-10 px-4 rounded-xl text-sm font-medium transition border";
   const style =
     variant === "primary"
-      ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+      ? "bg-blue-600 hover:bg-blue-700 rc-text rc-text border-blue-600"
       : variant === "danger"
-      ? "bg-red-600 hover:bg-red-700 text-white border-red-600"
-      : "bg-transparent hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700";
+      ? "bg-red-600 hover:bg-red-700 rc-text rc-text border-red-600"
+      : "bg-transparent hover:bg-gray-50 dark:hover:rc-card rc-text rc-text rc-border rc-border";
   return (
     <button
       type={type}
@@ -127,7 +127,7 @@ const Input = React.forwardRef<
   <input
     ref={ref}
     {...props}
-    className={`h-10 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm ${
+    className={`h-10 w-full rounded-xl border rc-border rc-border rc-card px-3 text-sm ${
       props.className || ""
     }`}
   />
@@ -141,7 +141,7 @@ const Select = React.forwardRef<
   <select
     ref={ref}
     {...props}
-    className={`h-10 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm ${
+    className={`h-10 w-full rounded-xl border rc-border rc-border rc-card px-3 text-sm ${
       props.className || ""
     }`}
   />
@@ -152,7 +152,7 @@ function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
       {...props}
-      className={`w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm ${
+      className={`w-full rounded-xl border rc-border rc-border rc-card px-3 py-2 text-sm ${
         props.className || ""
       }`}
     />
@@ -467,7 +467,7 @@ export default function ConfiguracionPage() {
                 value={reminderDays}
                 onChange={(e) => setReminderDays(Number(e.target.value))}
               />
-              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <div className="mt-1 text-xs rc-muted rc-muted">
                 Recomendado: <b>3</b>, <b>5</b> o <b>7</b> días.
               </div>
             </div>
@@ -476,7 +476,7 @@ export default function ConfiguracionPage() {
                 {prefSaving ? "Guardando…" : "Guardar preferencia"}
               </Button>
               {prefLoading && (
-                <span className="text-sm text-gray-500 dark:text-gray-400">Cargando…</span>
+                <span className="text-sm rc-muted rc-muted">Cargando…</span>
               )}
             </div>
           </div>
@@ -549,7 +549,7 @@ export default function ConfiguracionPage() {
           </Row>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+            <div className="rounded-xl border rc-border rc-border p-3">
               <Label>Recursos</Label>
               <div className="mt-2 space-y-2 text-sm">
                 <label className="flex items-center gap-2">
@@ -578,7 +578,7 @@ export default function ConfiguracionPage() {
                 </label>
               </div>
             </div>
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+            <div className="rounded-xl border rc-border rc-border p-3">
               <Label>Estado de propiedad (opcional)</Label>
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                 {["disponible", "vendido", "reservado"].map((opt) => (
@@ -619,18 +619,18 @@ export default function ConfiguracionPage() {
             </div>
           )}
           {metrics && (
-            <div className="mt-4 rounded-xl border border-gray-200 dark:border-gray-800 p-3 text-sm">
+            <div className="mt-4 rounded-xl border rc-border rc-border p-3 text-sm">
               <div className="font-medium mb-2">
                 Métricas {metrics.year}-{fmt(metrics.month)}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
+                <div className="rounded-xl rc-card p-3">
                   Leads del mes: <b>{metrics.leads_mes}</b>
                 </div>
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
+                <div className="rounded-xl rc-card p-3">
                   Ventas del mes: <b>{metrics.ventas_mes}</b>
                 </div>
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
+                <div className="rounded-xl rc-card p-3">
                   % Conversión: <b>{metrics.conversion_pct}%</b>
                 </div>
               </div>
@@ -690,10 +690,10 @@ export default function ConfiguracionPage() {
                 </div>
               </Alert>
               {importRes.errors.length > 0 && (
-                <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-3 overflow-auto">
+                <div className="rounded-xl border rc-border rc-border p-3 overflow-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="text-gray-500">
+                      <tr className="rc-muted">
                         <th className="py-1 pr-3">Fila</th>
                         <th className="py-1">Error</th>
                       </tr>
@@ -702,7 +702,7 @@ export default function ConfiguracionPage() {
                       {importRes.errors.slice(0, 200).map((e, i) => (
                         <tr
                           key={i}
-                          className="border-t border-gray-100 dark:border-gray-800"
+                          className="border-t rc-border rc-border rc-border"
                         >
                           <td className="py-1 pr-3">{e.row}</td>
                           <td className="py-1">{e.error}</td>
@@ -754,7 +754,7 @@ export default function ConfiguracionPage() {
                 {pwdLoading ? "Guardando…" : "Actualizar contraseña"}
               </Button>
               {pwdMsg && (
-                <span className="text-sm text-gray-600 dark:text-gray-300">
+                <span className="text-sm rc-muted dark:text-gray-300">
                   {pwdMsg}
                 </span>
               )}

@@ -83,7 +83,7 @@ export default function Register() {
           <input
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
           />
         </div>
         <div>
@@ -91,7 +91,7 @@ export default function Register() {
           <input
             value={apellido}
             onChange={(e) => setApellido(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
           />
         </div>
         <div>
@@ -100,7 +100,7 @@ export default function Register() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
           />
         </div>
         <div>
@@ -109,7 +109,7 @@ export default function Register() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
           />
         </div>
         <div>
@@ -126,7 +126,7 @@ export default function Register() {
             pattern="\d*"           //  hint de validación nativa
             maxLength={15}          // mismo longitud que backend
             placeholder="Ej: 3472438055"
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
           />
         </div>
         <div>
@@ -143,19 +143,19 @@ export default function Register() {
             pattern="^\d{7,8}$"     // 7 u 8 dígitos
             maxLength={8}
             placeholder="Ej: 40973728"
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
           />
         </div>
 
         <button
           disabled={loading}
-          className="w-full rounded-md px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+          className="w-full rounded-md px-4 py-2 bg-blue-600 rc-text rc-text hover:bg-blue-700 disabled:opacity-60"
         >
           {loading ? "Creando cuenta..." : "Crear cuenta"}
         </button>
       </form>
 
-      <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+      <p className="mt-3 text-sm rc-muted rc-muted">
         ¿Ya tenés cuenta? <Link to="/login" className="underline">Iniciá sesión</Link>
       </p>
     </div>

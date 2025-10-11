@@ -75,26 +75,26 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-sm">Nombre</label>
-            <input className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            <input className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
               value={nombre} onChange={(e) => setNombre(e.target.value)} />
           </div>
           <div>
             <label className="text-sm">Apellido</label>
-            <input className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            <input className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
               value={apellido} onChange={(e) => setApellido(e.target.value)} />
           </div>
         </div>
 
         <div>
           <label className="text-sm">Email</label>
-          <input type="email" className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+          <input type="email" className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
             value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
 
         <div>
           <label className="text-sm">Propiedad</label>
           <select
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
             value={propiedadId}
             onChange={(e) => setPropiedadId(Number(e.target.value))}
             disabled={loadingProps}
@@ -112,7 +112,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
           <label className="text-sm">Fecha y hora</label>
           <input
             type="datetime-local"
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
             value={fechaHora}
             onChange={(e) => setFechaHora(e.target.value)}
           />
@@ -121,7 +121,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
         <div>
           <label className="text-sm">Tipo de evento</label>
           <select
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
             value={tipo}
             onChange={(e) => setTipo(e.target.value as any)}
           >
@@ -134,11 +134,11 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
 
         <div className="flex items-center justify-end gap-2 pt-2">
           <button type="button" onClick={onClose}
-            className="rounded-md border px-4 py-2 text-sm border-gray-300 dark:border-gray-700">
+            className="rounded-md border px-4 py-2 text-sm rc-border rc-border">
             Cancelar
           </button>
           <button disabled={submitting || !propiedadId || !fechaHora || !tipo}
-            className="rounded-md px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60">
+            className="rounded-md px-4 py-2 text-sm rc-text rc-text bg-blue-600 hover:bg-blue-700 disabled:opacity-60">
             {submitting ? "Guardando..." : "Registrar"}
           </button>
         </div>

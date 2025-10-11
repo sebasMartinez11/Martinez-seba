@@ -139,7 +139,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                   <label className="text-sm">Código *</label>
                   <input
                     required
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={codigo}
                     onChange={(e) => setCodigo(e.target.value)}
                   />
@@ -148,7 +148,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                   <label className="text-sm">Título *</label>
                   <input
                     required
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={titulo}
                     onChange={(e) => setTitulo(e.target.value)}
                   />
@@ -171,7 +171,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                 <label className="text-sm">Descripción</label>
                 <textarea
                   rows={2}
-                  className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                  className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
                 />
@@ -181,7 +181,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                 <div>
                   <label className="text-sm">Tipo de propiedad *</label>
                   <select
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={tipoDePropiedad}
                     onChange={(e) => setTipoDePropiedad(e.target.value as any)}
                   >
@@ -195,7 +195,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                   <label className="text-sm">Disponibilidad *</label>
                   <select
                     required
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={disponibilidad}
                     onChange={(e) => setDisponibilidad(e.target.value as Disponibilidad)}
                   >
@@ -213,7 +213,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                     required
                     type="number"
                     min={0}
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={precio}
                     onChange={(e) => setPrecio(e.target.value === "" ? "" : Number(e.target.value))}
                   />
@@ -221,7 +221,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                 <div>
                   <label className="text-sm">Moneda *</label>
                   <select
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={moneda}
                     onChange={(e) => setMoneda(e.target.value as any)}
                   >
@@ -237,7 +237,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={ambiente}
                     onChange={(e) => setAmbiente(e.target.value === "" ? "" : Number(e.target.value))}
                   />
@@ -247,7 +247,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={banos}
                     onChange={(e) => setBanos(e.target.value === "" ? "" : Number(e.target.value))}
                   />
@@ -257,7 +257,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={antiguedad}
                     onChange={(e) => setAntiguedad(e.target.value === "" ? "" : Number(e.target.value))}
                   />
@@ -268,7 +268,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                     type="number"
                     min={0}
                     step="0.01"
-                    className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                    className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                     value={superficie}
                     onChange={(e) => setSuperficie(e.target.value === "" ? "" : Number(e.target.value))}
                   />
@@ -278,7 +278,7 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
               <div>
                 <label className="text-sm">Estado *</label>
                 <select
-                  className="mt-1 w-full border rounded-md px-3 h-10 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+                  className="mt-1 w-full border rounded-md px-3 h-10 rc-card border rc-border rc-border rc-text rc-text"
                   value={estado}
                   onChange={(e) => setEstado(e.target.value as any)}
                 >
@@ -292,11 +292,11 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
             {/* Columna derecha (imagen) */}
             <div className="md:col-span-4 space-y-2">
               <label className="text-sm">Imagen (opcional)</label>
-              <div className="rounded-xl border border-dashed h-40 flex items-center justify-center text-sm dark:border-gray-700 overflow-hidden">
+              <div className="rounded-xl border border-dashed h-40 flex items-center justify-center text-sm rc-border overflow-hidden">
                 {preview ? (
                   <img src={preview} alt="preview" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-gray-500 px-4 text-center">
+                  <span className="rc-muted px-4 text-center">
                     Seleccioná una imagen para subir al crear.
                   </span>
                 )}
@@ -308,24 +308,24 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                 onChange={onChangeFile}
                 className="block w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:bg-gray-100 dark:file:bg-gray-800 file:text-gray-700 dark:file:text-gray-200"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs rc-muted">
                 La imagen se sube <strong>después</strong> de crear la propiedad, vía endpoint de imágenes.
               </p>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="sticky bottom-0 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-t border-gray-200 dark:border-gray-800 pt-3 flex items-center justify-end gap-2">
+          <div className="sticky bottom-0 border-t rc-border pt-3 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border px-4 py-2 text-sm border-gray-300 dark:border-gray-700"
+              className="rounded-md border px-4 py-2 text-sm rc-border hover:bg-[rgb(var(--card))/0.9] transition-colors"
             >
               Cancelar
             </button>
             <button
               disabled={submitting || !codigo || !titulo || !ubicacion || precio === "" || !disponibilidad}
-              className="rounded-md px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+              className="rounded-md px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
             >
               {submitting ? "Guardando..." : "Registrar"}
             </button>

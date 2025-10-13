@@ -1,9 +1,5 @@
 from rest_framework import serializers
 from .models import Propiedad, PropiedadImagen
-<<<<<<< HEAD
-
-=======
->>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
 
 class PropiedadImagenSerializer(serializers.ModelSerializer):
     imagen = serializers.ImageField(read_only=True)
@@ -55,11 +51,7 @@ class PropiedadSerializer(serializers.ModelSerializer):
             "imagenes",
         ]
         read_only_fields = ["id", "fecha_alta"]
-<<<<<<< HEAD
-
-=======
         
->>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
 
 class SubirImagenesSerializer(serializers.Serializer):
     imagenes = serializers.ListField(

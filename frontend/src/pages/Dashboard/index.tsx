@@ -99,39 +99,9 @@ export default function DashboardPage() {
   const [openDayModal, setOpenDayModal] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  //  Ajuste automático de altura del calendario
-  const calendarRef = useRef<HTMLDivElement>(null);
-  const weekHeaderRef = useRef<HTMLDivElement>(null);
-  const [calHeight, setCalHeight] = useState<number | null>(null);
-  const [dayHeight, setDayHeight] = useState<number | null>(null);
-
-  useLayoutEffect(() => {
-    const recompute = () => {
-      if (!calendarRef.current) return;
-      const rect = calendarRef.current.getBoundingClientRect();
-      const available = Math.max(320, Math.floor(window.innerHeight - rect.top - 24)); // margen inferior
-      const weekH = weekHeaderRef.current?.offsetHeight ?? 32;
-      const gridH = Math.max(180, available - weekH);
-      const cellH = Math.max(84, Math.floor(gridH / 6)); // 6 semanas visibles
-      setCalHeight(available);
-      setDayHeight(cellH);
-    };
-    recompute();
-    window.addEventListener("resize", recompute);
-    return () => window.removeEventListener("resize", recompute);
-  }, []);
-
-=======
->>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
-  async function fetchAll() {
-    setLoading(true);
-=======
   /* ------------------------ Fetch data ------------------------ */
   // Datos “estáticos” (contactos/propiedades) — una sola vez (lista base para selects)
   async function fetchStatic() {
->>>>>>> fc791a81db1bbf7da1b799525546b7ec8e1bb2a1
     try {
       const [cRes, pRes] = await Promise.all([api.get("contactos/"), api.get("propiedades/")]);
       const toArr = (d: any) => Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
@@ -271,7 +241,7 @@ export default function DashboardPage() {
 
   async function saveEvento(data: Partial<Evento>, mode: "create" | "edit", id?: number) {
     const payload: any = {};
-    (["nombre","apellido","email","tipo","fecha_hora","notas","propiedad","contacto"] as const)
+    (["nombre", "apellido", "email", "tipo", "fecha_hora", "notas", "propiedad", "contacto"] as const)
       .forEach((k) => { const v = (data as any)[k]; if (v !== undefined) payload[k] = v; });
 
     try {
@@ -550,13 +520,13 @@ function DayEventsModal({
                     {typeof (ev as any).propiedad_titulo === "string"
                       ? (ev as any).propiedad_titulo
                       : ev.propiedad
-                      ? `Propiedad #${ev.propiedad}`
-                      : "—"}
+                        ? `Propiedad #${ev.propiedad}`
+                        : "—"}
                     {(ev as any).contacto_nombre
                       ? ` • ${(ev as any).contacto_nombre}`
                       : ev.contacto
-                      ? ` • Lead #${ev.contacto}`
-                      : ""}
+                        ? ` • Lead #${ev.contacto}`
+                        : ""}
                   </div>
                   {ev.notas && <div className="text-xs text-gray-500 mt-0.5 truncate">{ev.notas}</div>}
                 </div>
@@ -595,11 +565,11 @@ function EventModal({
     evento
       ? { ...evento }
       : {
-          tipo: "Reunion",
-          fecha_hora: toLocalInputValue(baseDate || new Date()),
-          propiedad: propiedades[0]?.id,
-          contacto: undefined,
-        }
+        tipo: "Reunion",
+        fecha_hora: toLocalInputValue(baseDate || new Date()),
+        propiedad: propiedades[0]?.id,
+        contacto: undefined,
+      }
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -898,9 +868,8 @@ function ContactAutocomplete({
                   key={it.id}
                   type="button"
                   onClick={() => pick(it)}
-                  className={`w-full text-left px-3 py-2 text-sm ${
-                    idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
-                  }`}
+                  className={`w-full text-left px-3 py-2 text-sm ${idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                    }`}
                   onMouseEnter={() => setHighlight(idx)}
                 >
                   <div className="font-medium truncate">{full}</div>
@@ -972,9 +941,8 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>

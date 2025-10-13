@@ -1,17 +1,58 @@
+// src/lib/api.ts
 import axios from "axios";
 
+/**
+ * Debe terminar en /api/
+ * Ej: VITE_API_URL = http://127.0.0.1:8000/api/
+ */
 export const API_BASE =
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/";
 
-export const api = axios.create({ baseURL: API_BASE });
+/* ---------------- Cliente dedicado ---------------- */
+export const api = axios.create({
+  baseURL: API_BASE,
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
+  timeout: 15000,
+});
 
+/** Normaliza SOLO rutas relativas. Las absolutas (http/https) NO se tocan. */
+function normalizeUrl(u?: string) {
+  if (!u) return u;
+  if (/^https?:\/\//i.test(u)) return u; // absoluta => no tocar
+
+  let url = u;
+  // quita prefijo /api/ o api/ para evitar /api/api
+  if (url.startsWith("/api/")) url = url.slice(5);
+  else if (url.startsWith("api/")) url = url.slice(4);
+
+  // compacta slashes múltiples
+  url = url.replace(/\/{2,}/g, "/");
+  return url;
+}
+
+/* --- Bearer + normalización para el cliente dedicado --- */
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access");
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (config.url) config.url = normalizeUrl(config.url);
   return config;
 });
 
-// === Leads ===
+/* -------- Parche global para axios “crudo” (por si alguna vista lo usa) -------- */
+axios.defaults.baseURL = API_BASE;
+axios.defaults.headers.common["Accept"] = "application/json";
+axios.defaults.timeout = 15000;
+
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem("access");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (config.url && !/^https?:\/\//i.test(config.url)) {
+    config.url = normalizeUrl(config.url);
+  }
+  return config;
+});
+
+/* ----- Leads ----- */
 export type Contacto = {
   id: number;
   nombre: string;
@@ -25,11 +66,11 @@ export type Contacto = {
 };
 
 export async function fetchLeads(params: Record<string, any> = {}) {
-  const { data } = await api.get("/api/contactos/", { params });
+  const { data } = await api.get("contactos/", { params });
   return data.results ?? data;
 }
 
-// === Propiedades ===
+/* ----- Propiedades ----- */
 export type Propiedad = {
   id: number;
   codigo: string;
@@ -38,7 +79,7 @@ export type Propiedad = {
   ubicacion: string;
   tipo_de_propiedad: "casa" | "departamento" | "hotel";
   disponibilidad: string;
-  precio: string;   // viene como decimal -> string
+  precio: string;
   moneda: "USD" | "ARS";
   ambiente: number;
   antiguedad: number;
@@ -49,11 +90,11 @@ export type Propiedad = {
 };
 
 export async function fetchPropiedades(params: Record<string, any> = {}) {
-  const { data } = await api.get("/api/propiedades/", { params });
+  const { data } = await api.get("propiedades/", { params });
   return data.results ?? data;
 }
 
-// === Usuarios (solo lista simple) ===
+/* ----- Usuarios ----- */
 export type Usuario = {
   id: number;
   username?: string;
@@ -63,7 +104,66 @@ export type Usuario = {
   telefono?: string;
   dni?: string;
 };
+
 export async function fetchUsuarios() {
-  const { data } = await api.get("/api/usuarios/");
+  const { data } = await api.get("usuarios/");
   return data.results ?? data;
 }
+
+/* ----- Eventos ----- */
+export type Evento = {
+  id: number;
+  owner?: number; // read-only (puede no venir en todas las vistas)
+  nombre?: string;
+  apellido?: string;
+  email?: string | null;
+  contacto: number | null;
+  propiedad: number;
+  tipo: "Reunion" | "Visita" | "Llamada";
+  fecha_hora: string; // ISO
+  notas?: string;
+  creado_en?: string;
+};
+
+export type EventoCreate = {
+  contacto?: number | null;          // 👈 ahora puede asignarse un lead (o dejar null)
+  propiedad: number;
+  tipo: "Reunion" | "Visita" | "Llamada";
+  fecha_hora: string;                // ISO: "2025-10-05T15:00:00" o "2025-10-05 15:00"
+  notas?: string;
+};
+
+export type EventoUpdate = Partial<EventoCreate>;
+
+export type EventoFilters = {
+  date?: string;       // YYYY-MM-DD (día exacto)
+  from?: string;       // YYYY-MM-DD (inicio, inclusive)
+  to?: string;         // YYYY-MM-DD (fin, exclusivo si solo fecha)
+  types?: string;      // "Reunion" | "Llamada" | "Visita"
+  ordering?: string;   // ej: "fecha_hora"
+  [k: string]: any;    // permitir extras sin romper TS
+};
+
+export async function fetchEventos(params: EventoFilters = {}) {
+  const { data } = await api.get("eventos/", { params });
+  return data.results ?? data;
+}
+
+/** Crear evento (permite contacto opcional) */
+export async function createEvento(payload: EventoCreate): Promise<Evento> {
+  const { data } = await api.post("eventos/", payload);
+  return data;
+}
+
+/** Actualizar evento */
+export async function updateEvento(id: number, payload: EventoUpdate): Promise<Evento> {
+  const { data } = await api.patch(`eventos/${id}/`, payload);
+  return data;
+}
+
+/** Borrar evento */
+export async function deleteEvento(id: number): Promise<void> {
+  await api.delete(`eventos/${id}/`);
+}
+
+export default api;

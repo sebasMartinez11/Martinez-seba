@@ -4,6 +4,9 @@ import Topbar from "@/components/Topbar";
 import { useMemo } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
+// 👇 Importamos el asistente (solo se monta dentro del layout de /app)
+import AssistantWidget from "@/components/AssistantWidget";
+
 export default function AppLayout() {
   const { pathname } = useLocation();
 
@@ -11,13 +14,15 @@ export default function AppLayout() {
     if (pathname.startsWith("/app/leads")) return "Leads";
     if (pathname.startsWith("/app/propiedades")) return "Propiedades";
     if (pathname.startsWith("/app/usuarios")) return "Usuarios";
+    if (pathname.startsWith("/app/avisos")) return "Recordatorios y avisos"; // 👈 NUEVO
+    if (pathname.startsWith("/app/configuracion")) return "Configuración";   // 👈 opcional
     return "Dashboard";
   }, [pathname]);
 
   usePageTitle(sectionTitle ? `${sectionTitle} · Real Connect` : "Real Connect");
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 relative z-0">
       <div className="flex">
         <Sidebar />
         <main className="flex-1 min-w-0">
@@ -27,6 +32,9 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
+
+      {/* 👇 Asistente visible en todas las rutas /app */}
+      <AssistantWidget />
 
       <footer className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto">

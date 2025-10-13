@@ -93,13 +93,9 @@ class EstadoLeadHistorialSerializer(serializers.ModelSerializer):
 
 
 class EventoSerializer(serializers.ModelSerializer):
-<<<<<<< HEAD
-    # 📌 Relación por ID (escribible)
-=======
     # read-only para multi-tenant
     owner = serializers.ReadOnlyField(source="owner.id")
 
->>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
     contacto = serializers.PrimaryKeyRelatedField(
         queryset=Contacto.objects.all(), allow_null=True, required=False
     )

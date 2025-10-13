@@ -84,14 +84,6 @@ class Contacto(models.Model):
 
 
 class Evento(models.Model):
-<<<<<<< HEAD
-    # 👇 Choices definidos dentro de la clase
-    TIPO_EVENTO_CHOICES = [
-        ("Reunion", "Reunión"),
-        ("Visita", "Visita"),
-        ("Llamada", "Llamada"),
-    ]
-=======
     # === Multi-tenant ===
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -100,7 +92,6 @@ class Evento(models.Model):
         null=True,
         blank=True,
     )
->>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
 
     nombre = models.CharField(max_length=120, blank=True, default="")
     apellido = models.CharField(max_length=120, blank=True, default="")

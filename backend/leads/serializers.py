@@ -1,9 +1,15 @@
+# leads/serializers.py
 from rest_framework import serializers
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import F, Value, ExpressionWrapper, DateTimeField
+from django.utils import timezone
+from datetime import timedelta
 
 from .models import EstadoLead, Contacto, Evento, EstadoLeadHistorial
 from propiedades.models import Propiedad
 
+# Duración por defecto de un evento (minutos)
+DEFAULT_EVENT_DURATION_MIN = 60
 
 class EstadoLeadSerializer(serializers.ModelSerializer):
     class Meta:
@@ -146,3 +152,54 @@ class EventoSerializer(serializers.ModelSerializer):
             if value.owner_id != user.id:
                 raise serializers.ValidationError("Propiedad no pertenece al usuario autenticado.")
         return value
+
+    # ----- Validación anti-solapamiento, duplicado y fecha pasada (por propiedad) -----
+    def validate(self, attrs):
+        """
+        - Previene eventos en el pasado (fecha_hora < ahora).
+        - Previene duplicados exactos: misma propiedad + misma fecha_hora
+        - Previene solapamiento: intervalo [fecha_hora, fecha_hora + duration) no debe
+          intersectar con otros eventos de la misma propiedad.
+        """
+        fecha_hora = attrs.get("fecha_hora", getattr(self.instance, "fecha_hora", None))
+        propiedad = attrs.get("propiedad", getattr(self.instance, "propiedad", None))
+        if not fecha_hora or not propiedad:
+            # Si faltan, dejamos que otras validaciones manejen el error
+            return attrs
+
+        # Normalizamos a timezone local
+        fecha_hora_local = timezone.localtime(fecha_hora)
+        now_local = timezone.localtime(timezone.now())
+        if fecha_hora_local < now_local:
+            raise serializers.ValidationError("No se puede programar un evento en una fecha/hora pasada.")
+
+        duration_min = DEFAULT_EVENT_DURATION_MIN
+        new_start = fecha_hora_local
+        new_end = new_start + timedelta(minutes=duration_min)
+
+        # Construimos queryset base (mismo propiedad), excluimos si estamos en update
+        base_qs = Evento.objects.filter(propiedad=propiedad)
+        if self.instance and getattr(self.instance, "id", None):
+            base_qs = base_qs.exclude(id=self.instance.id)
+
+        # Duplicado exacto
+        if base_qs.filter(fecha_hora=fecha_hora).exists():
+            raise serializers.ValidationError("Ya existe un evento exactamente en esa fecha y hora para la misma propiedad.")
+
+        # Anotamos existing_end = fecha_hora + duration y chequeamos overlap:
+        existing_end_expr = ExpressionWrapper(
+            F("fecha_hora") + Value(timedelta(minutes=duration_min)),
+            output_field=DateTimeField(),
+        )
+        overlap_qs = base_qs.annotate(existing_end=existing_end_expr).filter(
+            fecha_hora__lt=new_end,
+            existing_end__gt=new_start,
+        )
+
+        if overlap_qs.exists():
+            first = overlap_qs.order_by("fecha_hora").first()
+            raise serializers.ValidationError(
+                f"El horario solapa con otro evento en la misma propiedad (desde {timezone.localtime(first.fecha_hora).isoformat()})."
+            )
+
+        return attrs

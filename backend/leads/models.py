@@ -77,6 +77,7 @@ class Contacto(models.Model):
 #  MODELO: Evento
 # =====================
 class Evento(models.Model):
+<<<<<<< HEAD
     # Choices definidos dentro de la clase
     TIPO_EVENTO_CHOICES = [
         ("llamada", "Llamada"),
@@ -86,6 +87,9 @@ class Evento(models.Model):
         ("otros", "Otros"),
     ]
 
+=======
+    # === Multi-tenant ===
+>>>>>>> 29c55b7a163422ad4d79190070cdce4c8f37c305
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

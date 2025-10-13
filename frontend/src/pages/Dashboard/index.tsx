@@ -77,6 +77,76 @@ function monthRange(d: Date) {
   return { from: ymd(start), to: ymd(end) };
 }
 
+/* =============== Nuevos helpers para validación de solapamientos =============== */
+/**
+ * parseFechaHoraRange:
+ * - Entrada: evento con campo fecha_hora (ISO string expected)
+ * - Retorna { start: Date, end: Date } o null
+ * - Por defecto asigna duración = 1 hora (3600000 ms)
+ */
+const DEFAULT_DURATION_MS = 60 * 60 * 1000;
+function parseFechaHoraRange(ev: Partial<Evento>, durationMs = DEFAULT_DURATION_MS): { start: Date; end: Date } | null {
+  if (!ev || !ev.fecha_hora) return null;
+  const d = new Date(ev.fecha_hora);
+  if (isNaN(d.getTime())) return null;
+  return { start: d, end: new Date(d.getTime() + durationMs) };
+}
+
+/**
+ * rangesOverlap: detecta si [aStart, aEnd) se intersecta con [bStart, bEnd)
+ */
+function rangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {
+  return aStart < bEnd && aEnd > bStart;
+}
+
+/**
+ * validateEventoNoSolapa:
+ * - Revisa en el arreglo existing si el evento newEv solapa con alguno de ellos.
+ * - Comparación por defecto **solo** contra eventos que pertenezcan a la misma propiedad (propiedad).
+ * - Duplica exacto: mismo start.getTime() y misma propiedad -> rechazo.
+ * - Si mode === "edit" se puede pasar ignoreId para ignorar el mismo evento.
+ */
+function validateEventoNoSolapa(
+  newEv: Partial<Evento>,
+  existing: Evento[],
+  opts?: { ignoreId?: number; durationMs?: number }
+): { ok: true } | { ok: false; msg: string } {
+  const dur = opts?.durationMs ?? DEFAULT_DURATION_MS;
+  const newRange = parseFechaHoraRange(newEv, dur);
+  if (!newRange) return { ok: false, msg: "Fecha/hora inválida." };
+
+  // Si nueva propiedad no está definida, tratamos como global: no permitimos crear si hay duplicado exacto global,
+  // pero para solapamiento intentamos comparar solo si property matches. Esto evita false positives.
+  const newProp = (newEv as any).propiedad ?? (newEv as any).propiedad_id ?? null;
+
+  for (const ev of existing) {
+    if (opts?.ignoreId && ev.id === opts.ignoreId) continue;
+    const evRange = parseFechaHoraRange(ev as Partial<Evento>, dur);
+    if (!evRange) continue;
+
+    const evProp = (ev as any).propiedad ?? (ev as any).propiedad_id ?? null;
+
+    // duplicado exacto: misma propiedad (o ambos nulos) y misma fecha_hora exacta
+    if (newProp === evProp) {
+      if (newRange.start.getTime() === evRange.start.getTime()) {
+        return {
+          ok: false,
+          msg: "Ya existe un evento exactamente en esa fecha y hora para la misma propiedad.",
+        };
+      }
+      // chequeo de solapamiento horario solo dentro de la misma propiedad
+      if (rangesOverlap(newRange.start, newRange.end, evRange.start, evRange.end)) {
+        return {
+          ok: false,
+          msg: `El horario solapa con otro evento en la misma propiedad (desde ${evRange.start.toLocaleString()} hasta ${evRange.end.toLocaleString()}).`,
+        };
+      }
+    }
+  }
+
+  return { ok: true };
+}
+
 /* ============================== Page =============================== */
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -239,10 +309,22 @@ export default function DashboardPage() {
 
   function openCreateOnDay(d: Date) { setOpenEventModal({ mode: "create", baseDate: d }); }
 
+  /**
+   * saveEvento: valida solapamientos/duplicados (front) antes de post/patch
+   */
   async function saveEvento(data: Partial<Evento>, mode: "create" | "edit", id?: number) {
     const payload: any = {};
     (["nombre", "apellido", "email", "tipo", "fecha_hora", "notas", "propiedad", "contacto"] as const)
       .forEach((k) => { const v = (data as any)[k]; if (v !== undefined) payload[k] = v; });
+
+    // --- Validación front: no solapamiento / duplicado en la misma propiedad ---
+    // Cuando se edita, ignoramos el id del evento en la validación
+    const ignoreId = mode === "edit" ? id : undefined;
+    const valid = validateEventoNoSolapa(payload, eventos, { ignoreId });
+    if (!valid.ok) {
+      setResult({ ok: false, msg: (valid as any).msg });
+      return;
+    }
 
     try {
       if (mode === "create") await api.post("eventos/", payload);

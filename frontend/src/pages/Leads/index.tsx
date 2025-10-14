@@ -3,6 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from 'react-hot-toast'; // Importar toast si no está ya
 import NextContactModal from "./NextContactModal"; // 👈 SOLUCIÓN: IMPORTAR EL MODAL
+<<<<<<< HEAD
+=======
+import { FiAlertCircle } from "react-icons/fi"; // Importar ícono para modales
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
@@ -129,6 +133,12 @@ export default function LeadsPage() {
   const PAGE_SIZE = 10;
 
   async function fetchEstados() {
+    // 🔒 GUARDIA DE AUTENTICACIÓN
+    if (!localStorage.getItem('rc_token')) {
+        setEstados([]);
+        return;
+    }
+    
     try {
       const res = await api.get("estados-lead/");
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
@@ -140,6 +150,13 @@ export default function LeadsPage() {
   }
 
   async function fetchContactos() {
+    // 🔒 GUARDIA DE AUTENTICACIÓN
+    if (!localStorage.getItem('rc_token')) {
+        setLoading(false);
+        setContactos([]);
+        return;
+    }
+
     setLoading(true);
     try {
       const params: Record<string, any> = {};
@@ -152,22 +169,40 @@ export default function LeadsPage() {
       const res = await api.get("contactos/", { params });
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
       setContactos(toArr(res.data));
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       setContactos([]);
+<<<<<<< HEAD
       toast.error("No se pudo cargar leads.");
+=======
+      // 🚨 Control de errores para evitar toast si el error es solo 401
+      if (e.response && e.response.status !== 401) {
+          toast.error("No se pudo cargar leads.");
+      } else if (!e.response) { // Error de red/timeout
+          toast.error("No se pudo cargar leads.");
+      }
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    fetchEstados();
+    // 🔑 Solo ejecutamos si el usuario está (o estuvo) logueado
+    if (localStorage.getItem('rc_token')) {
+        fetchEstados();
+    }
   }, []);
 
   // Carga inicial y recargas por filtros
   useEffect(() => {
-    fetchContactos();
+    // 🔑 GUARDIA CRÍTICA para el polling de datos
+    if (localStorage.getItem('rc_token')) {
+        fetchContactos();
+    } else {
+        setContactos([]); // Limpiar si el token desaparece
+        setLoading(false);
+    }
     setPage(1);
   }, [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
 
@@ -257,6 +292,7 @@ export default function LeadsPage() {
     }
   }
 
+<<<<<<< HEAD
   /* === Acciones rápidas: próximo contacto === */
   // Ya no usamos estas, el modal NextContactModal lo maneja
   /*
@@ -269,6 +305,8 @@ export default function LeadsPage() {
   }
   */
 
+=======
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
   /* ----------------------------- UI ------------------------------ */
   return (
     <div className="flex flex-col gap-6">
@@ -534,6 +572,7 @@ export default function LeadsPage() {
             const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
             const nextChip = statusChipClass(nextLabel);
             const nextNote = c.next_contact_note || "";
+
             const isBusy = busyId === c.id;
 
             return (
@@ -691,6 +730,12 @@ export default function LeadsPage() {
           onClose={() => {
             setNextContactTarget(null);
             fetchContactos(); // Refresca los leads después de cerrar el modal
+<<<<<<< HEAD
+=======
+            // 🚨 Sincronización: Disparar evento para que TopBar y Dashboard recarguen
+            window.dispatchEvent(new Event('avisos:refresh'));
+            window.dispatchEvent(new Event('assistant:refresh-calendar')); // Nuevo evento para el Dashboard
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
           }}
         />
       )}

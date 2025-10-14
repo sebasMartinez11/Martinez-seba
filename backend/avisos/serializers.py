@@ -19,11 +19,14 @@ class AvisoSerializer(serializers.ModelSerializer):
     lead_detalle = ContactoMinSerializer(source='lead', read_only=True)
     propiedad_detalle = PropiedadMinSerializer(source='propiedad', read_only=True)
     
+<<<<<<< HEAD
     # 👇 ======================= INICIO DE LA CORRECCIÓN ======================= 👇
     # Declaramos manualmente el campo "estado" para evitar el error.
     estado = serializers.ChoiceField(choices=Aviso.ESTADOS)
     # 👆 ======================== FIN DE LA CORRECCIÓN ======================== 👆
 
+=======
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
     class Meta:
         model = Aviso
         fields = [
@@ -45,4 +48,8 @@ class AvisoSerializer(serializers.ModelSerializer):
             # Hacemos estos campos de solo lectura ya que usaremos los detalles
             'lead': {'write_only': True, 'required': False}, 
             'propiedad': {'write_only': True, 'required': False},
+<<<<<<< HEAD
         }
+=======
+        }
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39

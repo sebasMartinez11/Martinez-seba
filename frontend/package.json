@@ -17,7 +17,10 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hot-toast": "^2.6.0",
+<<<<<<< HEAD
     "react-icons": "^5.5.0",
+=======
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
     "react-router-dom": "^7.9.1"
   },
   "devDependencies": {

@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiSearch, FiBell, FiAlertCircle, FiCalendar, FiClock } from "react-icons/fi";
 import ThemeToggle from "@/components/ThemeToggle";
+<<<<<<< HEAD
 import { api } from "@/lib/api"; // Asegura que usamos el cliente Axios con el interceptor
+=======
+import { api } from "@/lib/api"; 
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
 // Helper para formato de fecha con hora (Ej: 15/10/2025 10:00)
 const formatDateWithTime = (d: string | Date) => {
@@ -101,6 +105,12 @@ export default function Topbar({ title }: { title: string }) {
     const [loadingAvisos, setLoadingAvisos] = useState(false);
     const [errorAvisos, setErrorAvisos] = useState<string | null>(null);
 
+<<<<<<< HEAD
+=======
+    // Variable de referencia para mantener el ID del intervalo activo
+    const intervalRef = useRef<number | undefined>(undefined); 
+
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
     // Cerrar popovers al click fuera / Esc
     useEffect(() => {
         function onDocClick(e: MouseEvent) {
@@ -218,7 +228,15 @@ export default function Topbar({ title }: { title: string }) {
     // --------- Fetch avisos + auto-refresh ---------
     async function fetchAvisos() {
         // 🔒 GUARDIA DE AUTENTICACIÓN
+<<<<<<< HEAD
         if (!localStorage.getItem('rc_token')) return; 
+=======
+        if (!localStorage.getItem('rc_token')) {
+            setAvisos(null);
+            setLoadingAvisos(false);
+            return; 
+        }
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
         setLoadingAvisos(true);
         setErrorAvisos(null);
@@ -230,22 +248,46 @@ export default function Topbar({ title }: { title: string }) {
             
             const data: AvisosPayload = res.data; 
             setAvisos(data);
+<<<<<<< HEAD
         } catch (e) {
             setErrorAvisos("No se pudieron cargar los avisos.");
             setAvisos(null);
+=======
+        } catch (e: any) {
+            // 🔑 CORRECCIÓN CRÍTICA 401: Si el token falla, detenemos el polling
+            if (e.response && e.response.status === 401) {
+                 setAvisos(null);
+                 // 🛑 Detener el intervalo si falla por 401
+                 if (intervalRef.current !== undefined) {
+                     clearInterval(intervalRef.current);
+                     intervalRef.current = undefined; // Marcar como detenido
+                 }
+            } else {
+                 setErrorAvisos("No se pudieron cargar los avisos.");
+                 setAvisos(null);
+            }
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
         } finally {
             setLoadingAvisos(false);
         }
     }
 
+<<<<<<< HEAD
     // 🔑 CLAVE: Escuchamos el evento global para forzar la recarga
     useEffect(() => {
         const handleRefresh = () => {
             // Solo si estamos logeados
+=======
+    // 🔑 CLAVE: Control de Polling y Listeners
+    useEffect(() => {
+        // Handlers para el evento global de refresco (desde Avisos/index.tsx)
+        const handleRefresh = () => {
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
             if (localStorage.getItem('rc_token')) {
                 fetchAvisos();
             }
         };
+<<<<<<< HEAD
 
         if (localStorage.getItem('rc_token')) {
              fetchAvisos(); // Carga inicial
@@ -260,6 +302,42 @@ export default function Topbar({ title }: { title: string }) {
              }
         }
     }, []); // Dependencia vacía
+=======
+        
+        // 🛑 Función para detener completamente el polling
+        const stopPolling = () => {
+            if (intervalRef.current !== undefined) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = undefined;
+            }
+            window.removeEventListener('avisos:refresh', handleRefresh);
+        }
+
+        // Función para iniciar el polling
+        const startPolling = () => {
+             // Detener cualquier polling existente para evitar duplicados
+            stopPolling(); 
+
+            if (localStorage.getItem('rc_token')) {
+                fetchAvisos(); // Carga inicial
+                // Usamos window.setInterval para el entorno web y guardamos el ID
+                intervalRef.current = window.setInterval(fetchAvisos, 60_000) as unknown as number;
+                window.addEventListener('avisos:refresh', handleRefresh);
+            } else {
+                // Si no hay token, aseguramos que el estado esté limpio
+                setAvisos(null);
+            }
+        };
+
+        // 3. Inicialización
+        startPolling();
+
+        return () => {
+            // Cleanup al desmontar el componente
+            stopPolling();
+        };
+    }, []); // Dependencia vacía para montar/desmontar
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
     const totalAvisos =
         (avisos?.vencidos.count ?? 0) +
@@ -352,6 +430,7 @@ export default function Topbar({ title }: { title: string }) {
                 <div className="relative" ref={bellWrapRef}>
                     <button
                         className="relative h-9 w-9 grid place-items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950"
+<<<<<<< HEAD
                         // 🔑 MODIFICACIÓN: Dispara fetchAvisos solo si el popover se va a abrir
                         onClick={() => { 
                             // Si está cerrado (false), lo abrimos y disparamos la carga.
@@ -359,6 +438,13 @@ export default function Topbar({ title }: { title: string }) {
                                 fetchAvisos();
                             } 
                             // Alternar el estado
+=======
+                        // Carga los datos ANTES de abrir si está cerrado
+                        onClick={() => { 
+                            if (!openBell) { 
+                                fetchAvisos();
+                            } 
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
                             setOpenBell((v) => !v); 
                         }}
                         title="Recordatorios y avisos"

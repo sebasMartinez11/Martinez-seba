@@ -41,6 +41,9 @@ urlpatterns = [
 
     # Asistente IA
     path("api/asistente/", include("asistente.urls")),
+    
+    # ✅ INCLUSIÓN DE DASHBOARD (SOLUCIÓN DEL 404)
+    path("api/", include("dashboard.urls")),
 
     # Usuarios CRUD + perfil
     path("api/usuarios/", ListaYCreaUsuario.as_view(), name="usuarios-lista"),

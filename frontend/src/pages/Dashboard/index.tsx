@@ -4,12 +4,14 @@ import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
-  fetchLeads,                 // 👈 NEW: para autocompletar
+  fetchLeads, // 👈 NEW: para autocompletar
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
 } from "../../lib/api";
 import TopFilters from "./TopFilter";
+import { toast } from 'react-hot-toast'; 
+import { FiAlertCircle, FiCheckCircle } from "react-icons/fi"; // Íconos para modales
 
 /* ============================== Types ============================== */
 // Reutilizo los tipos del cliente API para alinear con el back
@@ -19,7 +21,45 @@ type Evento = EventoApi;
 
 type Filters = { date?: string; from?: string; to?: string; types?: string };
 
-/* ============================ Utilities ============================ */
+type DashboardData = {
+  total_contactos: number;
+  contactos_por_estado: { fase: string; total: number }[];
+  proximos_contactos: number;
+  atrasados: number;
+  ultimos_contactos: { id: number; nombre: string; apellido: string; email: string }[];
+  avisos_pendientes: number; 
+  avisos_atrasados: number; 
+};
+
+/** ✅ Ítem de historial de cambios de estado */
+type HistItem = {
+  id: number;
+  contacto: number;
+  estado: EstadoLead | null;
+  changed_at: string; // ISO
+};
+type EstadoLead = { id: number; fase: string; descripcion?: string };
+
+
+/* --------------------------- Utils / UI --------------------------- */
+const STATE_COLORS: Record<string, string> = {
+  "en negociación": "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
+  negociacion: "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
+  rechazado: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
+  vendido: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
+  nuevo: "bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30",
+};
+
+const STATUS_BADGE = {
+  pendiente: "bg-gray-500/15 text-gray-300 ring-1 ring-gray-500/30",
+  vencido: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
+  hoy: "bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/30",
+  proximo: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
+};
+
+const norm = (s?: string | null) =>
+  (s || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
@@ -31,15 +71,22 @@ const sameDay = (a: Date, b: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
-const toKey = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+const formatDate = (d?: Date | string | null, withTime = false) => {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  if (isNaN(+date)) return "—";
+  const base = date.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  if (withTime) {
+      const h = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      return `${base} ${h}`;
+  }
+  return base;
 };
-const fromISO = (s: string) => new Date(s);
-const sortByDateAsc = (a: Evento, b: Evento) =>
-  +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
+
 
 const formatHour = (d: string | Date) =>
   (typeof d === "string" ? new Date(d) : d).toLocaleTimeString("es-AR", {
@@ -47,8 +94,16 @@ const formatHour = (d: string | Date) =>
     minute: "2-digit",
   });
 
-const formatDate = (d: Date, opts: Intl.DateTimeFormatOptions = {}) =>
-  d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", ...opts });
+const toKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const fromISO = (s: string) => new Date(s);
+const sortByDateAsc = (a: Evento, b: Evento) =>
+  +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
 
 const toLocalInputValue = (d?: string | Date | null) => {
   if (!d) return "";
@@ -155,6 +210,7 @@ export default function DashboardPage() {
   const [propiedades, setPropiedades] = useState<Propiedad[]>([]);
   const [today] = useState(new Date());
   const [cursor, setCursor] = useState(new Date()); // mes mostrado
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null); 
 
   // filtros activos (si hay algo acá, se prioriza sobre la vista mensual)
   const [activeFilters, setActiveFilters] = useState<Filters | null>(null);
@@ -170,31 +226,55 @@ export default function DashboardPage() {
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
   /* ------------------------ Fetch data ------------------------ */
-  // Datos “estáticos” (contactos/propiedades) — una sola vez (lista base para selects)
   async function fetchStatic() {
+    // Verificar si el token existe antes de hacer la petición
+    if (!localStorage.getItem('rc_token')) {
+        setLoading(false);
+        toast.error("No autenticado. Por favor, inicia sesión.");
+        return;
+    }
+    
     try {
-      const [cRes, pRes] = await Promise.all([api.get("contactos/"), api.get("propiedades/")]);
+      const [cRes, pRes, dRes] = await Promise.all([
+        api.get("contactos/"),
+        api.get("propiedades/"),
+        api.get("dashboard/data/"), 
+      ]);
       const toArr = (d: any) => Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
       setContactos(toArr(cRes.data));
       setPropiedades(toArr(pRes.data));
-    } catch (e) {
+      setDashboardData(dRes.data); 
+    } catch (e: any) {
       console.error(e);
       setContactos([]); setPropiedades([]);
-      setResult({ ok: false, msg: "No se pudieron cargar contactos/propiedades." });
+      // Mostrar el error de forma controlada si no es un 401 inicial
+      if (e.response && e.response.status !== 401) {
+          toast.error("No se pudieron cargar datos iniciales: " + (e.response.data.detail || e.message));
+      }
     }
   }
 
   // Eventos según el MES visible (cursor)
   async function fetchMonthEvents(d = cursor) {
+    if (!localStorage.getItem('rc_token')) return; // No hacer fetch si no hay token
     const { from, to } = monthRange(d);
-    const data = await fetchEventos({ from, to, ordering: "fecha_hora" });
-    setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    try {
+        const data = await fetchEventos({ from, to, ordering: "fecha_hora" });
+        setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    } catch (e) {
+        console.error("Error fetching month events:", e);
+    }
   }
 
   // Eventos con filtros activos (hoy/mañana/semana/tipo)
   async function fetchWithFilters(filters: Filters) {
-    const data = await fetchEventos({ ...filters, ordering: "fecha_hora" });
-    setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    if (!localStorage.getItem('rc_token')) return; // No hacer fetch si no hay token
+    try {
+        const data = await fetchEventos({ ...filters, ordering: "fecha_hora" });
+        setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    } catch (e) {
+        console.error("Error fetching filtered events:", e);
+    }
   }
 
   useEffect(() => {
@@ -206,14 +286,22 @@ export default function DashboardPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      // Si el token aún no existe, no hacemos el fetch, pero salimos de 'loading'
+      if (!localStorage.getItem('rc_token')) {
+          if (mounted) setLoading(false);
+          return;
+      }
+      
       setLoading(true);
       try {
         if (activeFilters) await fetchWithFilters(activeFilters);
         else await fetchMonthEvents();
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
         setEventos([]);
-        setResult({ ok: false, msg: activeFilters ? "No se pudieron cargar los eventos filtrados." : "No se pudieron cargar los eventos del mes." });
+        if (e.response && e.response.status !== 401) {
+            toast.error(activeFilters ? "No se pudieron cargar los eventos filtrados." : "No se pudieron cargar los eventos del mes.");
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -224,14 +312,25 @@ export default function DashboardPage() {
 
   /* 🔔 Auto-refresh cuando el asistente crea algo */
   useEffect(() => {
+    // 🔑 ESCUCHADOR DE RECARGA GLOBAL DESDE LEADS/AVISOS
     const handler = () => {
+      // Solo refrescamos si ya estamos logeados
+      if (!localStorage.getItem('rc_token')) return;
+
+      // Forzamos la recarga de eventos del mes
+      // Llamamos a fetchMonthEvents para recargar los datos del calendario en el mes actual
       if (activeFilters) fetchWithFilters(activeFilters);
       else fetchMonthEvents();
+      
+      fetchStatic(); // Refrescar KPIs
     };
-    window.addEventListener("assistant:refresh-calendar", handler as EventListener);
+    
+    // El nombre de evento lo definimos en Leads/index.tsx
+    window.addEventListener("assistant:refresh-calendar", handler as EventListener); 
+    
     return () => window.removeEventListener("assistant:refresh-calendar", handler as EventListener);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilters, cursor]);
+  }, [activeFilters, cursor]); // cursor y activeFilters aseguran que el fetch se haga correctamente si se usa en el handler
 
   /* ------------------------ Calendar helpers ------------------------ */
   const monthLabel = `${MONTHS[cursor.getMonth()]} de ${cursor.getFullYear()}`;
@@ -294,6 +393,8 @@ export default function DashboardPage() {
     }
 
     const evInMonth = eventos.length; // ya traemos solo el mes o filtros
+    
+    // Eliminamos el KPI de Avisos aquí
     return [
       { label: "Leads", value: totalLeads, hint: "Totales" },
       { label: "Propiedades en venta", value: enVenta, hint: "" },
@@ -313,44 +414,69 @@ export default function DashboardPage() {
    * saveEvento: valida solapamientos/duplicados (front) antes de post/patch
    */
   async function saveEvento(data: Partial<Evento>, mode: "create" | "edit", id?: number) {
+    if (!localStorage.getItem('rc_token')) {
+        toast.error("Acción no permitida. Inicia sesión.");
+        return;
+    }
+      
     const payload: any = {};
     (["nombre","apellido","email","tipo","fecha_hora","notas","propiedad","contacto"] as const)
       .forEach((k) => { const v = (data as any)[k]; if (v !== undefined) payload[k] = v; });
 
     // --- Validación front: no solapamiento / duplicado en la misma propiedad ---
-    // Cuando se edita, ignoramos el id del evento en la validación
     const ignoreId = mode === "edit" ? id : undefined;
     const valid = validateEventoNoSolapa(payload, eventos, { ignoreId });
     if (!valid.ok) {
-      setResult({ ok: false, msg: (valid as any).msg });
+      toast.error(valid.msg);
       return;
     }
 
     try {
+      let fechaISO = String(payload.fecha_hora);
+      if (fechaISO.length <= 16 && fechaISO.includes("T")) {
+        const d = new Date(fechaISO);
+        fechaISO = d.toISOString();
+      }
+      payload.fecha_hora = fechaISO;
+
       if (mode === "create") await api.post("eventos/", payload);
       else if (id) await api.patch(`eventos/${id}/`, payload);
+      
       // refrescar según contexto
       if (activeFilters) await fetchWithFilters(activeFilters);
       else await fetchMonthEvents();
+      
+      // refetch de los datos estáticos para actualizar los KPIs
+      await fetchStatic();
+
       setOpenEventModal(null);
       setOpenDayModal(null);
-      setResult({ ok: true, msg: "Evento guardado correctamente." });
-    } catch (e) {
+      toast.success("Evento guardado correctamente.");
+    } catch (e: any) {
       console.error(e);
-      setResult({ ok: false, msg: "No se pudo guardar el evento." });
+      toast.error(e?.response?.data?.detail || "No se pudo guardar el evento.");
     }
   }
 
   async function deleteEvento(ev: Evento) {
+    if (!localStorage.getItem('rc_token')) {
+        toast.error("Acción no permitida. Inicia sesión.");
+        return;
+    }
+      
     try {
       await api.delete(`eventos/${ev.id}/`);
       if (activeFilters) await fetchWithFilters(activeFilters);
       else await fetchMonthEvents();
+      
+      // refetch de los datos estáticos para actualizar los KPIs
+      await fetchStatic();
+
       setDeleting(null);
-      setResult({ ok: true, msg: "Evento eliminado." });
+      toast.success("Evento eliminado.");
     } catch (e) {
       console.error(e);
-      setResult({ ok: false, msg: "No se pudo eliminar el evento." });
+      toast.error("No se pudo eliminar el evento.");
     }
   }
 
@@ -382,7 +508,13 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
-              onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
+              onClick={() => {
+                  if (!localStorage.getItem('rc_token')) {
+                      toast.error("Debes iniciar sesión para agregar eventos.");
+                      return;
+                  }
+                  setOpenEventModal({ mode: "create", baseDate: new Date() });
+              }}
             >
               + Agregar evento
             </button>
@@ -441,7 +573,7 @@ export default function DashboardPage() {
                 <div
                   key={i}
                   className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
-                  title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
+                  title={inMonth ? formatDate(d) : undefined}
                 >
                   {/* Contenedor columna + evitar desborde */}
                   <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
@@ -474,7 +606,13 @@ export default function DashboardPage() {
                       <div className="pt-2 shrink-0">
                         <button
                           className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                          onClick={() => openCreateOnDay(d)}
+                          onClick={() => {
+                            if (!localStorage.getItem('rc_token')) {
+                                toast.error("Debes iniciar sesión para agregar eventos.");
+                                return;
+                            }
+                            openCreateOnDay(d);
+                          }}
                         >
                           + nuevo
                         </button>
@@ -567,7 +705,7 @@ function DayEventsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold">Eventos del {formatDate(date, { year: "numeric" })}</div>
+          <div className="text-lg font-semibold">Eventos del {formatDate(date, true)}</div>
           <div className="flex gap-2">
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCreate}>+ Nuevo</button>
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
@@ -746,7 +884,7 @@ function EventModal({
             <ContactAutocomplete
               valueId={form.contacto == null ? null : Number(form.contacto)}
               initialList={contactos}
-              onChange={(id, item) => {
+              onChange={(id: number | null, item: Contacto | null | undefined) => { // Corregido el tipo
                 set("contacto", id);
                 // Limpio visitante si hay lead
                 if (id) {
@@ -816,7 +954,157 @@ function EventModal({
   );
 }
 
-/* ======================= Autocomplete Contacto ======================= */
+/* --------------------------- Confirm Modal -------------------------- */
+type ConfirmModalProps = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  confirmType?: "primary" | "danger";
+  onCancel: () => void;
+  onConfirm: () => void | Promise<void>;
+};
+
+function ConfirmModal({
+  title,
+  message,
+  confirmLabel = "Confirmar",
+  confirmType = "primary",
+  onCancel,
+  onConfirm,
+}: ConfirmModalProps) {
+  const [working, setWorking] = useState(false);
+  async function go() {
+    setWorking(true);
+    await onConfirm();
+    setWorking(false);
+  }
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
+        <div className="text-lg font-semibold mb-2">{title}</div>
+        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
+            Cancelar
+          </button>
+          <button
+            className={
+              confirmType === "danger"
+                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
+                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+            }
+            onClick={go}
+            disabled={working}
+          >
+            {working ? "Procesando..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------- Result Modal --------------------------- */
+
+function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
+      <div
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
+          ok
+            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
+        <div className="text-sm">{message}</div>
+        <div className="mt-4 text-right">
+          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------- History Modal --------------------------- */
+
+function HistoryModal({
+  contacto,
+  items,
+  loading,
+  onClose,
+}: {
+  contacto: Contacto;
+  items: HistItem[] | null;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
+      <div
+        className="w/full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-lg font-semibold mb-1">
+          Historial de {contacto.nombre || "—"} {contacto.apellido || ""}
+        </div>
+        <div className="text-xs text-gray-500 mb-4">{contacto.email || "—"}</div>
+
+        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+        {!loading && (items?.length ?? 0) === 0 && (
+          <div className="text-sm text-gray-500">Este lead aún no tiene cambios de estado.</div>
+        )}
+
+        {!loading && !!items && items.length > 0 && (
+          <ul className="relative pl-5">
+            {items.map((h, idx) => {
+              const fase = h.estado?.fase || "—";
+              const key = norm(fase);
+              const chip =
+                STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+              return (
+                <li key={h.id} className="pb-4 last:pb-0">
+                  {idx !== items.length - 1 && (
+                    <span className="absolute left-2 top-3 h-full w-px bg-gray-200 dark:bg-gray-800" />
+                  )}
+                  <span className="absolute left-0 mt-1 h-2 w-2 rounded-full bg-gray-400" />
+                  <div className="ml-4">
+                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>
+                      {fase}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">{formatDate(h.changed_at, true)}</div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="mt-5 text-right">
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ UI bits ----------------------------- */
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs mb-1">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+/* --------------------------- Contact Autocomplete Component (Moved from Leads/index.tsx) -------------------------- */
 function useDebounced<T>(value: T, delay = 300) {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -853,6 +1141,12 @@ function ContactAutocomplete({
   useEffect(() => {
     let done = false;
     (async () => {
+      // No hacer fetch si no hay token
+      if (!localStorage.getItem('rc_token')) {
+          setItems(initialList.slice(0, 10)); // Mostrar lista inicial si no logeado
+          return;
+      }
+          
       try {
         const q = debounced.trim();
         // si no hay query, mostramos los primeros 10 de initialList
@@ -880,7 +1174,7 @@ function ContactAutocomplete({
   }, []);
 
   function pick(it: Contacto | null) {
-    onChange(it ? it.id : null, it || null);
+    onChange(it ? it.id : null, it); // Corregido: si it es null, pasamos null, no undefined
     setOpen(false);
   }
 
@@ -965,88 +1259,6 @@ function ContactAutocomplete({
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ============================ Confirm Modal ============================ */
-type ConfirmModalProps = {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  confirmType?: "primary" | "danger";
-  onCancel: () => void;
-  onConfirm: () => void | Promise<void>;
-};
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel = "Confirmar",
-  confirmType = "primary",
-  onCancel,
-  onConfirm,
-}: ConfirmModalProps) {
-  const [working, setWorking] = useState(false);
-  async function go() {
-    setWorking(true);
-    await onConfirm();
-    setWorking(false);
-  }
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
-        <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
-            Cancelar
-          </button>
-          <button
-            className={
-              confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-            }
-            onClick={go}
-            disabled={working}
-          >
-            {working ? "Procesando..." : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ============================= Result Modal ============================ */
-function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
-      <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
-        <div className="text-sm">{message}</div>
-        <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ================================ UI bits ================================ */
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs mb-1">{label}</label>
-      {children}
     </div>
   );
 }

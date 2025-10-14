@@ -1,10 +1,11 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 from propiedades.models import Propiedad
+from avisos.models import Aviso
 
 
 class EstadoLead(models.Model):
@@ -136,16 +137,11 @@ class EstadoLeadHistorial(models.Model):
 # Señales de sincronización
 # =========================
 @receiver(post_save, sender=Evento)
-def sync_contacto_fechas_from_evento(sender, instance: Evento, created: bool, **kwargs):
+def sync_contacto_and_aviso_from_evento(sender, instance: Evento, created: bool, **kwargs):
     """
-    Reglas:
-      - Si el Evento es pasado o de hoy (fecha_hora <= ahora): actualiza last_contact_at
-        al más reciente entre el valor actual y fecha_hora del evento.
-      - Si el Evento es futuro (fecha_hora > ahora):
-          * Si el contacto no tiene next_contact_at o este evento está más próximo
-            que el programado, se actualiza next_contact_at.
-          * Si next_contact_note está vacío, se sugiere con el tipo y (opcional) un recorte de notas.
-    Nota: corre en cada save; no depende de 'created' para contemplar ediciones.
+    Gestiona la sincronización del Contacto y el Aviso a partir de un Evento.
+    - Si el Evento es pasado o de hoy: actualiza el last_contact_at del Contacto y elimina el Aviso.
+    - Si el Evento es futuro: crea o actualiza el next_contact_at del Contacto y el Aviso asociado.
     """
     contacto = instance.contacto
     if not contacto:
@@ -154,32 +150,62 @@ def sync_contacto_fechas_from_evento(sender, instance: Evento, created: bool, **
     now = timezone.localtime()
     evento_dt = timezone.localtime(instance.fecha_hora)
 
-    # Evento ocurrido (pasado o hoy) => último contacto
+    # Evento ocurrido (pasado o hoy)
     if evento_dt <= now:
-        # Tomar el máximo para no "retroceder" el último contacto si se edita un evento viejo
+        # Actualiza el último contacto si este evento es más reciente
         if not contacto.last_contact_at or evento_dt > contacto.last_contact_at:
             contacto.last_contact_at = evento_dt
-            # Si este último contacto coincide con el próximo programado, limpiamos el próximo
-            if contacto.next_contact_at and evento_dt >= contacto.next_contact_at:
-                contacto.next_contact_at = None
-                # no tocamos la nota; podría servir como historial breve
-            contacto.save(update_fields=["last_contact_at", "next_contact_at"])
+            contacto.save(update_fields=["last_contact_at"])
+            
+        # Marca como completado o elimina el aviso relacionado
+        try:
+            aviso = Aviso.objects.get(evento=instance)
+            if aviso.estado == 'pendiente':
+                aviso.estado = 'completado'
+                aviso.save(update_fields=['estado'])
+        except Aviso.DoesNotExist:
+            pass # No hay aviso, no hacemos nada
+
         return
 
-    # Evento futuro => posible próximo contacto
+    # Evento futuro
     should_update_next = (
         not contacto.next_contact_at or evento_dt < timezone.localtime(contacto.next_contact_at)
     )
     if should_update_next:
         contacto.next_contact_at = evento_dt
-        # Solo sugerimos nota si está vacía (no pisamos algo que haya escrito el usuario)
         if not contacto.next_contact_note:
             base = f"{instance.tipo}"
             if instance.notas:
-                # Recortamos una nota breve para no pasarnos del max_length
                 snippet = (instance.notas or "").strip().replace("\n", " ")
                 if len(snippet) > 80:
                     snippet = snippet[:77] + "..."
                 base = f"{base} · {snippet}"
             contacto.next_contact_note = base
         contacto.save(update_fields=["next_contact_at", "next_contact_note"])
+
+    # Crear o actualizar un aviso para este evento futuro
+    aviso_titulo = f"Próximo contacto con {contacto.nombre} {contacto.apellido}"
+    aviso_descripcion = f"{instance.tipo} sobre la propiedad {instance.propiedad.titulo}" if instance.propiedad else f"{instance.tipo} con el lead"
+
+    Aviso.objects.update_or_create(
+        evento=instance,
+        defaults={
+            'titulo': aviso_titulo,
+            'descripcion': aviso_descripcion,
+            'fecha': instance.fecha_hora,
+            'lead': contacto,
+            'propiedad': instance.propiedad,
+            'estado': 'pendiente',
+        }
+    )
+
+@receiver(post_delete, sender=Evento)
+def delete_aviso_on_evento_delete(sender, instance, **kwargs):
+    """
+    Elimina el aviso asociado cuando se elimina el evento.
+    """
+    try:
+        Aviso.objects.get(evento=instance).delete()
+    except Aviso.DoesNotExist:
+        pass

@@ -1,6 +1,8 @@
 // src/pages/Leads/index.tsx
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { toast } from 'react-hot-toast'; // Importar toast si no está ya
+import NextContactModal from "./NextContactModal"; // 👈 SOLUCIÓN: IMPORTAR EL MODAL
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
@@ -121,6 +123,9 @@ export default function LeadsPage() {
   // ✅ Busy por acción rápida
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  // Nuevo estado para el modal de próximo contacto
+  const [nextContactTarget, setNextContactTarget] = useState<Contacto | null>(null);
+
   const PAGE_SIZE = 10;
 
   async function fetchEstados() {
@@ -150,7 +155,7 @@ export default function LeadsPage() {
     } catch (e) {
       console.error(e);
       setContactos([]);
-      setResult({ ok: false, msg: "No se pudo cargar leads." });
+      toast.error("No se pudo cargar leads.");
     } finally {
       setLoading(false);
     }
@@ -229,10 +234,10 @@ export default function LeadsPage() {
         api.post("estados-lead/", { fase: "Vendido", descripcion: "" }),
       ]);
       await fetchEstados();
-      setResult({ ok: true, msg: "Estados cargados correctamente." });
+      toast.success("Estados cargados correctamente.");
     } catch (e) {
       console.error(e);
-      setResult({ ok: false, msg: "No se pudieron cargar los estados recomendados." });
+      toast.error("No se pudieron cargar los estados recomendados.");
     }
   }
 
@@ -253,46 +258,16 @@ export default function LeadsPage() {
   }
 
   /* === Acciones rápidas: próximo contacto === */
+  // Ya no usamos estas, el modal NextContactModal lo maneja
+  /*
   async function quickSetNext(c: Contacto, daysFromToday: number, hour = 10) {
-    try {
-      setBusyId(c.id);
-      const iso = localISOAt(daysFromToday, hour, 0);
-      const note =
-        daysFromToday === 1
-          ? "Programado rápido: mañana 10:00"
-          : `Programado rápido: +${daysFromToday}d 10:00`;
-      await saveContacto(`contactos/${c.id}/`, "patch", {
-        estado: typeof c.estado === "number" ? c.estado : c.estado_detalle?.id,
-        next_contact_at: iso,
-        next_contact_note: note,
-      });
-      await fetchContactos();
-      setResult({ ok: true, msg: "Próximo contacto programado ✅" });
-    } catch (e) {
-      console.error(e);
-      setResult({ ok: false, msg: "No se pudo programar el próximo contacto." });
-    } finally {
-      setBusyId(null);
-    }
+    // ... lógica eliminada
   }
 
   async function quickClearNext(c: Contacto) {
-    try {
-      setBusyId(c.id);
-      await saveContacto(`contactos/${c.id}/`, "patch", {
-        estado: typeof c.estado === "number" ? c.estado : c.estado_detalle?.id,
-        next_contact_at: null,
-        next_contact_note: null,
-      });
-      await fetchContactos();
-      setResult({ ok: true, msg: "Próximo contacto limpiado ✅" });
-    } catch (e) {
-      console.error(e);
-      setResult({ ok: false, msg: "No se pudo limpiar el próximo contacto." });
-    } finally {
-      setBusyId(null);
-    }
+    // ... lógica eliminada
   }
+  */
 
   /* ----------------------------- UI ------------------------------ */
   return (
@@ -505,39 +480,12 @@ export default function LeadsPage() {
                         >
                           Borrar
                         </button>
-                        {/* ✅ Historial */}
                         <button
                           className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => openHistory(c)}
+                          onClick={() => setNextContactTarget(c)}
                           disabled={isBusy}
                         >
-                          Historial
-                        </button>
-
-                        {/* ✅ Acciones rápidas de seguimiento */}
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickSetNext(c, 1, 10)}
-                          disabled={isBusy}
-                          title="Programar mañana a las 10:00"
-                        >
-                          Mañana 10:00
-                        </button>
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickSetNext(c, 3, 10)}
-                          disabled={isBusy}
-                          title="Programar en 3 días a las 10:00"
-                        >
-                          +3d 10:00
-                        </button>
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickClearNext(c)}
-                          disabled={isBusy}
-                          title="Limpiar próximo contacto"
-                        >
-                          Limpiar próximo
+                          Configurar próximo contacto
                         </button>
                       </div>
                     </td>
@@ -648,36 +596,12 @@ export default function LeadsPage() {
                   >
                     Borrar
                   </button>
-                  {/* ✅ Historial (mobile) */}
                   <button
                     className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => openHistory(c)}
+                    onClick={() => setNextContactTarget(c)}
                     disabled={isBusy}
                   >
-                    Historial
-                  </button>
-
-                  {/* ✅ Acciones rápidas (mobile) */}
-                  <button
-                    className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => quickSetNext(c, 1, 10)}
-                    disabled={isBusy}
-                  >
-                    Mañana 10:00
-                  </button>
-                  <button
-                    className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => quickSetNext(c, 3, 10)}
-                    disabled={isBusy}
-                  >
-                    +3d 10:00
-                  </button>
-                  <button
-                    className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => quickClearNext(c)}
-                    disabled={isBusy}
-                  >
-                    Limpiar próximo
+                    Configurar próximo contacto
                   </button>
                 </div>
               </div>
@@ -696,10 +620,10 @@ export default function LeadsPage() {
               await saveContacto("contactos/", "post", payload);
               await fetchContactos();
               setOpenAdd(false);
-              setResult({ ok: true, msg: "Lead creado correctamente." });
+              toast.success("Lead creado correctamente.");
             } catch (e) {
               console.error(e);
-              setResult({ ok: false, msg: "No se pudo crear el lead." });
+              toast.error("No se pudo crear el lead.");
             }
           }}
         />
@@ -731,10 +655,10 @@ export default function LeadsPage() {
               await saveContacto(`contactos/${editTarget.id}/`, "patch", payload);
               await fetchContactos();
               setEditTarget(null);
-              setResult({ ok: true, msg: "Lead actualizado correctamente." });
+              toast.success("Lead actualizado correctamente.");
             } catch (e) {
               console.error(e);
-              setResult({ ok: false, msg: "No se pudo actualizar el lead." });
+              toast.error("No se pudo actualizar el lead.");
             }
           }}
         />
@@ -752,17 +676,23 @@ export default function LeadsPage() {
               await api.delete(`contactos/${deleteTarget.id}/`);
               await fetchContactos();
               setDeleteTarget(null);
-              setResult({ ok: true, msg: "Lead eliminado." });
+              toast.success("Lead eliminado.");
             } catch (e) {
               console.error(e);
-              setResult({ ok: false, msg: "No se pudo eliminar el lead." });
+              toast.error("No se pudo eliminar el lead.");
             }
           }}
         />
       )}
 
-      {result && (
-        <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />
+      {nextContactTarget && (
+        <NextContactModal
+          contacto={nextContactTarget}
+          onClose={() => {
+            setNextContactTarget(null);
+            fetchContactos(); // Refresca los leads después de cerrar el modal
+          }}
+        />
       )}
 
       {/* ✅ Modal de Historial */}

@@ -4,12 +4,13 @@ import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
-  fetchLeads,                 // 👈 NEW: para autocompletar
+  fetchLeads, // 👈 NEW: para autocompletar
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
 } from "../../lib/api";
 import TopFilters from "./TopFilter";
+import { toast } from 'react-hot-toast'; 
 
 /* ============================== Types ============================== */
 // Reutilizo los tipos del cliente API para alinear con el back
@@ -18,6 +19,16 @@ type Propiedad = PropiedadApi;
 type Evento = EventoApi;
 
 type Filters = { date?: string; from?: string; to?: string; types?: string };
+
+type DashboardData = {
+  total_contactos: number;
+  contactos_por_estado: { fase: string; total: number }[];
+  proximos_contactos: number;
+  atrasados: number;
+  ultimos_contactos: { id: number; nombre: string; apellido: string; email: string }[];
+  avisos_pendientes: number; 
+  avisos_atrasados: number; 
+};
 
 /* ============================ Utilities ============================ */
 const MONTHS = [
@@ -155,6 +166,7 @@ export default function DashboardPage() {
   const [propiedades, setPropiedades] = useState<Propiedad[]>([]);
   const [today] = useState(new Date());
   const [cursor, setCursor] = useState(new Date()); // mes mostrado
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null); 
 
   // filtros activos (si hay algo acá, se prioriza sobre la vista mensual)
   const [activeFilters, setActiveFilters] = useState<Filters | null>(null);
@@ -170,31 +182,56 @@ export default function DashboardPage() {
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
   /* ------------------------ Fetch data ------------------------ */
-  // Datos “estáticos” (contactos/propiedades) — una sola vez (lista base para selects)
   async function fetchStatic() {
+    // Verificar si el token existe antes de hacer la petición
+    if (!localStorage.getItem('rc_token')) {
+        setLoading(false);
+        // Podrías lanzar un toast aquí o manejar el estado de No Logeado
+        toast.error("No autenticado. Por favor, inicia sesión.");
+        return;
+    }
+    
     try {
-      const [cRes, pRes] = await Promise.all([api.get("contactos/"), api.get("propiedades/")]);
+      const [cRes, pRes, dRes] = await Promise.all([
+        api.get("contactos/"),
+        api.get("propiedades/"),
+        api.get("dashboard/data/"), 
+      ]);
       const toArr = (d: any) => Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
       setContactos(toArr(cRes.data));
       setPropiedades(toArr(pRes.data));
-    } catch (e) {
+      setDashboardData(dRes.data); 
+    } catch (e: any) {
       console.error(e);
       setContactos([]); setPropiedades([]);
-      setResult({ ok: false, msg: "No se pudieron cargar contactos/propiedades." });
+      // Mostrar el error de forma controlada si no es un 401 inicial
+      if (e.response && e.response.status !== 401) {
+          toast.error("No se pudieron cargar datos iniciales: " + (e.response.data.detail || e.message));
+      }
     }
   }
 
   // Eventos según el MES visible (cursor)
   async function fetchMonthEvents(d = cursor) {
+    if (!localStorage.getItem('rc_token')) return; // No hacer fetch si no hay token
     const { from, to } = monthRange(d);
-    const data = await fetchEventos({ from, to, ordering: "fecha_hora" });
-    setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    try {
+        const data = await fetchEventos({ from, to, ordering: "fecha_hora" });
+        setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    } catch (e) {
+        console.error("Error fetching month events:", e);
+    }
   }
 
   // Eventos con filtros activos (hoy/mañana/semana/tipo)
   async function fetchWithFilters(filters: Filters) {
-    const data = await fetchEventos({ ...filters, ordering: "fecha_hora" });
-    setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    if (!localStorage.getItem('rc_token')) return; // No hacer fetch si no hay token
+    try {
+        const data = await fetchEventos({ ...filters, ordering: "fecha_hora" });
+        setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    } catch (e) {
+        console.error("Error fetching filtered events:", e);
+    }
   }
 
   useEffect(() => {
@@ -206,14 +243,22 @@ export default function DashboardPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      // Si el token aún no existe, no hacemos el fetch, pero salimos de 'loading'
+      if (!localStorage.getItem('rc_token')) {
+          if (mounted) setLoading(false);
+          return;
+      }
+      
       setLoading(true);
       try {
         if (activeFilters) await fetchWithFilters(activeFilters);
         else await fetchMonthEvents();
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
         setEventos([]);
-        setResult({ ok: false, msg: activeFilters ? "No se pudieron cargar los eventos filtrados." : "No se pudieron cargar los eventos del mes." });
+        if (e.response && e.response.status !== 401) {
+            toast.error(activeFilters ? "No se pudieron cargar los eventos filtrados." : "No se pudieron cargar los eventos del mes.");
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -225,8 +270,12 @@ export default function DashboardPage() {
   /* 🔔 Auto-refresh cuando el asistente crea algo */
   useEffect(() => {
     const handler = () => {
+      // Solo refrescamos si ya estamos logeados
+      if (!localStorage.getItem('rc_token')) return;
+
       if (activeFilters) fetchWithFilters(activeFilters);
       else fetchMonthEvents();
+      fetchStatic(); // Refrescar KPIs
     };
     window.addEventListener("assistant:refresh-calendar", handler as EventListener);
     return () => window.removeEventListener("assistant:refresh-calendar", handler as EventListener);
@@ -294,6 +343,8 @@ export default function DashboardPage() {
     }
 
     const evInMonth = eventos.length; // ya traemos solo el mes o filtros
+    
+    // Eliminamos el KPI de Avisos aquí
     return [
       { label: "Leads", value: totalLeads, hint: "Totales" },
       { label: "Propiedades en venta", value: enVenta, hint: "" },
@@ -313,44 +364,69 @@ export default function DashboardPage() {
    * saveEvento: valida solapamientos/duplicados (front) antes de post/patch
    */
   async function saveEvento(data: Partial<Evento>, mode: "create" | "edit", id?: number) {
+    if (!localStorage.getItem('rc_token')) {
+        toast.error("Acción no permitida. Inicia sesión.");
+        return;
+    }
+      
     const payload: any = {};
-    (["nombre", "apellido", "email", "tipo", "fecha_hora", "notas", "propiedad", "contacto"] as const)
+    (["nombre","apellido","email","tipo","fecha_hora","notas","propiedad","contacto"] as const)
       .forEach((k) => { const v = (data as any)[k]; if (v !== undefined) payload[k] = v; });
 
     // --- Validación front: no solapamiento / duplicado en la misma propiedad ---
-    // Cuando se edita, ignoramos el id del evento en la validación
     const ignoreId = mode === "edit" ? id : undefined;
     const valid = validateEventoNoSolapa(payload, eventos, { ignoreId });
     if (!valid.ok) {
-      setResult({ ok: false, msg: (valid as any).msg });
+      toast.error(valid.msg);
       return;
     }
 
     try {
+      let fechaISO = String(payload.fecha_hora);
+      if (fechaISO.length <= 16 && fechaISO.includes("T")) {
+        const d = new Date(fechaISO);
+        fechaISO = d.toISOString();
+      }
+      payload.fecha_hora = fechaISO;
+
       if (mode === "create") await api.post("eventos/", payload);
       else if (id) await api.patch(`eventos/${id}/`, payload);
+      
       // refrescar según contexto
       if (activeFilters) await fetchWithFilters(activeFilters);
       else await fetchMonthEvents();
+      
+      // refetch de los datos estáticos para actualizar los KPIs
+      await fetchStatic();
+
       setOpenEventModal(null);
       setOpenDayModal(null);
-      setResult({ ok: true, msg: "Evento guardado correctamente." });
-    } catch (e) {
+      toast.success("Evento guardado correctamente.");
+    } catch (e: any) {
       console.error(e);
-      setResult({ ok: false, msg: "No se pudo guardar el evento." });
+      toast.error(e?.response?.data?.detail || "No se pudo guardar el evento.");
     }
   }
 
   async function deleteEvento(ev: Evento) {
+    if (!localStorage.getItem('rc_token')) {
+        toast.error("Acción no permitida. Inicia sesión.");
+        return;
+    }
+      
     try {
       await api.delete(`eventos/${ev.id}/`);
       if (activeFilters) await fetchWithFilters(activeFilters);
       else await fetchMonthEvents();
+      
+      // refetch de los datos estáticos para actualizar los KPIs
+      await fetchStatic();
+
       setDeleting(null);
-      setResult({ ok: true, msg: "Evento eliminado." });
+      toast.success("Evento eliminado.");
     } catch (e) {
       console.error(e);
-      setResult({ ok: false, msg: "No se pudo eliminar el evento." });
+      toast.error("No se pudo eliminar el evento.");
     }
   }
 
@@ -382,7 +458,13 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
-              onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
+              onClick={() => {
+                  if (!localStorage.getItem('rc_token')) {
+                      toast.error("Debes iniciar sesión para agregar eventos.");
+                      return;
+                  }
+                  setOpenEventModal({ mode: "create", baseDate: new Date() });
+              }}
             >
               + Agregar evento
             </button>
@@ -474,7 +556,13 @@ export default function DashboardPage() {
                       <div className="pt-2 shrink-0">
                         <button
                           className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                          onClick={() => openCreateOnDay(d)}
+                          onClick={() => {
+                            if (!localStorage.getItem('rc_token')) {
+                                toast.error("Debes iniciar sesión para agregar eventos.");
+                                return;
+                            }
+                            openCreateOnDay(d);
+                          }}
                         >
                           + nuevo
                         </button>
@@ -602,13 +690,13 @@ function DayEventsModal({
                     {typeof (ev as any).propiedad_titulo === "string"
                       ? (ev as any).propiedad_titulo
                       : ev.propiedad
-                        ? `Propiedad #${ev.propiedad}`
-                        : "—"}
+                      ? `Propiedad #${ev.propiedad}`
+                      : "—"}
                     {(ev as any).contacto_nombre
                       ? ` • ${(ev as any).contacto_nombre}`
                       : ev.contacto
-                        ? ` • Lead #${ev.contacto}`
-                        : ""}
+                      ? ` • Lead #${ev.contacto}`
+                      : ""}
                   </div>
                   {ev.notas && <div className="text-xs text-gray-500 mt-0.5 truncate">{ev.notas}</div>}
                 </div>
@@ -647,11 +735,11 @@ function EventModal({
     evento
       ? { ...evento }
       : {
-        tipo: "Reunion",
-        fecha_hora: toLocalInputValue(baseDate || new Date()),
-        propiedad: propiedades[0]?.id,
-        contacto: undefined,
-      }
+          tipo: "Reunion",
+          fecha_hora: toLocalInputValue(baseDate || new Date()),
+          propiedad: propiedades[0]?.id,
+          contacto: undefined,
+        }
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -853,6 +941,12 @@ function ContactAutocomplete({
   useEffect(() => {
     let done = false;
     (async () => {
+      // No hacer fetch si no hay token
+      if (!localStorage.getItem('rc_token')) {
+          setItems(initialList.slice(0, 10)); // Mostrar lista inicial si no logeado
+          return;
+      }
+          
       try {
         const q = debounced.trim();
         // si no hay query, mostramos los primeros 10 de initialList
@@ -950,8 +1044,9 @@ function ContactAutocomplete({
                   key={it.id}
                   type="button"
                   onClick={() => pick(it)}
-                  className={`w-full text-left px-3 py-2 text-sm ${idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
-                    }`}
+                  className={`w-full text-left px-3 py-2 text-sm ${
+                    idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                  }`}
                   onMouseEnter={() => setHighlight(idx)}
                 >
                   <div className="font-medium truncate">{full}</div>
@@ -1023,8 +1118,9 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
+          ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+              : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>

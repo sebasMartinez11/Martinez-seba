@@ -15,20 +15,6 @@ class PropiedadSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source="owner.id")
     imagenes = PropiedadImagenSerializer(many=True, read_only=True)
 
-    # 🔹 Campos con choices definidos explícitamente
-    tipo_de_propiedad = serializers.ChoiceField(
-        choices=Propiedad._meta.get_field("tipo_de_propiedad").choices
-    )
-    disponibilidad = serializers.ChoiceField(
-        choices=Propiedad._meta.get_field("disponibilidad").choices
-    )
-    moneda = serializers.ChoiceField(
-        choices=Propiedad._meta.get_field("moneda").choices
-    )
-    estado = serializers.ChoiceField(
-        choices=Propiedad._meta.get_field("estado").choices
-    )
-
     class Meta:
         model = Propiedad
         fields = [
@@ -54,10 +40,6 @@ class PropiedadSerializer(serializers.ModelSerializer):
         
 
 class SubirImagenesSerializer(serializers.Serializer):
-    imagenes = serializers.ListField(
-        child=serializers.ImageField(),
-        allow_empty=False,
-        required=False,
-    )
-    imagen = serializers.ImageField(required=False)  # por si suben solo una
+    imagenes = serializers.ListField(child=serializers.ImageField(), allow_empty=False, required=False)
+    imagen = serializers.ImageField(required=False)  # por si suben una sola con key 'imagen'
     descripcion = serializers.CharField(required=False, allow_blank=True)

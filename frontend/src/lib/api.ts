@@ -1,4 +1,3 @@
-// src/lib/api.ts
 import axios from "axios";
 
 /**
@@ -32,7 +31,8 @@ function normalizeUrl(u?: string) {
 
 /* --- Bearer + normalización para el cliente dedicado --- */
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access");
+  // AHORA BUSCAMOS 'rc_token' para estandarizar
+  const token = localStorage.getItem("rc_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   if (config.url) config.url = normalizeUrl(config.url);
   return config;
@@ -44,7 +44,8 @@ axios.defaults.headers.common["Accept"] = "application/json";
 axios.defaults.timeout = 15000;
 
 axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access");
+  // AHORA BUSCAMOS 'rc_token' para estandarizar
+  const token = localStorage.getItem("rc_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   if (config.url && !/^https?:\/\//i.test(config.url)) {
     config.url = normalizeUrl(config.url);
@@ -126,22 +127,22 @@ export type Evento = {
 };
 
 export type EventoCreate = {
-  contacto?: number | null;          // 👈 ahora puede asignarse un lead (o dejar null)
+  contacto?: number | null; 
   propiedad: number;
   tipo: "Reunion" | "Visita" | "Llamada";
-  fecha_hora: string;                // ISO: "2025-10-05T15:00:00" o "2025-10-05 15:00"
+  fecha_hora: string; 
   notas?: string;
 };
 
 export type EventoUpdate = Partial<EventoCreate>;
 
 export type EventoFilters = {
-  date?: string;       // YYYY-MM-DD (día exacto)
-  from?: string;       // YYYY-MM-DD (inicio, inclusive)
-  to?: string;         // YYYY-MM-DD (fin, exclusivo si solo fecha)
-  types?: string;      // "Reunion" | "Llamada" | "Visita"
-  ordering?: string;   // ej: "fecha_hora"
-  [k: string]: any;    // permitir extras sin romper TS
+  date?: string; 
+  from?: string; 
+  to?: string; 
+  types?: string; 
+  ordering?: string; 
+  [k: string]: any; 
 };
 
 export async function fetchEventos(params: EventoFilters = {}) {

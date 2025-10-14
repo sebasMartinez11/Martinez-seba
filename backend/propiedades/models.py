@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
-from django.conf import settings
+from django.conf import settings  # <-- NUEVO
 
 
 class Propiedad(models.Model):
@@ -19,12 +19,6 @@ class Propiedad(models.Model):
     MONEDA_CHOICES = [
         ("USD", "USD"),
         ("ARS", "ARS"),
-    ]
-
-    DISPONIBILIDAD_CHOICES = [
-        ("venta", "Venta"),
-        ("alquiler", "Alquiler"),
-        ("alquiler_temporario", "Alquiler Temporario"),
     ]
 
     # === Multi-tenant ===
@@ -46,11 +40,7 @@ class Propiedad(models.Model):
         choices=TIPO_DE_PROPIEDAD_CHOICES,
         default="casa",
     )
-    disponibilidad = models.CharField(
-        max_length=50,
-        choices=DISPONIBILIDAD_CHOICES,
-        default="venta",
-    )
+    disponibilidad = models.CharField(max_length=50)
     precio = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -76,7 +66,7 @@ class Propiedad(models.Model):
         default="disponible",
     )
 
-    # Marca de tiempo efectiva de venta (para métricas exactas)
+    # ✅ NUEVO: marca de tiempo efectiva de venta (para métricas exactas)
     vendida_en = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -86,7 +76,7 @@ class Propiedad(models.Model):
             models.Index(fields=["estado"]),
             models.Index(fields=["disponibilidad"]),
             models.Index(fields=["moneda", "precio"]),
-            models.Index(fields=["vendida_en"]),
+            models.Index(fields=["vendida_en"]),  # <-- ayuda para reportes por mes
         ]
 
     def __str__(self):

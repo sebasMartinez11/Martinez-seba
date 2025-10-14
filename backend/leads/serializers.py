@@ -5,6 +5,8 @@ from django.db.models import F, Value, ExpressionWrapper, DateTimeField
 from django.utils import timezone
 from datetime import timedelta
 
+# Importamos Aviso para gestionar el quick-contact
+from avisos.models import Aviso 
 from .models import EstadoLead, Contacto, Evento, EstadoLeadHistorial
 from propiedades.models import Propiedad
 
@@ -59,7 +61,6 @@ class ContactoSerializer(serializers.ModelSerializer):
             # metadatos
             "creado_en",
         ]
-    # ...
         read_only_fields = [
             "id",
             "owner",
@@ -83,11 +84,51 @@ class ContactoSerializer(serializers.ModelSerializer):
         return contacto
 
     def update(self, instance, validated_data):
-        # Guardamos cambios; si cambió 'estado', la signal generará el historial.
+        # Guardamos cambios
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
-        instance.save()
-        return instance
+        instance.save() # Guarda Contacto y dispara signal para EstadoLeadHistorial
+
+        # ----------------------------------------------------
+        # Lógica de sincronización de Aviso (para Quick-Contact)
+        # ----------------------------------------------------
+        
+        # 1. Chequeamos si el próximo contacto fue modificado
+        if "next_contact_at" in validated_data or "next_contact_note" in validated_data:
+            
+            # Buscamos un Aviso existente ligado a este Lead y que NO provenga de un Evento
+            # Esto es nuestro marcador para "Quick Follow-up"
+            quick_aviso_qs = Aviso.objects.filter(lead=instance, evento__isnull=True)
+            
+            next_contact_at = validated_data.get("next_contact_at")
+            next_contact_note = validated_data.get("next_contact_note")
+            
+            if next_contact_at is not None:
+                # Caso A: Se programa un próximo contacto (Future Date)
+                
+                # El título y la descripción son esenciales para el aviso
+                titulo = f"Seguimiento programado con {instance.nombre} {instance.apellido}"
+                descripcion = next_contact_note or "Próximo contacto registrado manualmente."
+                
+                # Creamos o actualizamos el Aviso (no ligado a Evento ni Propiedad en este contexto rápido)
+                Aviso.objects.update_or_create(
+                    lead=instance,
+                    evento=None, 
+                    defaults={
+                        'titulo': titulo,
+                        'descripcion': descripcion,
+                        'fecha': next_contact_at,
+                        'estado': 'pendiente', 
+                        'propiedad': None, # No conocemos la propiedad en este modal rápido
+                    }
+                )
+                
+            else:
+                # Caso B: next_contact_at es None (Se limpia el próximo contacto)
+                # Eliminamos cualquier Aviso de quick-contact existente
+                quick_aviso_qs.delete()
+        
+        return instance # Devuelve la instancia actualizada
 
 
 class EstadoLeadHistorialSerializer(serializers.ModelSerializer):
@@ -105,16 +146,7 @@ class EventoSerializer(serializers.ModelSerializer):
     contacto = serializers.PrimaryKeyRelatedField(
         queryset=Contacto.objects.all(), allow_null=True, required=False
     )
-    propiedad = serializers.PrimaryKeyRelatedField(
-        queryset=Propiedad.objects.all()
-    )
-
-    # 📌 Lectura expandida (nested, opcional)
-    contacto_detalle = ContactoSerializer(source="contacto", read_only=True)
-    propiedad_detalle = serializers.StringRelatedField(source="propiedad", read_only=True)
-
-    # 📌 Campo tipo con choices del modelo
-    tipo = serializers.ChoiceField(choices=Evento.TIPO_EVENTO_CHOICES)
+    propiedad = serializers.PrimaryKeyRelatedField(queryset=Propiedad.objects.all())
 
     class Meta:
         model = Evento
@@ -125,9 +157,7 @@ class EventoSerializer(serializers.ModelSerializer):
             "apellido",
             "email",
             "contacto",
-            "contacto_detalle",
             "propiedad",
-            "propiedad_detalle",
             "tipo",
             "fecha_hora",
             "notas",

@@ -6,120 +6,129 @@ import { api, API_BASE } from "@/lib/api";
 type JwtResponse = { access: string; refresh?: string };
 
 export default function Login() {
-  const navigate = useNavigate();
-  const [userOrEmail, setUserOrEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
+    const [userOrEmail, setUserOrEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // limpiar restos para que no “ensucien” el flujo
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    localStorage.removeItem("rc_user_id");
-  }, []);
+    useEffect(() => {
+        // Limpiamos solo los nombres de token antiguos/incorrectos
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
+        localStorage.removeItem("rc_user_id");
+    }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      // ===== 1) TOKEN (llamada directa, fuera del api con interceptores) =====
-      const url = API_BASE + "auth/token/"; // p.ej. http://127.0.0.1:8000/api/auth/token/
-      const res = await axios.post<JwtResponse>(
-        url,
-        { username: userOrEmail.trim(), password },
-        { headers: { "Content-Type": "application/json", Accept: "application/json" } }
-      );
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+        try {
+            // ===== 1) TOKEN (llamada directa, fuera del api con interceptores) =====
+            const url = API_BASE + "auth/token/"; // p.ej. http://127.0.0.1:8000/api/auth/token/
+            const res = await axios.post<JwtResponse>(
+                url,
+                { username: userOrEmail.trim(), password },
+                { headers: { "Content-Type": "application/json", Accept: "application/json" } }
+            );
 
-      // si llegamos acá, es 200
-      const { access, refresh } = res.data;
-      if (!access) throw new Error("No llegó el access token");
+            // si llegamos acá, es 200
+            const { access, refresh } = res.data;
+            if (!access) throw new Error("No llegó el access token");
 
-      localStorage.setItem("access", access);
-      if (refresh) localStorage.setItem("refresh", refresh);
-      if (!localStorage.getItem("rc_theme")) localStorage.setItem("rc_theme", "dark");
+            // 🔑 CORRECCIÓN CLAVE: Guardamos el token de acceso como 'rc_token'
+            localStorage.setItem("rc_token", access); 
+            
+            // Si el backend te devuelve un token de refresco con otro nombre, es mejor no guardarlo aquí,
+            // pero si tu backend usa 'refresh', puedes mantener esta línea si lo necesitas:
+            // if (refresh) localStorage.setItem("rc_refresh", refresh);
+            
+            // Si tu backend usa el nombre "refresh" para el token de refresco
+            if (refresh) localStorage.setItem("refresh", refresh);
 
-      // ===== 2) ME (ahora sí con api, ya que el interceptor pondrá el Bearer) =====
-      const me = await api.get<{ id: number }>("usuarios/me/");
-      localStorage.setItem("rc_user_id", String(me.data.id));
+            if (!localStorage.getItem("rc_theme")) localStorage.setItem("rc_theme", "dark");
 
-      // listo
-      navigate("/app", { replace: true });
-    } catch (err: any) {
-      // Mostrar el mensaje real del backend para saber POR QUÉ devuelve 401
-      const status = err?.response?.status;
-      const data = err?.response?.data;
-      console.error("LOGIN ERROR", status, data ?? err);
-      const msg =
-        (data && (data.detail || data.message || JSON.stringify(data))) ||
-        err?.message ||
-        "Credenciales inválidas";
-      setError(String(msg));
-    } finally {
-      setLoading(false);
+            // ===== 2) ME (ahora sí con api, ya que el interceptor pondrá el Bearer) =====
+            // El interceptor en api.ts ahora lee 'rc_token' y adjunta el header Bearer.
+            const me = await api.get<{ id: number }>("usuarios/me/");
+            localStorage.setItem("rc_user_id", String(me.data.id));
+
+            // listo
+            navigate("/app", { replace: true });
+        } catch (err: any) {
+            // Mostrar el mensaje real del backend para saber POR QUÉ devuelve 401
+            const status = err?.response?.status;
+            const data = err?.response?.data;
+            console.error("LOGIN ERROR", status, data ?? err);
+            const msg =
+                (data && (data.detail || data.message || JSON.stringify(data))) ||
+                err?.message ||
+                "Credenciales inválidas";
+            setError(String(msg));
+        } finally {
+            setLoading(false);
+        }
     }
-  }
 
-  return (
-    <main className="relative min-h-[100svh] overflow-hidden">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0b1220] via-[#0a0f1a] to-[#0b1220]" />
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.06]
-                   [background-image:radial-gradient(#ffffff_1px,transparent_1px)]
-                   [background-size:22px_22px]"
-      />
-      <div className="grid min-h-[100svh] place-items-center px-4 py-10">
-        <form
-          onSubmit={handleSubmit}
-          className="w-full max-w-md rounded-2xl border border-white/10 bg-white/10 backdrop-blur
-                     shadow-2xl p-6 md:p-7 text-gray-100"
-        >
-          <h1 className="text-xl font-semibold mb-4">Iniciar sesión</h1>
+    return (
+        <main className="relative min-h-[100svh] overflow-hidden">
+            <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0b1220] via-[#0a0f1a] to-[#0b1220]" />
+            <div
+                className="pointer-events-none absolute inset-0 -z-10 opacity-[0.06]
+                             [background-image:radial-gradient(#ffffff_1px,transparent_1px)]
+                             [background-size:22px_22px]"
+            />
+            <div className="grid min-h-[100svh] place-items-center px-4 py-10">
+                <form
+                    onSubmit={handleSubmit}
+                    className="w-full max-w-md rounded-2xl border border-white/10 bg-white/10 backdrop-blur
+                             shadow-2xl p-6 md:p-7 text-gray-100"
+                >
+                    <h1 className="text-xl font-semibold mb-4">Iniciar sesión</h1>
 
-          {error && (
-            <div className="mb-4 text-sm rounded-md border border-red-400/40 bg-red-500/10 text-red-200 p-3 whitespace-pre-wrap">
-              {error}
+                    {error && (
+                        <div className="mb-4 text-sm rounded-md border border-red-400/40 bg-red-500/10 text-red-200 p-3 whitespace-pre-wrap">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="space-y-1">
+                        <label className="text-sm text-gray-300">Email o usuario</label>
+                        <input
+                            type="text"
+                            required
+                            value={userOrEmail}
+                            onChange={(e) => setUserOrEmail(e.target.value)}
+                            className="w-full h-10 rounded-lg border border-white/15 bg-white/5
+                                         px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400/50"
+                            placeholder="tu@mail.com o username"
+                            autoComplete="username"
+                        />
+                    </div>
+
+                    <div className="space-y-1 mt-4">
+                        <label className="text-sm text-gray-300">Contraseña</label>
+                        <input
+                            type="password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full h-10 rounded-lg border border-white/15 bg-white/5
+                                         px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400/50"
+                            placeholder="••••••••"
+                            autoComplete="current-password"
+                        />
+                    </div>
+
+                    <button
+                        disabled={loading}
+                        className="mt-5 w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60
+                                         text-white text-sm font-medium shadow-lg shadow-blue-900/30"
+                    >
+                        {loading ? "Ingresando..." : "Ingresar"}
+                    </button>
+                </form>
             </div>
-          )}
-
-          <div className="space-y-1">
-            <label className="text-sm text-gray-300">Email o usuario</label>
-            <input
-              type="text"
-              required
-              value={userOrEmail}
-              onChange={(e) => setUserOrEmail(e.target.value)}
-              className="w-full h-10 rounded-lg border border-white/15 bg-white/5
-                         px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400/50"
-              placeholder="tu@mail.com o username"
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="space-y-1 mt-4">
-            <label className="text-sm text-gray-300">Contraseña</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-10 rounded-lg border border-white/15 bg-white/5
-                         px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400/50"
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-          </div>
-
-          <button
-            disabled={loading}
-            className="mt-5 w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60
-                       text-white text-sm font-medium shadow-lg shadow-blue-900/30"
-          >
-            {loading ? "Ingresando..." : "Ingresar"}
-          </button>
-        </form>
-      </div>
-    </main>
-  );
+        </main>
+    );
 }

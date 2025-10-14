@@ -140,13 +140,18 @@ class EstadoLeadHistorialSerializer(serializers.ModelSerializer):
 
 
 class EventoSerializer(serializers.ModelSerializer):
-    # read-only para multi-tenant
     owner = serializers.ReadOnlyField(source="owner.id")
 
     contacto = serializers.PrimaryKeyRelatedField(
         queryset=Contacto.objects.all(), allow_null=True, required=False
     )
-    propiedad = serializers.PrimaryKeyRelatedField(queryset=Propiedad.objects.all())
+    propiedad = serializers.PrimaryKeyRelatedField(
+        queryset=Propiedad.objects.all()
+    )
+
+    contacto_detalle = ContactoSerializer(source="contacto", read_only=True)
+    propiedad_detalle = serializers.StringRelatedField(source="propiedad", read_only=True)
+    tipo = serializers.ChoiceField(choices=Evento.TIPO_EVENTO_CHOICES)
 
     class Meta:
         model = Evento
@@ -157,7 +162,9 @@ class EventoSerializer(serializers.ModelSerializer):
             "apellido",
             "email",
             "contacto",
+            "contacto_detalle",
             "propiedad",
+            "propiedad_detalle",
             "tipo",
             "fecha_hora",
             "notas",

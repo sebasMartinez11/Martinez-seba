@@ -31,11 +31,7 @@ function normalizeUrl(u?: string) {
 
 /* --- Bearer + normalización para el cliente dedicado --- */
 api.interceptors.request.use((config) => {
-<<<<<<< HEAD
-  // AHORA BUSCAMOS 'rc_token' para estandarizar
-=======
   // 🔑 Lectura del token estándar: 'rc_token'
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
   const token = localStorage.getItem("rc_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   if (config.url) config.url = normalizeUrl(config.url);
@@ -48,11 +44,7 @@ axios.defaults.headers.common["Accept"] = "application/json";
 axios.defaults.timeout = 15000;
 
 axios.interceptors.request.use((config) => {
-<<<<<<< HEAD
-  // AHORA BUSCAMOS 'rc_token' para estandarizar
-=======
   // 🔑 Lectura del token estándar: 'rc_token'
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
   const token = localStorage.getItem("rc_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   if (config.url && !/^https?:\/\//i.test(config.url)) {
@@ -135,22 +127,22 @@ export type Evento = {
 };
 
 export type EventoCreate = {
-  contacto?: number | null; 
+  contacto?: number | null;
   propiedad: number;
   tipo: "Reunion" | "Visita" | "Llamada";
-  fecha_hora: string; 
+  fecha_hora: string;
   notas?: string;
 };
 
 export type EventoUpdate = Partial<EventoCreate>;
 
 export type EventoFilters = {
-  date?: string; 
-  from?: string; 
-  to?: string; 
-  types?: string; 
-  ordering?: string; 
-  [k: string]: any; 
+  date?: string;
+  from?: string;
+  to?: string;
+  types?: string;
+  ordering?: string;
+  [k: string]: any;
 };
 
 export async function fetchEventos(params: EventoFilters = {}) {

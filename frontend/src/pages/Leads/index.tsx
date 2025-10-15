@@ -3,10 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from 'react-hot-toast'; // Importar toast si no está ya
 import NextContactModal from "./NextContactModal"; // 👈 SOLUCIÓN: IMPORTAR EL MODAL
-<<<<<<< HEAD
-=======
 import { FiAlertCircle } from "react-icons/fi"; // Importar ícono para modales
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
@@ -135,10 +132,10 @@ export default function LeadsPage() {
   async function fetchEstados() {
     // 🔒 GUARDIA DE AUTENTICACIÓN
     if (!localStorage.getItem('rc_token')) {
-        setEstados([]);
-        return;
+      setEstados([]);
+      return;
     }
-    
+
     try {
       const res = await api.get("estados-lead/");
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
@@ -152,9 +149,9 @@ export default function LeadsPage() {
   async function fetchContactos() {
     // 🔒 GUARDIA DE AUTENTICACIÓN
     if (!localStorage.getItem('rc_token')) {
-        setLoading(false);
-        setContactos([]);
-        return;
+      setLoading(false);
+      setContactos([]);
+      return;
     }
 
     setLoading(true);
@@ -172,16 +169,12 @@ export default function LeadsPage() {
     } catch (e: any) {
       console.error(e);
       setContactos([]);
-<<<<<<< HEAD
-      toast.error("No se pudo cargar leads.");
-=======
       // 🚨 Control de errores para evitar toast si el error es solo 401
       if (e.response && e.response.status !== 401) {
-          toast.error("No se pudo cargar leads.");
+        toast.error("No se pudo cargar leads.");
       } else if (!e.response) { // Error de red/timeout
-          toast.error("No se pudo cargar leads.");
+        toast.error("No se pudo cargar leads.");
       }
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
     } finally {
       setLoading(false);
     }
@@ -190,7 +183,7 @@ export default function LeadsPage() {
   useEffect(() => {
     // 🔑 Solo ejecutamos si el usuario está (o estuvo) logueado
     if (localStorage.getItem('rc_token')) {
-        fetchEstados();
+      fetchEstados();
     }
   }, []);
 
@@ -198,10 +191,10 @@ export default function LeadsPage() {
   useEffect(() => {
     // 🔑 GUARDIA CRÍTICA para el polling de datos
     if (localStorage.getItem('rc_token')) {
-        fetchContactos();
+      fetchContactos();
     } else {
-        setContactos([]); // Limpiar si el token desaparece
-        setLoading(false);
+      setContactos([]); // Limpiar si el token desaparece
+      setLoading(false);
     }
     setPage(1);
   }, [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
@@ -292,21 +285,6 @@ export default function LeadsPage() {
     }
   }
 
-<<<<<<< HEAD
-  /* === Acciones rápidas: próximo contacto === */
-  // Ya no usamos estas, el modal NextContactModal lo maneja
-  /*
-  async function quickSetNext(c: Contacto, daysFromToday: number, hour = 10) {
-    // ... lógica eliminada
-  }
-
-  async function quickClearNext(c: Contacto) {
-    // ... lógica eliminada
-  }
-  */
-
-=======
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
   /* ----------------------------- UI ------------------------------ */
   return (
     <div className="flex flex-col gap-6">
@@ -681,10 +659,10 @@ export default function LeadsPage() {
               (typeof editTarget.estado === "number"
                 ? String(editTarget.estado)
                 : editTarget.estado?.id
-                ? String(editTarget.estado.id)
-                : editTarget.estado_detalle?.id
-                ? String(editTarget.estado_detalle.id)
-                : "") || "",
+                  ? String(editTarget.estado.id)
+                  : editTarget.estado_detalle?.id
+                    ? String(editTarget.estado_detalle.id)
+                    : "") || "",
             next_contact_at: editTarget.next_contact_at || "",
             next_contact_note: editTarget.next_contact_note || "",
           }}
@@ -730,12 +708,9 @@ export default function LeadsPage() {
           onClose={() => {
             setNextContactTarget(null);
             fetchContactos(); // Refresca los leads después de cerrar el modal
-<<<<<<< HEAD
-=======
             // 🚨 Sincronización: Disparar evento para que TopBar y Dashboard recarguen
             window.dispatchEvent(new Event('avisos:refresh'));
             window.dispatchEvent(new Event('assistant:refresh-calendar')); // Nuevo evento para el Dashboard
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
           }}
         />
       )}
@@ -1025,11 +1000,10 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${ok
             ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
-        }`}
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>

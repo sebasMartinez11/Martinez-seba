@@ -2,11 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiSearch, FiBell, FiAlertCircle, FiCalendar, FiClock } from "react-icons/fi";
 import ThemeToggle from "@/components/ThemeToggle";
-<<<<<<< HEAD
-import { api } from "@/lib/api"; // Asegura que usamos el cliente Axios con el interceptor
-=======
-import { api } from "@/lib/api"; 
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
+import { api } from "@/lib/api";
 
 // Helper para formato de fecha con hora (Ej: 15/10/2025 10:00)
 const formatDateWithTime = (d: string | Date) => {
@@ -105,12 +101,9 @@ export default function Topbar({ title }: { title: string }) {
     const [loadingAvisos, setLoadingAvisos] = useState(false);
     const [errorAvisos, setErrorAvisos] = useState<string | null>(null);
 
-<<<<<<< HEAD
-=======
     // Variable de referencia para mantener el ID del intervalo activo
-    const intervalRef = useRef<number | undefined>(undefined); 
+    const intervalRef = useRef<number | undefined>(undefined);
 
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
     // Cerrar popovers al click fuera / Esc
     useEffect(() => {
         function onDocClick(e: MouseEvent) {
@@ -140,11 +133,11 @@ export default function Topbar({ title }: { title: string }) {
                 setLoading(false);
                 return;
             }
-            
+
             // 🔒 GUARDIA DE AUTENTICACIÓN
             if (!localStorage.getItem('rc_token')) {
                 setLoading(false);
-                return; 
+                return;
             }
 
             setLoading(true);
@@ -228,82 +221,49 @@ export default function Topbar({ title }: { title: string }) {
     // --------- Fetch avisos + auto-refresh ---------
     async function fetchAvisos() {
         // 🔒 GUARDIA DE AUTENTICACIÓN
-<<<<<<< HEAD
-        if (!localStorage.getItem('rc_token')) return; 
-=======
         if (!localStorage.getItem('rc_token')) {
             setAvisos(null);
             setLoadingAvisos(false);
-            return; 
+            return;
         }
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
         setLoadingAvisos(true);
         setErrorAvisos(null);
         try {
             // USAMOS CLIENTE 'api' DE AXIOS
-            const res = await api.get(`/contactos/avisos/`, { 
-                params: { recordame_cada: 3, proximo_en_dias: 3, limit: 10 } 
+            const res = await api.get(`/contactos/avisos/`, {
+                params: { recordame_cada: 3, proximo_en_dias: 3, limit: 10 }
             });
-            
-            const data: AvisosPayload = res.data; 
+
+            const data: AvisosPayload = res.data;
             setAvisos(data);
-<<<<<<< HEAD
-        } catch (e) {
-            setErrorAvisos("No se pudieron cargar los avisos.");
-            setAvisos(null);
-=======
         } catch (e: any) {
             // 🔑 CORRECCIÓN CRÍTICA 401: Si el token falla, detenemos el polling
             if (e.response && e.response.status === 401) {
-                 setAvisos(null);
-                 // 🛑 Detener el intervalo si falla por 401
-                 if (intervalRef.current !== undefined) {
-                     clearInterval(intervalRef.current);
-                     intervalRef.current = undefined; // Marcar como detenido
-                 }
+                setAvisos(null);
+                // 🛑 Detener el intervalo si falla por 401
+                if (intervalRef.current !== undefined) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = undefined; // Marcar como detenido
+                }
             } else {
-                 setErrorAvisos("No se pudieron cargar los avisos.");
-                 setAvisos(null);
+                setErrorAvisos("No se pudieron cargar los avisos.");
+                setAvisos(null);
             }
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
         } finally {
             setLoadingAvisos(false);
         }
     }
 
-<<<<<<< HEAD
-    // 🔑 CLAVE: Escuchamos el evento global para forzar la recarga
-    useEffect(() => {
-        const handleRefresh = () => {
-            // Solo si estamos logeados
-=======
     // 🔑 CLAVE: Control de Polling y Listeners
     useEffect(() => {
         // Handlers para el evento global de refresco (desde Avisos/index.tsx)
         const handleRefresh = () => {
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
             if (localStorage.getItem('rc_token')) {
                 fetchAvisos();
             }
         };
-<<<<<<< HEAD
 
-        if (localStorage.getItem('rc_token')) {
-             fetchAvisos(); // Carga inicial
-             const intervalId = setInterval(fetchAvisos, 60_000); // Refresco periódico
-             
-             // Listener para el evento que dispara la página de Avisos
-             window.addEventListener('avisos:refresh', handleRefresh);
-
-             return () => {
-                 clearInterval(intervalId);
-                 window.removeEventListener('avisos:refresh', handleRefresh);
-             }
-        }
-    }, []); // Dependencia vacía
-=======
-        
         // 🛑 Función para detener completamente el polling
         const stopPolling = () => {
             if (intervalRef.current !== undefined) {
@@ -315,8 +275,8 @@ export default function Topbar({ title }: { title: string }) {
 
         // Función para iniciar el polling
         const startPolling = () => {
-             // Detener cualquier polling existente para evitar duplicados
-            stopPolling(); 
+            // Detener cualquier polling existente para evitar duplicados
+            stopPolling();
 
             if (localStorage.getItem('rc_token')) {
                 fetchAvisos(); // Carga inicial
@@ -337,7 +297,6 @@ export default function Topbar({ title }: { title: string }) {
             stopPolling();
         };
     }, []); // Dependencia vacía para montar/desmontar
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
     const totalAvisos =
         (avisos?.vencidos.count ?? 0) +
@@ -430,22 +389,12 @@ export default function Topbar({ title }: { title: string }) {
                 <div className="relative" ref={bellWrapRef}>
                     <button
                         className="relative h-9 w-9 grid place-items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950"
-<<<<<<< HEAD
-                        // 🔑 MODIFICACIÓN: Dispara fetchAvisos solo si el popover se va a abrir
-                        onClick={() => { 
-                            // Si está cerrado (false), lo abrimos y disparamos la carga.
-                            if (!openBell) { 
-                                fetchAvisos();
-                            } 
-                            // Alternar el estado
-=======
                         // Carga los datos ANTES de abrir si está cerrado
-                        onClick={() => { 
-                            if (!openBell) { 
+                        onClick={() => {
+                            if (!openBell) {
                                 fetchAvisos();
-                            } 
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
-                            setOpenBell((v) => !v); 
+                            }
+                            setOpenBell((v) => !v);
                         }}
                         title="Recordatorios y avisos"
                     >
@@ -592,10 +541,10 @@ function BucketSmall({
                         const nextContactTime = it.next_contact_at
                             ? formatDateWithTime(it.next_contact_at)
                             : '—';
-                        
+
                         // Construye la descripción detallada
-                        const description = it.next_contact_note 
-                            ? it.next_contact_note 
+                        const description = it.next_contact_note
+                            ? it.next_contact_note
                             : 'Programado en Leads';
 
                         return (
@@ -608,14 +557,14 @@ function BucketSmall({
                                         {label.split(' ')[0]}
                                     </span>
                                 </div>
-                                
+
                                 <div className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
                                     📅 {nextContactTime}
                                     <span className="ml-2">
                                         {it.next_contact_note ? ` • ${description}` : ''}
                                     </span>
                                 </div>
-                                
+
                                 {showSinSeg && typeof it.dias_sin_seguimiento === "number" && (
                                     <div className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
                                         ⚠️ Sin seguimiento por {it.dias_sin_seguimiento} días

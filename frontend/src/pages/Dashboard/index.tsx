@@ -10,11 +10,8 @@ import {
   type Contacto as ContactoApi,
 } from "../../lib/api";
 import TopFilters from "./TopFilter";
-import { toast } from 'react-hot-toast'; 
-<<<<<<< HEAD
-=======
+import { toast } from 'react-hot-toast';
 import { FiAlertCircle, FiCheckCircle } from "react-icons/fi"; // Íconos para modales
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
 /* ============================== Types ============================== */
 // Reutilizo los tipos del cliente API para alinear con el back
@@ -30,13 +27,10 @@ type DashboardData = {
   proximos_contactos: number;
   atrasados: number;
   ultimos_contactos: { id: number; nombre: string; apellido: string; email: string }[];
-  avisos_pendientes: number; 
-  avisos_atrasados: number; 
+  avisos_pendientes: number;
+  avisos_atrasados: number;
 };
 
-<<<<<<< HEAD
-/* ============================ Utilities ============================ */
-=======
 /** ✅ Ítem de historial de cambios de estado */
 type HistItem = {
   id: number;
@@ -66,7 +60,6 @@ const STATUS_BADGE = {
 const norm = (s?: string | null) =>
   (s || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
@@ -88,8 +81,8 @@ const formatDate = (d?: Date | string | null, withTime = false) => {
     year: "numeric",
   });
   if (withTime) {
-      const h = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-      return `${base} ${h}`;
+    const h = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    return `${base} ${h}`;
   }
   return base;
 };
@@ -217,7 +210,7 @@ export default function DashboardPage() {
   const [propiedades, setPropiedades] = useState<Propiedad[]>([]);
   const [today] = useState(new Date());
   const [cursor, setCursor] = useState(new Date()); // mes mostrado
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null); 
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
 
   // filtros activos (si hay algo acá, se prioriza sobre la vista mensual)
   const [activeFilters, setActiveFilters] = useState<Filters | null>(null);
@@ -236,31 +229,27 @@ export default function DashboardPage() {
   async function fetchStatic() {
     // Verificar si el token existe antes de hacer la petición
     if (!localStorage.getItem('rc_token')) {
-        setLoading(false);
-<<<<<<< HEAD
-        // Podrías lanzar un toast aquí o manejar el estado de No Logeado
-=======
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
-        toast.error("No autenticado. Por favor, inicia sesión.");
-        return;
+      setLoading(false);
+      toast.error("No autenticado. Por favor, inicia sesión.");
+      return;
     }
-    
+
     try {
       const [cRes, pRes, dRes] = await Promise.all([
         api.get("contactos/"),
         api.get("propiedades/"),
-        api.get("dashboard/data/"), 
+        api.get("dashboard/data/"),
       ]);
       const toArr = (d: any) => Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
       setContactos(toArr(cRes.data));
       setPropiedades(toArr(pRes.data));
-      setDashboardData(dRes.data); 
+      setDashboardData(dRes.data);
     } catch (e: any) {
       console.error(e);
       setContactos([]); setPropiedades([]);
       // Mostrar el error de forma controlada si no es un 401 inicial
       if (e.response && e.response.status !== 401) {
-          toast.error("No se pudieron cargar datos iniciales: " + (e.response.data.detail || e.message));
+        toast.error("No se pudieron cargar datos iniciales: " + (e.response.data.detail || e.message));
       }
     }
   }
@@ -270,10 +259,10 @@ export default function DashboardPage() {
     if (!localStorage.getItem('rc_token')) return; // No hacer fetch si no hay token
     const { from, to } = monthRange(d);
     try {
-        const data = await fetchEventos({ from, to, ordering: "fecha_hora" });
-        setEventos(Array.isArray(data) ? data : data?.results ?? []);
+      const data = await fetchEventos({ from, to, ordering: "fecha_hora" });
+      setEventos(Array.isArray(data) ? data : data?.results ?? []);
     } catch (e) {
-        console.error("Error fetching month events:", e);
+      console.error("Error fetching month events:", e);
     }
   }
 
@@ -281,10 +270,10 @@ export default function DashboardPage() {
   async function fetchWithFilters(filters: Filters) {
     if (!localStorage.getItem('rc_token')) return; // No hacer fetch si no hay token
     try {
-        const data = await fetchEventos({ ...filters, ordering: "fecha_hora" });
-        setEventos(Array.isArray(data) ? data : data?.results ?? []);
+      const data = await fetchEventos({ ...filters, ordering: "fecha_hora" });
+      setEventos(Array.isArray(data) ? data : data?.results ?? []);
     } catch (e) {
-        console.error("Error fetching filtered events:", e);
+      console.error("Error fetching filtered events:", e);
     }
   }
 
@@ -299,10 +288,10 @@ export default function DashboardPage() {
     (async () => {
       // Si el token aún no existe, no hacemos el fetch, pero salimos de 'loading'
       if (!localStorage.getItem('rc_token')) {
-          if (mounted) setLoading(false);
-          return;
+        if (mounted) setLoading(false);
+        return;
       }
-      
+
       setLoading(true);
       try {
         if (activeFilters) await fetchWithFilters(activeFilters);
@@ -311,7 +300,7 @@ export default function DashboardPage() {
         console.error(e);
         setEventos([]);
         if (e.response && e.response.status !== 401) {
-            toast.error(activeFilters ? "No se pudieron cargar los eventos filtrados." : "No se pudieron cargar los eventos del mes.");
+          toast.error(activeFilters ? "No se pudieron cargar los eventos filtrados." : "No se pudieron cargar los eventos del mes.");
         }
       } finally {
         if (mounted) setLoading(false);
@@ -328,22 +317,17 @@ export default function DashboardPage() {
       // Solo refrescamos si ya estamos logeados
       if (!localStorage.getItem('rc_token')) return;
 
-<<<<<<< HEAD
-      if (activeFilters) fetchWithFilters(activeFilters);
-      else fetchMonthEvents();
-=======
       // Forzamos la recarga de eventos del mes
       // Llamamos a fetchMonthEvents para recargar los datos del calendario en el mes actual
       if (activeFilters) fetchWithFilters(activeFilters);
       else fetchMonthEvents();
-      
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
+
       fetchStatic(); // Refrescar KPIs
     };
-    
+
     // El nombre de evento lo definimos en Leads/index.tsx
-    window.addEventListener("assistant:refresh-calendar", handler as EventListener); 
-    
+    window.addEventListener("assistant:refresh-calendar", handler as EventListener);
+
     return () => window.removeEventListener("assistant:refresh-calendar", handler as EventListener);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilters, cursor]); // cursor y activeFilters aseguran que el fetch se haga correctamente si se usa en el handler
@@ -409,7 +393,7 @@ export default function DashboardPage() {
     }
 
     const evInMonth = eventos.length; // ya traemos solo el mes o filtros
-    
+
     // Eliminamos el KPI de Avisos aquí
     return [
       { label: "Leads", value: totalLeads, hint: "Totales" },
@@ -431,12 +415,12 @@ export default function DashboardPage() {
    */
   async function saveEvento(data: Partial<Evento>, mode: "create" | "edit", id?: number) {
     if (!localStorage.getItem('rc_token')) {
-        toast.error("Acción no permitida. Inicia sesión.");
-        return;
+      toast.error("Acción no permitida. Inicia sesión.");
+      return;
     }
-      
+
     const payload: any = {};
-    (["nombre","apellido","email","tipo","fecha_hora","notas","propiedad","contacto"] as const)
+    (["nombre", "apellido", "email", "tipo", "fecha_hora", "notas", "propiedad", "contacto"] as const)
       .forEach((k) => { const v = (data as any)[k]; if (v !== undefined) payload[k] = v; });
 
     // --- Validación front: no solapamiento / duplicado en la misma propiedad ---
@@ -457,11 +441,11 @@ export default function DashboardPage() {
 
       if (mode === "create") await api.post("eventos/", payload);
       else if (id) await api.patch(`eventos/${id}/`, payload);
-      
+
       // refrescar según contexto
       if (activeFilters) await fetchWithFilters(activeFilters);
       else await fetchMonthEvents();
-      
+
       // refetch de los datos estáticos para actualizar los KPIs
       await fetchStatic();
 
@@ -476,15 +460,15 @@ export default function DashboardPage() {
 
   async function deleteEvento(ev: Evento) {
     if (!localStorage.getItem('rc_token')) {
-        toast.error("Acción no permitida. Inicia sesión.");
-        return;
+      toast.error("Acción no permitida. Inicia sesión.");
+      return;
     }
-      
+
     try {
       await api.delete(`eventos/${ev.id}/`);
       if (activeFilters) await fetchWithFilters(activeFilters);
       else await fetchMonthEvents();
-      
+
       // refetch de los datos estáticos para actualizar los KPIs
       await fetchStatic();
 
@@ -525,11 +509,11 @@ export default function DashboardPage() {
             <button
               className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
               onClick={() => {
-                  if (!localStorage.getItem('rc_token')) {
-                      toast.error("Debes iniciar sesión para agregar eventos.");
-                      return;
-                  }
-                  setOpenEventModal({ mode: "create", baseDate: new Date() });
+                if (!localStorage.getItem('rc_token')) {
+                  toast.error("Debes iniciar sesión para agregar eventos.");
+                  return;
+                }
+                setOpenEventModal({ mode: "create", baseDate: new Date() });
               }}
             >
               + Agregar evento
@@ -624,8 +608,8 @@ export default function DashboardPage() {
                           className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
                           onClick={() => {
                             if (!localStorage.getItem('rc_token')) {
-                                toast.error("Debes iniciar sesión para agregar eventos.");
-                                return;
+                              toast.error("Debes iniciar sesión para agregar eventos.");
+                              return;
                             }
                             openCreateOnDay(d);
                           }}
@@ -756,13 +740,13 @@ function DayEventsModal({
                     {typeof (ev as any).propiedad_titulo === "string"
                       ? (ev as any).propiedad_titulo
                       : ev.propiedad
-                      ? `Propiedad #${ev.propiedad}`
-                      : "—"}
+                        ? `Propiedad #${ev.propiedad}`
+                        : "—"}
                     {(ev as any).contacto_nombre
                       ? ` • ${(ev as any).contacto_nombre}`
                       : ev.contacto
-                      ? ` • Lead #${ev.contacto}`
-                      : ""}
+                        ? ` • Lead #${ev.contacto}`
+                        : ""}
                   </div>
                   {ev.notas && <div className="text-xs text-gray-500 mt-0.5 truncate">{ev.notas}</div>}
                 </div>
@@ -801,11 +785,11 @@ function EventModal({
     evento
       ? { ...evento }
       : {
-          tipo: "Reunion",
-          fecha_hora: toLocalInputValue(baseDate || new Date()),
-          propiedad: propiedades[0]?.id,
-          contacto: undefined,
-        }
+        tipo: "Reunion",
+        fecha_hora: toLocalInputValue(baseDate || new Date()),
+        propiedad: propiedades[0]?.id,
+        contacto: undefined,
+      }
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1026,11 +1010,10 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${ok
             ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
-        }`}
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
@@ -1159,10 +1142,10 @@ function ContactAutocomplete({
     (async () => {
       // No hacer fetch si no hay token
       if (!localStorage.getItem('rc_token')) {
-          setItems(initialList.slice(0, 10)); // Mostrar lista inicial si no logeado
-          return;
+        setItems(initialList.slice(0, 10)); // Mostrar lista inicial si no logeado
+        return;
       }
-          
+
       try {
         const q = debounced.trim();
         // si no hay query, mostramos los primeros 10 de initialList
@@ -1260,9 +1243,8 @@ function ContactAutocomplete({
                   key={it.id}
                   type="button"
                   onClick={() => pick(it)}
-                  className={`w-full text-left px-3 py-2 text-sm ${
-                    idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
-                  }`}
+                  className={`w-full text-left px-3 py-2 text-sm ${idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                    }`}
                   onMouseEnter={() => setHighlight(idx)}
                 >
                   <div className="font-medium truncate">{full}</div>
@@ -1278,88 +1260,3 @@ function ContactAutocomplete({
     </div>
   );
 }
-<<<<<<< HEAD
-
-/* ============================ Confirm Modal ============================ */
-type ConfirmModalProps = {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  confirmType?: "primary" | "danger";
-  onCancel: () => void;
-  onConfirm: () => void | Promise<void>;
-};
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel = "Confirmar",
-  confirmType = "primary",
-  onCancel,
-  onConfirm,
-}: ConfirmModalProps) {
-  const [working, setWorking] = useState(false);
-  async function go() {
-    setWorking(true);
-    await onConfirm();
-    setWorking(false);
-  }
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
-        <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
-            Cancelar
-          </button>
-          <button
-            className={
-              confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-            }
-            onClick={go}
-            disabled={working}
-          >
-            {working ? "Procesando..." : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ============================= Result Modal ============================ */
-function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
-      <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-              : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
-        <div className="text-sm">{message}</div>
-        <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ================================ UI bits ================================ */
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs mb-1">{label}</label>
-      {children}
-    </div>
-  );
-}
-=======
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39

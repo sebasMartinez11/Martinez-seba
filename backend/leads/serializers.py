@@ -86,59 +86,18 @@ class ContactoSerializer(serializers.ModelSerializer):
         return contacto
 
     def update(self, instance, validated_data):
-<<<<<<< HEAD
-        # Guardamos cambios
-=======
         # Guardamos cambios ANTES de cualquier sincronización
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
         instance.save() # Guarda Contacto y dispara signal para EstadoLeadHistorial
 
         # ----------------------------------------------------
-<<<<<<< HEAD
-        # Lógica de sincronización de Aviso (para Quick-Contact)
-=======
         # Lógica de sincronización de Evento (para Quick-Contact/Dashboard)
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
         # ----------------------------------------------------
         
         # 1. Chequeamos si el próximo contacto fue modificado
         if "next_contact_at" in validated_data or "next_contact_note" in validated_data:
             
-<<<<<<< HEAD
-            # Buscamos un Aviso existente ligado a este Lead y que NO provenga de un Evento
-            # Esto es nuestro marcador para "Quick Follow-up"
-            quick_aviso_qs = Aviso.objects.filter(lead=instance, evento__isnull=True)
-            
-            next_contact_at = validated_data.get("next_contact_at")
-            next_contact_note = validated_data.get("next_contact_note")
-            
-            if next_contact_at is not None:
-                # Caso A: Se programa un próximo contacto (Future Date)
-                
-                # El título y la descripción son esenciales para el aviso
-                titulo = f"Seguimiento programado con {instance.nombre} {instance.apellido}"
-                descripcion = next_contact_note or "Próximo contacto registrado manualmente."
-                
-                # Creamos o actualizamos el Aviso (no ligado a Evento ni Propiedad en este contexto rápido)
-                Aviso.objects.update_or_create(
-                    lead=instance,
-                    evento=None, 
-                    defaults={
-                        'titulo': titulo,
-                        'descripcion': descripcion,
-                        'fecha': next_contact_at,
-                        'estado': 'pendiente', 
-                        'propiedad': None, # No conocemos la propiedad en este modal rápido
-                    }
-                )
-                
-            else:
-                # Caso B: next_contact_at es None (Se limpia el próximo contacto)
-                # Eliminamos cualquier Aviso de quick-contact existente
-                quick_aviso_qs.delete()
-=======
             next_contact_at = validated_data.get("next_contact_at")
             next_contact_note = validated_data.get("next_contact_note")
             
@@ -177,7 +136,6 @@ class ContactoSerializer(serializers.ModelSerializer):
                 # Caso B: next_contact_at es None (Se limpia el próximo contacto)
                 # Eliminamos el Evento Marcador (y la señal post_delete eliminará el Aviso)
                 evento_marcador.delete()
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
         
         return instance # Devuelve la instancia actualizada
 

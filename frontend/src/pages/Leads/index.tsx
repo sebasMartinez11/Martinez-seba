@@ -928,12 +928,37 @@ function LeadModal({
             />
           </Field>
           <Field label="Teléfono">
-            <input
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-              value={form.telefono}
-              onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
-            />
+              <input
+                type="tel"
+                className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+                value={form.telefono}
+                onChange={(e) =>
+                  setForm(f => ({ ...f, telefono: e.target.value.replace(/\D/g, "") }))
+                }
+                onPaste={(e) => {
+                  const pasted = (e.clipboardData || (window as any).clipboardData).getData("text");
+                  if (/\D/.test(pasted)) {
+                    e.preventDefault();
+                    const digits = pasted.replace(/\D/g, "");
+                    setForm(f => ({ ...f, telefono: (f.telefono || "") + digits }));
+                  }
+                }}
+                onKeyDown={(e) => {
+                  const ok = [
+                    "Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"
+                  ];
+                  if (ok.includes(e.key)) return;
+                  if ((e.ctrlKey || e.metaKey) && ["a","c","v","x"].includes(e.key.toLowerCase())) return;
+                  if (!/^\d$/.test(e.key)) e.preventDefault();
+                }}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={15}         // mismo tope que en el modelo
+                placeholder="Sólo números"
+              />
           </Field>
+
+
 
           <div className="md:col-span-2">
             <label className="block text-xs mb-1">Estado</label>

@@ -1,10 +1,11 @@
-# leads/serializers.py
 from rest_framework import serializers
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import F, Value, ExpressionWrapper, DateTimeField
 from django.utils import timezone
 from datetime import timedelta
 
+# Importamos Aviso para gestionar el quick-contact
+from avisos.models import Aviso 
 from .models import EstadoLead, Contacto, Evento, EstadoLeadHistorial
 from propiedades.models import Propiedad
 
@@ -34,7 +35,6 @@ class ContactoSerializer(serializers.ModelSerializer):
     next_contact_note = serializers.CharField(required=False, allow_blank=True, max_length=255)
 
     # === Derivados del modelo (solo lectura) ===
-    # Nota: si el nombre del field coincide con el atributo/property del modelo, no uses `source`
     proximo_contacto_estado = serializers.ReadOnlyField()
     dias_sin_seguimiento = serializers.ReadOnlyField()
 
@@ -59,7 +59,6 @@ class ContactoSerializer(serializers.ModelSerializer):
             # metadatos
             "creado_en",
         ]
-    # ...
         read_only_fields = [
             "id",
             "owner",
@@ -87,16 +86,71 @@ class ContactoSerializer(serializers.ModelSerializer):
 
     # ---- Create / Update (el historial lo maneja la signal) ----
     def create(self, validated_data):
+        # Aseguramos el owner en la creación si está disponible
+        user = self.context['request'].user
+        if not isinstance(user, AnonymousUser) and user.is_authenticated:
+             validated_data['owner'] = user
+             
         contacto = Contacto.objects.create(**validated_data)
+<<<<<<< HEAD
         #  No crear historial acá: lo hace la signal post_save(Contacto).
+=======
+>>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
         return contacto
 
     def update(self, instance, validated_data):
-        # Guardamos cambios; si cambió 'estado', la signal generará el historial.
+        # Guardamos cambios ANTES de cualquier sincronización
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
-        instance.save()
-        return instance
+        instance.save() # Guarda Contacto y dispara signal para EstadoLeadHistorial
+
+        # ----------------------------------------------------
+        # Lógica de sincronización de Evento (para Quick-Contact/Dashboard)
+        # ----------------------------------------------------
+        
+        # 1. Chequeamos si el próximo contacto fue modificado
+        if "next_contact_at" in validated_data or "next_contact_note" in validated_data:
+            
+            next_contact_at = validated_data.get("next_contact_at")
+            next_contact_note = validated_data.get("next_contact_note")
+            
+            # 💡 CLAVE: Usamos un Evento ficticio (sin propiedad) como marcador para el Quick Contact
+            # Buscamos o creamos el Evento asociado al Lead y sin Propiedad
+            evento_marcador, created = Evento.objects.get_or_create(
+                 contacto=instance, 
+                 propiedad__isnull=True, # Evento sin propiedad = Quick Contact
+                 defaults={
+                     'tipo': 'Llamada', 
+                     'fecha_hora': timezone.now(), # Usar una fecha inicial para get_or_create
+                     'owner': instance.owner, 
+                 }
+            )
+            
+            if next_contact_at is not None and instance.next_contact_at:
+                # Caso A: Se programa un próximo contacto
+                
+                # Actualizamos el Evento Marcador
+                evento_marcador.nombre = instance.nombre
+                evento_marcador.apellido = instance.apellido
+                evento_marcador.email = instance.email
+                evento_marcador.tipo = 'Llamada' # Default para quick contact
+                evento_marcador.fecha_hora = instance.next_contact_at # Usar la fecha ya guardada en instance
+                evento_marcador.notas = next_contact_note or "Seguimiento rápido."
+                evento_marcador.save() # Dispara signal para actualizar el Aviso
+                
+                # 📢 Notificación al frontend para actualizar el Dashboard (Calendario)
+                try:
+                     from django.core.signals import request_finished
+                     request_finished.send(sender=self.__class__, refresh_dashboard=True)
+                except ImportError:
+                    pass
+
+            else:
+                # Caso B: next_contact_at es None (Se limpia el próximo contacto)
+                # Eliminamos el Evento Marcador (y la señal post_delete eliminará el Aviso)
+                evento_marcador.delete()
+        
+        return instance # Devuelve la instancia actualizada
 
 
 class EstadoLeadHistorialSerializer(serializers.ModelSerializer):

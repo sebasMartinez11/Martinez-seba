@@ -35,7 +35,7 @@ export default function AssistantWidget() {
   );
   const hasToken = useMemo(() => {
     try {
-      return !!localStorage.getItem("access");
+      return !!localStorage.getItem("rc_token");
     } catch {
       return false;
     }
@@ -175,15 +175,14 @@ function MessageBubble({ msg }: { msg: Message }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line ${
-          isUser
-            ? "bg-blue-600 text-white shadow-md"
-            : msg.role === "system"
+        className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line ${isUser
+          ? "bg-blue-600 text-white shadow-md"
+          : msg.role === "system"
             ? // System: contraste fuerte
-              "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300 dark:border-amber-800"
+            "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300 dark:border-amber-800"
             : // Assistant: alto contraste (fondo claro + borde)
-              "bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
-        }`}
+            "bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
+          }`}
       >
         <div>{msg.text}</div>
         {isAssistant && msg.payload && msg.payload.items?.length > 0 && (

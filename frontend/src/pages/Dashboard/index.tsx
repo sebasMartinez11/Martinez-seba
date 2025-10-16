@@ -225,35 +225,6 @@ export default function DashboardPage() {
   const [openDayModal, setOpenDayModal] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  //  Ajuste automático de altura del calendario
-  const calendarRef = useRef<HTMLDivElement>(null);
-  const weekHeaderRef = useRef<HTMLDivElement>(null);
-  const [calHeight, setCalHeight] = useState<number | null>(null);
-  const [dayHeight, setDayHeight] = useState<number | null>(null);
-
-  useLayoutEffect(() => {
-    const recompute = () => {
-      if (!calendarRef.current) return;
-      const rect = calendarRef.current.getBoundingClientRect();
-      const available = Math.max(320, Math.floor(window.innerHeight - rect.top - 24)); // margen inferior
-      const weekH = weekHeaderRef.current?.offsetHeight ?? 32;
-      const gridH = Math.max(180, available - weekH);
-      const cellH = Math.max(84, Math.floor(gridH / 6)); // 6 semanas visibles
-      setCalHeight(available);
-      setDayHeight(cellH);
-    };
-    recompute();
-    window.addEventListener("resize", recompute);
-    return () => window.removeEventListener("resize", recompute);
-  }, []);
-
-=======
->>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
-  async function fetchAll() {
-    setLoading(true);
-=======
   /* ------------------------ Fetch data ------------------------ */
   async function fetchStatic() {
     // Verificar si el token existe antes de hacer la petición
@@ -263,7 +234,6 @@ export default function DashboardPage() {
       return;
     }
 
->>>>>>> adf4b8c42bdb2a8daf3576afbf683899158ffc9c
     try {
       const [cRes, pRes, dRes] = await Promise.all([
         api.get("contactos/"),

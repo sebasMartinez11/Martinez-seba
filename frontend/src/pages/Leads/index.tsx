@@ -1,6 +1,9 @@
 // src/pages/Leads/index.tsx
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { toast } from 'react-hot-toast'; // Importar toast si no está ya
+import NextContactModal from "./NextContactModal"; // 👈 SOLUCIÓN: IMPORTAR EL MODAL
+import { FiAlertCircle } from "react-icons/fi"; // Importar ícono para modales
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
@@ -121,9 +124,18 @@ export default function LeadsPage() {
   // ✅ Busy por acción rápida
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  // Nuevo estado para el modal de próximo contacto
+  const [nextContactTarget, setNextContactTarget] = useState<Contacto | null>(null);
+
   const PAGE_SIZE = 10;
 
   async function fetchEstados() {
+    // 🔒 GUARDIA DE AUTENTICACIÓN
+    if (!localStorage.getItem('rc_token')) {
+      setEstados([]);
+      return;
+    }
+
     try {
       const res = await api.get("estados-lead/");
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
@@ -135,6 +147,13 @@ export default function LeadsPage() {
   }
 
   async function fetchContactos() {
+    // 🔒 GUARDIA DE AUTENTICACIÓN
+    if (!localStorage.getItem('rc_token')) {
+      setLoading(false);
+      setContactos([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const params: Record<string, any> = {};
@@ -147,22 +166,36 @@ export default function LeadsPage() {
       const res = await api.get("contactos/", { params });
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
       setContactos(toArr(res.data));
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       setContactos([]);
-      setResult({ ok: false, msg: "No se pudo cargar leads." });
+      // 🚨 Control de errores para evitar toast si el error es solo 401
+      if (e.response && e.response.status !== 401) {
+        toast.error("No se pudo cargar leads.");
+      } else if (!e.response) { // Error de red/timeout
+        toast.error("No se pudo cargar leads.");
+      }
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    fetchEstados();
+    // 🔑 Solo ejecutamos si el usuario está (o estuvo) logueado
+    if (localStorage.getItem('rc_token')) {
+      fetchEstados();
+    }
   }, []);
 
   // Carga inicial y recargas por filtros
   useEffect(() => {
-    fetchContactos();
+    // 🔑 GUARDIA CRÍTICA para el polling de datos
+    if (localStorage.getItem('rc_token')) {
+      fetchContactos();
+    } else {
+      setContactos([]); // Limpiar si el token desaparece
+      setLoading(false);
+    }
     setPage(1);
   }, [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
 
@@ -229,10 +262,10 @@ export default function LeadsPage() {
         api.post("estados-lead/", { fase: "Vendido", descripcion: "" }),
       ]);
       await fetchEstados();
-      setResult({ ok: true, msg: "Estados cargados correctamente." });
+      toast.success("Estados cargados correctamente.");
     } catch (e) {
       console.error(e);
-      setResult({ ok: false, msg: "No se pudieron cargar los estados recomendados." });
+      toast.error("No se pudieron cargar los estados recomendados.");
     }
   }
 
@@ -249,48 +282,6 @@ export default function LeadsPage() {
       setHistoryItems([]);
     } finally {
       setHistoryLoading(false);
-    }
-  }
-
-  /* === Acciones rápidas: próximo contacto === */
-  async function quickSetNext(c: Contacto, daysFromToday: number, hour = 10) {
-    try {
-      setBusyId(c.id);
-      const iso = localISOAt(daysFromToday, hour, 0);
-      const note =
-        daysFromToday === 1
-          ? "Programado rápido: mañana 10:00"
-          : `Programado rápido: +${daysFromToday}d 10:00`;
-      await saveContacto(`contactos/${c.id}/`, "patch", {
-        estado: typeof c.estado === "number" ? c.estado : c.estado_detalle?.id,
-        next_contact_at: iso,
-        next_contact_note: note,
-      });
-      await fetchContactos();
-      setResult({ ok: true, msg: "Próximo contacto programado ✅" });
-    } catch (e) {
-      console.error(e);
-      setResult({ ok: false, msg: "No se pudo programar el próximo contacto." });
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function quickClearNext(c: Contacto) {
-    try {
-      setBusyId(c.id);
-      await saveContacto(`contactos/${c.id}/`, "patch", {
-        estado: typeof c.estado === "number" ? c.estado : c.estado_detalle?.id,
-        next_contact_at: null,
-        next_contact_note: null,
-      });
-      await fetchContactos();
-      setResult({ ok: true, msg: "Próximo contacto limpiado ✅" });
-    } catch (e) {
-      console.error(e);
-      setResult({ ok: false, msg: "No se pudo limpiar el próximo contacto." });
-    } finally {
-      setBusyId(null);
     }
   }
 
@@ -505,39 +496,12 @@ export default function LeadsPage() {
                         >
                           Borrar
                         </button>
-                        {/* ✅ Historial */}
                         <button
                           className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => openHistory(c)}
+                          onClick={() => setNextContactTarget(c)}
                           disabled={isBusy}
                         >
-                          Historial
-                        </button>
-
-                        {/* ✅ Acciones rápidas de seguimiento */}
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickSetNext(c, 1, 10)}
-                          disabled={isBusy}
-                          title="Programar mañana a las 10:00"
-                        >
-                          Mañana 10:00
-                        </button>
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickSetNext(c, 3, 10)}
-                          disabled={isBusy}
-                          title="Programar en 3 días a las 10:00"
-                        >
-                          +3d 10:00
-                        </button>
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickClearNext(c)}
-                          disabled={isBusy}
-                          title="Limpiar próximo contacto"
-                        >
-                          Limpiar próximo
+                          Configurar próximo contacto
                         </button>
                       </div>
                     </td>
@@ -586,6 +550,7 @@ export default function LeadsPage() {
             const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
             const nextChip = statusChipClass(nextLabel);
             const nextNote = c.next_contact_note || "";
+
             const isBusy = busyId === c.id;
 
             return (
@@ -648,36 +613,12 @@ export default function LeadsPage() {
                   >
                     Borrar
                   </button>
-                  {/* ✅ Historial (mobile) */}
                   <button
                     className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => openHistory(c)}
+                    onClick={() => setNextContactTarget(c)}
                     disabled={isBusy}
                   >
-                    Historial
-                  </button>
-
-                  {/* ✅ Acciones rápidas (mobile) */}
-                  <button
-                    className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => quickSetNext(c, 1, 10)}
-                    disabled={isBusy}
-                  >
-                    Mañana 10:00
-                  </button>
-                  <button
-                    className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => quickSetNext(c, 3, 10)}
-                    disabled={isBusy}
-                  >
-                    +3d 10:00
-                  </button>
-                  <button
-                    className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => quickClearNext(c)}
-                    disabled={isBusy}
-                  >
-                    Limpiar próximo
+                    Configurar próximo contacto
                   </button>
                 </div>
               </div>
@@ -696,10 +637,10 @@ export default function LeadsPage() {
               await saveContacto("contactos/", "post", payload);
               await fetchContactos();
               setOpenAdd(false);
-              setResult({ ok: true, msg: "Lead creado correctamente." });
+              toast.success("Lead creado correctamente.");
             } catch (e) {
               console.error(e);
-              setResult({ ok: false, msg: "No se pudo crear el lead." });
+              toast.error("No se pudo crear el lead.");
             }
           }}
         />
@@ -718,10 +659,10 @@ export default function LeadsPage() {
               (typeof editTarget.estado === "number"
                 ? String(editTarget.estado)
                 : editTarget.estado?.id
-                ? String(editTarget.estado.id)
-                : editTarget.estado_detalle?.id
-                ? String(editTarget.estado_detalle.id)
-                : "") || "",
+                  ? String(editTarget.estado.id)
+                  : editTarget.estado_detalle?.id
+                    ? String(editTarget.estado_detalle.id)
+                    : "") || "",
             next_contact_at: editTarget.next_contact_at || "",
             next_contact_note: editTarget.next_contact_note || "",
           }}
@@ -731,10 +672,10 @@ export default function LeadsPage() {
               await saveContacto(`contactos/${editTarget.id}/`, "patch", payload);
               await fetchContactos();
               setEditTarget(null);
-              setResult({ ok: true, msg: "Lead actualizado correctamente." });
+              toast.success("Lead actualizado correctamente.");
             } catch (e) {
               console.error(e);
-              setResult({ ok: false, msg: "No se pudo actualizar el lead." });
+              toast.error("No se pudo actualizar el lead.");
             }
           }}
         />
@@ -752,17 +693,26 @@ export default function LeadsPage() {
               await api.delete(`contactos/${deleteTarget.id}/`);
               await fetchContactos();
               setDeleteTarget(null);
-              setResult({ ok: true, msg: "Lead eliminado." });
+              toast.success("Lead eliminado.");
             } catch (e) {
               console.error(e);
-              setResult({ ok: false, msg: "No se pudo eliminar el lead." });
+              toast.error("No se pudo eliminar el lead.");
             }
           }}
         />
       )}
 
-      {result && (
-        <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />
+      {nextContactTarget && (
+        <NextContactModal
+          contacto={nextContactTarget}
+          onClose={() => {
+            setNextContactTarget(null);
+            fetchContactos(); // Refresca los leads después de cerrar el modal
+            // 🚨 Sincronización: Disparar evento para que TopBar y Dashboard recarguen
+            window.dispatchEvent(new Event('avisos:refresh'));
+            window.dispatchEvent(new Event('assistant:refresh-calendar')); // Nuevo evento para el Dashboard
+          }}
+        />
       )}
 
       {/* ✅ Modal de Historial */}
@@ -1050,11 +1000,10 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${ok
             ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
-        }`}
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>

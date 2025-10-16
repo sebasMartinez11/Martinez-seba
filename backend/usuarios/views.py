@@ -23,41 +23,48 @@ class RegisterView(APIView):
 
 
 class MeUsuarioView(APIView):
+    """
+    GET  /api/usuarios/me/            -> perfil propio (tabla usuarios_usuario)
+    PUT  /api/usuarios/me/            -> update parcial o total (partial=True)
+    PATCH /api/usuarios/me/           -> update parcial (alias del PUT)
+    """
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        """
-        Devuelve el perfil del usuario en TU tabla `usuarios_usuario`, no el auth.User.
-        Busca por email (case-insensitive). Si no existe, 404 controlado.
-        """
+    def _get_usuario_by_request(self, request):
         email = getattr(request.user, "email", None)
         if not email:
-            return Response({"detail": "User without email"}, status=400)
-
+            return None, Response({"detail": "User without email"}, status=400)
         try:
             usuario = UsuarioModel.objects.get(email__iexact=email)
+            return usuario, None
         except UsuarioModel.DoesNotExist:
-            return Response({"detail": "Usuario not found"}, status=404)
+            return None, Response({"detail": "Usuario not found"}, status=404)
 
+    def get(self, request):
+        usuario, error = self._get_usuario_by_request(request)
+        if error:
+            return error
         return Response(UsuarioSerializer(usuario).data)
 
     def put(self, request):
         """
         Actualiza datos del perfil en TU tabla `usuarios_usuario` (no contraseña).
+        Acepta actualización parcial (partial=True) para simplificar front.
         """
-        email = getattr(request.user, "email", None)
-        if not email:
-            return Response({"detail": "User without email"}, status=400)
-
-        try:
-            usuario = UsuarioModel.objects.get(email__iexact=email)
-        except UsuarioModel.DoesNotExist:
-            return Response({"detail": "Usuario not found"}, status=404)
+        usuario, error = self._get_usuario_by_request(request)
+        if error:
+            return error
 
         s = UsuarioSerializer(usuario, data=request.data, partial=True)
         s.is_valid(raise_exception=True)
         obj = s.save()
         return Response(UsuarioSerializer(obj).data, status=status.HTTP_200_OK)
+
+    def patch(self, request):
+        """
+        Alias de PUT con partial update para permitir método PATCH desde el front.
+        """
+        return self.put(request)
 
 
 class ListaYCreaUsuario(generics.ListCreateAPIView):

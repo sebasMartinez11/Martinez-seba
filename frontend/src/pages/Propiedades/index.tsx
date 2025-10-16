@@ -118,6 +118,29 @@ export default function PropiedadesPage() {
     fetchProps();
   }, []);
 
+  // Copiar @Propiedad <id>
+  async function copyPropTag(p: Propiedad) {
+    const tag = `@Propiedad ${p.id}`;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(tag);
+      } else {
+        // Fallback
+        const ta = document.createElement("textarea");
+        ta.value = tag;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setResult({ ok: true, msg: `Copiado: ${tag}` });
+    } catch {
+      setResult({ ok: false, msg: "No se pudo copiar al portapapeles." });
+    }
+  }
+
   /* ---------------------- Smart search (client) --------------------- */
   const filtered = useMemo(() => {
     const query = norm(q);
@@ -251,7 +274,7 @@ export default function PropiedadesPage() {
                   <h3 className="font-semibold leading-snug">{p.titulo}</h3>
                   <div className="text-sm">{money(p.precio, p.moneda)}</div>
                   {p.disponibilidad ? (
-                    <div className="text-xs text-gray-500">{p.disponibilidad}</div>
+                    <div className="text-xs text-gray-500 capitalize">{p.disponibilidad}</div>
                   ) : null}
                   {p.descripcion ? (
                     <p className="text-xs text-gray-500 line-clamp-2">
@@ -260,26 +283,54 @@ export default function PropiedadesPage() {
                   ) : null}
                 </div>
 
-                {/* Footer */}
-                <div className="mt-auto px-3 py-2 text-[11px] text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                  <div className="flex gap-4">
-                    <span>Amb: {p.ambiente}</span>
-                    <span>Baños: {p.banos}</span>
-                    <span>Sup: {p.superficie} m²</span>
-                    <span>Cód: {p.codigo}</span>
+                {/* Footer: dos filas (datos arriba, botones abajo) */}
+                <div className="mt-auto px-3 py-3 text-[11px] text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
+                  {/* fila 1: datos en grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
+                      <div className="text-[10px] text-gray-400">Ambientes</div>
+                      <div className="font-medium">{p.ambiente}</div>
+                    </div>
+                    <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
+                      <div className="text-[10px] text-gray-400">Baños</div>
+                      <div className="font-medium">{p.banos}</div>
+                    </div>
+                    <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
+                      <div className="text-[10px] text-gray-400">Superficie</div>
+                      <div className="font-medium">{p.superficie} m²</div>
+                    </div>
+                    <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
+                      <div className="text-[10px] text-gray-400">Cód</div>
+                      <div className="font-medium">{p.codigo}</div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="h-7 px-2 rounded-md border text-[11px]" onClick={() => setDetail(p)}>
+
+                  {/* fila 2: botones */}
+                  <div className="flex items-center justify-end gap-2 flex-wrap">
+                    <button
+                      className="h-8 px-3 rounded-md border text-[11px] whitespace-nowrap"
+                      onClick={() => setDetail(p)}
+                    >
                       Ver
                     </button>
-                    <button className="h-7 px-2 rounded-md border text-[11px]" onClick={() => setEditTarget(p)}>
+                    <button
+                      className="h-8 px-3 rounded-md border text-[11px] whitespace-nowrap"
+                      onClick={() => setEditTarget(p)}
+                    >
                       Editar
                     </button>
                     <button
-                      className="h-7 px-2 rounded-md border border-rose-600/40 text-rose-500 text-[11px]"
+                      className="h-8 px-3 rounded-md border border-rose-600/40 text-rose-500 text-[11px] whitespace-nowrap"
                       onClick={() => setDeleteTarget(p)}
                     >
                       Borrar
+                    </button>
+                    <button
+                      className="h-8 px-3 rounded-md border text-[11px] hover:bg-gray-50 dark:hover:bg-gray-900 whitespace-nowrap"
+                      title="Copiar etiqueta para pegar en el asistente"
+                      onClick={() => copyPropTag(p)}
+                    >
+                      @Propiedad {p.id}
                     </button>
                   </div>
                 </div>
@@ -309,6 +360,8 @@ export default function PropiedadesPage() {
             setDeleteTarget(detail);
             setDetail(null);
           }}
+          // Pasamos util para copiar desde el modal
+          onCopyTag={() => copyPropTag(detail)}
         />
       )}
 
@@ -361,11 +414,13 @@ function PropiedadDetailModal({
   onClose,
   onEdit,
   onDelete,
+  onCopyTag,
 }: {
   propiedad: Propiedad;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onCopyTag: () => void;
 }) {
   const imgs = (propiedad.imagenes || []).map((x) => absMedia(x.imagen)).filter(Boolean) as string[];
   const [active, setActive] = useState(0);
@@ -382,6 +437,9 @@ function PropiedadDetailModal({
             <div className="text-xs text-gray-500">{propiedad.ubicacion}</div>
           </div>
           <div className="flex gap-2">
+            <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCopyTag}>
+              Copiar @Propiedad {propiedad.id}
+            </button>
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onEdit}>Editar</button>
             <button className="h-9 px-3 rounded-lg border border-rose-600/40 text-rose-500 text-sm" onClick={onDelete}>Borrar</button>
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
@@ -519,7 +577,7 @@ function PropiedadEditModal({
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
       <div
         className="w-full max-w-4xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl
-                   max-h-[85vh] overflow-y-auto"  // <-- evita que se corte el modal
+                   max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-xl font-semibold mb-4">Editar propiedad</div>
@@ -578,7 +636,7 @@ function PropiedadEditModal({
               </Row>
               <Row label="Moneda">
                 <select className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                        value={form.moneda} onChange={(e) => set("moneda", e.target.value as Propiedad["moneda"])}>
+                        value={form.moneda} onChange={(e) => set("moneda", e.target.value as Propiedad["moneda"])} >
                   <option value="USD">USD</option>
                   <option value="ARS">ARS</option>
                 </select>
@@ -606,7 +664,7 @@ function PropiedadEditModal({
 
             <Row label="Estado">
               <select className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
-                      value={form.estado} onChange={(e) => set("estado", e.target.value as Propiedad["estado"])}>
+                      value={form.estado} onChange={(e) => set("estado", e.target.value as Propiedad["estado"])} >
                 <option value="disponible">Disponible</option>
                 <option value="vendido">Vendido</option>
                 <option value="reservado">Reservado</option>

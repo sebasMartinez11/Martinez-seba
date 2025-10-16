@@ -1,39 +1,65 @@
 // src/pages/Dashboard/index.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import type { ReactNode } from "react";
-import axios from "axios";
+import {
+  api,
+  fetchEventos,
+  fetchLeads, // 👈 NEW: para autocompletar
+  type Evento as EventoApi,
+  type Propiedad as PropiedadApi,
+  type Contacto as ContactoApi,
+} from "../../lib/api";
+import TopFilters from "./TopFilter";
+import { toast } from 'react-hot-toast';
+import { FiAlertCircle, FiCheckCircle } from "react-icons/fi"; // Íconos para modales
 
 /* ============================== Types ============================== */
-type Contacto = {
-  id: number;
-  nombre?: string;
-  apellido?: string;
-  email?: string | null;
+// Reutilizo los tipos del cliente API para alinear con el back
+type Contacto = ContactoApi;
+type Propiedad = PropiedadApi;
+type Evento = EventoApi;
+
+type Filters = { date?: string; from?: string; to?: string; types?: string };
+
+type DashboardData = {
+  total_contactos: number;
+  contactos_por_estado: { fase: string; total: number }[];
+  proximos_contactos: number;
+  atrasados: number;
+  ultimos_contactos: { id: number; nombre: string; apellido: string; email: string }[];
+  avisos_pendientes: number;
+  avisos_atrasados: number;
 };
 
-type Propiedad = {
+/** ✅ Ítem de historial de cambios de estado */
+type HistItem = {
   id: number;
-  titulo?: string;
-  direccion?: string;
-  estado?: string | null; // ej: "disponible", "vendido", etc.
-  vendida?: boolean | null; // compat con back existente
-  disponibilidad?: "venta" | "alquiler" | string | null; // <-- NUEVO
+  contacto: number;
+  estado: EstadoLead | null;
+  changed_at: string; // ISO
+};
+type EstadoLead = { id: number; fase: string; descripcion?: string };
+
+
+/* --------------------------- Utils / UI --------------------------- */
+const STATE_COLORS: Record<string, string> = {
+  "en negociación": "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
+  negociacion: "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
+  rechazado: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
+  vendido: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
+  nuevo: "bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30",
 };
 
-type Evento = {
-  id: number;
-  nombre?: string;
-  apellido?: string;
-  email?: string | null;
-  contacto?: number | null;
-  propiedad: number;
-  tipo: "Reunion" | "Visita" | "Llamada";
-  fecha_hora: string;
-  notas?: string;
-  creado_en?: string;
+const STATUS_BADGE = {
+  pendiente: "bg-gray-500/15 text-gray-300 ring-1 ring-gray-500/30",
+  vencido: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
+  hoy: "bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/30",
+  proximo: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
 };
 
-/* ============================ Utilities ============================ */
+const norm = (s?: string | null) =>
+  (s || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
@@ -41,7 +67,32 @@ const MONTHS = [
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 const sameDay = (a: Date, b: Date) =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+const formatDate = (d?: Date | string | null, withTime = false) => {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  if (isNaN(+date)) return "—";
+  const base = date.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  if (withTime) {
+    const h = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    return `${base} ${h}`;
+  }
+  return base;
+};
+
+
+const formatHour = (d: string | Date) =>
+  (typeof d === "string" ? new Date(d) : d).toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 const toKey = (d: Date) => {
   const y = d.getFullYear();
@@ -49,14 +100,10 @@ const toKey = (d: Date) => {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
+
 const fromISO = (s: string) => new Date(s);
-const sortByDateAsc = (a: Evento, b: Evento) => +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
-
-const formatHour = (d: string | Date) =>
-  (typeof d === "string" ? new Date(d) : d).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-
-const formatDate = (d: Date, opts: Intl.DateTimeFormatOptions = {}) =>
-  d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", ...opts });
+const sortByDateAsc = (a: Evento, b: Evento) =>
+  +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
 
 const toLocalInputValue = (d?: string | Date | null) => {
   if (!d) return "";
@@ -69,7 +116,91 @@ const toLocalInputValue = (d?: string | Date | null) => {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 };
 
-const plural = (n: number, uno: string, muchos: string) => (n === 1 ? uno : muchos);
+const plural = (n: number, uno: string, muchos: string) =>
+  n === 1 ? uno : muchos;
+
+// Helpers de rango mensual para el fetch del backend
+function ymd(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function monthRange(d: Date) {
+  const start = new Date(d.getFullYear(), d.getMonth(), 1);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 1); // exclusivo
+  return { from: ymd(start), to: ymd(end) };
+}
+
+/* =============== Nuevos helpers para validación de solapamientos =============== */
+/**
+ * parseFechaHoraRange:
+ * - Entrada: evento con campo fecha_hora (ISO string expected)
+ * - Retorna { start: Date, end: Date } o null
+ * - Por defecto asigna duración = 1 hora (3600000 ms)
+ */
+const DEFAULT_DURATION_MS = 60 * 60 * 1000;
+function parseFechaHoraRange(ev: Partial<Evento>, durationMs = DEFAULT_DURATION_MS): { start: Date; end: Date } | null {
+  if (!ev || !ev.fecha_hora) return null;
+  const d = new Date(ev.fecha_hora);
+  if (isNaN(d.getTime())) return null;
+  return { start: d, end: new Date(d.getTime() + durationMs) };
+}
+
+/**
+ * rangesOverlap: detecta si [aStart, aEnd) se intersecta con [bStart, bEnd)
+ */
+function rangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {
+  return aStart < bEnd && aEnd > bStart;
+}
+
+/**
+ * validateEventoNoSolapa:
+ * - Revisa en el arreglo existing si el evento newEv solapa con alguno de ellos.
+ * - Comparación por defecto **solo** contra eventos que pertenezcan a la misma propiedad (propiedad).
+ * - Duplica exacto: mismo start.getTime() y misma propiedad -> rechazo.
+ * - Si mode === "edit" se puede pasar ignoreId para ignorar el mismo evento.
+ */
+function validateEventoNoSolapa(
+  newEv: Partial<Evento>,
+  existing: Evento[],
+  opts?: { ignoreId?: number; durationMs?: number }
+): { ok: true } | { ok: false; msg: string } {
+  const dur = opts?.durationMs ?? DEFAULT_DURATION_MS;
+  const newRange = parseFechaHoraRange(newEv, dur);
+  if (!newRange) return { ok: false, msg: "Fecha/hora inválida." };
+
+  // Si nueva propiedad no está definida, tratamos como global: no permitimos crear si hay duplicado exacto global,
+  // pero para solapamiento intentamos comparar solo si property matches. Esto evita false positives.
+  const newProp = (newEv as any).propiedad ?? (newEv as any).propiedad_id ?? null;
+
+  for (const ev of existing) {
+    if (opts?.ignoreId && ev.id === opts.ignoreId) continue;
+    const evRange = parseFechaHoraRange(ev as Partial<Evento>, dur);
+    if (!evRange) continue;
+
+    const evProp = (ev as any).propiedad ?? (ev as any).propiedad_id ?? null;
+
+    // duplicado exacto: misma propiedad (o ambos nulos) y misma fecha_hora exacta
+    if (newProp === evProp) {
+      if (newRange.start.getTime() === evRange.start.getTime()) {
+        return {
+          ok: false,
+          msg: "Ya existe un evento exactamente en esa fecha y hora para la misma propiedad.",
+        };
+      }
+      // chequeo de solapamiento horario solo dentro de la misma propiedad
+      if (rangesOverlap(newRange.start, newRange.end, evRange.start, evRange.end)) {
+        return {
+          ok: false,
+          msg: `El horario solapa con otro evento en la misma propiedad (desde ${evRange.start.toLocaleString()} hasta ${evRange.end.toLocaleString()}).`,
+        };
+      }
+    }
+  }
+
+  return { ok: true };
+}
 
 /* ============================== Page =============================== */
 export default function DashboardPage() {
@@ -79,6 +210,10 @@ export default function DashboardPage() {
   const [propiedades, setPropiedades] = useState<Propiedad[]>([]);
   const [today] = useState(new Date());
   const [cursor, setCursor] = useState(new Date()); // mes mostrado
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
+  // filtros activos (si hay algo acá, se prioriza sobre la vista mensual)
+  const [activeFilters, setActiveFilters] = useState<Filters | null>(null);
 
   // UI/Modals
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -90,6 +225,7 @@ export default function DashboardPage() {
   const [openDayModal, setOpenDayModal] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState<Evento | null>(null);
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   //  Ajuste automático de altura del calendario
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -117,23 +253,114 @@ export default function DashboardPage() {
 >>>>>>> abd818dd92abbb4eea93f14917d024f149e5f281
   async function fetchAll() {
     setLoading(true);
+=======
+  /* ------------------------ Fetch data ------------------------ */
+  async function fetchStatic() {
+    // Verificar si el token existe antes de hacer la petición
+    if (!localStorage.getItem('rc_token')) {
+      setLoading(false);
+      toast.error("No autenticado. Por favor, inicia sesión.");
+      return;
+    }
+
+>>>>>>> adf4b8c42bdb2a8daf3576afbf683899158ffc9c
     try {
-      const [evRes, cRes, pRes] = await Promise.all([
-        axios.get("/api/eventos/"),
-        axios.get("/api/contactos/"),
-        axios.get("/api/propiedades/"),
+      const [cRes, pRes, dRes] = await Promise.all([
+        api.get("contactos/"),
+        api.get("propiedades/"),
+        api.get("dashboard/data/"),
       ]);
-      const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
-      setEventos(toArr(evRes.data));
+      const toArr = (d: any) => Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
       setContactos(toArr(cRes.data));
       setPropiedades(toArr(pRes.data));
-    } catch (e) {
+      setDashboardData(dRes.data);
+    } catch (e: any) {
       console.error(e);
-      setEventos([]); setContactos([]); setPropiedades([]);
-      setResult({ ok: false, msg: "No se pudo cargar información del dashboard." });
-    } finally { setLoading(false); }
+      setContactos([]); setPropiedades([]);
+      // Mostrar el error de forma controlada si no es un 401 inicial
+      if (e.response && e.response.status !== 401) {
+        toast.error("No se pudieron cargar datos iniciales: " + (e.response.data.detail || e.message));
+      }
+    }
   }
-  useEffect(() => { fetchAll(); }, []);
+
+  // Eventos según el MES visible (cursor)
+  async function fetchMonthEvents(d = cursor) {
+    if (!localStorage.getItem('rc_token')) return; // No hacer fetch si no hay token
+    const { from, to } = monthRange(d);
+    try {
+      const data = await fetchEventos({ from, to, ordering: "fecha_hora" });
+      setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    } catch (e) {
+      console.error("Error fetching month events:", e);
+    }
+  }
+
+  // Eventos con filtros activos (hoy/mañana/semana/tipo)
+  async function fetchWithFilters(filters: Filters) {
+    if (!localStorage.getItem('rc_token')) return; // No hacer fetch si no hay token
+    try {
+      const data = await fetchEventos({ ...filters, ordering: "fecha_hora" });
+      setEventos(Array.isArray(data) ? data : data?.results ?? []);
+    } catch (e) {
+      console.error("Error fetching filtered events:", e);
+    }
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    fetchStatic().finally(() => setLoading(false));
+  }, []);
+
+  // si hay filtros → traer con filtros; si no → traer por mes cuando cambie cursor
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      // Si el token aún no existe, no hacemos el fetch, pero salimos de 'loading'
+      if (!localStorage.getItem('rc_token')) {
+        if (mounted) setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        if (activeFilters) await fetchWithFilters(activeFilters);
+        else await fetchMonthEvents();
+      } catch (e: any) {
+        console.error(e);
+        setEventos([]);
+        if (e.response && e.response.status !== 401) {
+          toast.error(activeFilters ? "No se pudieron cargar los eventos filtrados." : "No se pudieron cargar los eventos del mes.");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursor, activeFilters]);
+
+  /* 🔔 Auto-refresh cuando el asistente crea algo */
+  useEffect(() => {
+    // 🔑 ESCUCHADOR DE RECARGA GLOBAL DESDE LEADS/AVISOS
+    const handler = () => {
+      // Solo refrescamos si ya estamos logeados
+      if (!localStorage.getItem('rc_token')) return;
+
+      // Forzamos la recarga de eventos del mes
+      // Llamamos a fetchMonthEvents para recargar los datos del calendario en el mes actual
+      if (activeFilters) fetchWithFilters(activeFilters);
+      else fetchMonthEvents();
+
+      fetchStatic(); // Refrescar KPIs
+    };
+
+    // El nombre de evento lo definimos en Leads/index.tsx
+    window.addEventListener("assistant:refresh-calendar", handler as EventListener);
+
+    return () => window.removeEventListener("assistant:refresh-calendar", handler as EventListener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilters, cursor]); // cursor y activeFilters aseguran que el fetch se haga correctamente si se usa en el handler
 
   /* ------------------------ Calendar helpers ------------------------ */
   const monthLabel = `${MONTHS[cursor.getMonth()]} de ${cursor.getFullYear()}`;
@@ -184,9 +411,8 @@ export default function DashboardPage() {
   /* ------------------------------ KPIs ------------------------------ */
   const kpis = useMemo(() => {
     const totalLeads = contactos.length;
-
     const norm = (s?: string | null) => (s || "").trim().toLowerCase();
-    const isVendida = (p: Propiedad) => p.vendida === true || norm(p.estado).includes("vendid");
+    const isVendida = (p: Propiedad) => norm(p.estado).includes("vendid");
 
     let enVenta = 0, enAlquiler = 0, vendidas = 0;
     for (const p of propiedades) {
@@ -196,11 +422,9 @@ export default function DashboardPage() {
       else if (d === "alquiler") enAlquiler++;
     }
 
-    const evInMonth = eventos.filter((e) => {
-      const d = new Date(e.fecha_hora);
-      return d.getFullYear() === cursor.getFullYear() && d.getMonth() === cursor.getMonth();
-    }).length;
+    const evInMonth = eventos.length; // ya traemos solo el mes o filtros
 
+    // Eliminamos el KPI de Avisos aquí
     return [
       { label: "Leads", value: totalLeads, hint: "Totales" },
       { label: "Propiedades en venta", value: enVenta, hint: "" },
@@ -208,7 +432,7 @@ export default function DashboardPage() {
       { label: "Propiedades vendidas", value: vendidas, hint: "" },
       { label: "Reuniones programadas", value: evInMonth, hint: "" },
     ];
-  }, [contactos, propiedades, eventos, cursor]);
+  }, [contactos, propiedades, eventos]);
 
   /* ---------------------------- Handlers ---------------------------- */
   const prevMonth = () => { const d = new Date(cursor); d.setMonth(cursor.getMonth() - 1); setCursor(d); };
@@ -216,191 +440,273 @@ export default function DashboardPage() {
 
   function openCreateOnDay(d: Date) { setOpenEventModal({ mode: "create", baseDate: d }); }
 
+  /**
+   * saveEvento: valida solapamientos/duplicados (front) antes de post/patch
+   */
   async function saveEvento(data: Partial<Evento>, mode: "create" | "edit", id?: number) {
+    if (!localStorage.getItem('rc_token')) {
+      toast.error("Acción no permitida. Inicia sesión.");
+      return;
+    }
+
     const payload: any = {};
-    (["nombre","apellido","email","tipo","fecha_hora","notas","propiedad","contacto"] as const)
+    (["nombre", "apellido", "email", "tipo", "fecha_hora", "notas", "propiedad", "contacto"] as const)
       .forEach((k) => { const v = (data as any)[k]; if (v !== undefined) payload[k] = v; });
 
+    // --- Validación front: no solapamiento / duplicado en la misma propiedad ---
+    const ignoreId = mode === "edit" ? id : undefined;
+    const valid = validateEventoNoSolapa(payload, eventos, { ignoreId });
+    if (!valid.ok) {
+      toast.error(valid.msg);
+      return;
+    }
+
     try {
-      if (mode === "create") await axios.post("/api/eventos/", payload);
-      else if (id) await axios.patch(`/api/eventos/${id}/`, payload);
-      await fetchAll();
+      let fechaISO = String(payload.fecha_hora);
+      if (fechaISO.length <= 16 && fechaISO.includes("T")) {
+        const d = new Date(fechaISO);
+        fechaISO = d.toISOString();
+      }
+      payload.fecha_hora = fechaISO;
+
+      if (mode === "create") await api.post("eventos/", payload);
+      else if (id) await api.patch(`eventos/${id}/`, payload);
+
+      // refrescar según contexto
+      if (activeFilters) await fetchWithFilters(activeFilters);
+      else await fetchMonthEvents();
+
+      // refetch de los datos estáticos para actualizar los KPIs
+      await fetchStatic();
+
       setOpenEventModal(null);
       setOpenDayModal(null);
-      setResult({ ok: true, msg: "Evento guardado correctamente." });
-    } catch (e) {
+      toast.success("Evento guardado correctamente.");
+    } catch (e: any) {
       console.error(e);
-      setResult({ ok: false, msg: "No se pudo guardar el evento." });
+      toast.error(e?.response?.data?.detail || "No se pudo guardar el evento.");
     }
   }
 
   async function deleteEvento(ev: Evento) {
+    if (!localStorage.getItem('rc_token')) {
+      toast.error("Acción no permitida. Inicia sesión.");
+      return;
+    }
+
     try {
-      await axios.delete(`/api/eventos/${ev.id}/`);
-      await fetchAll();
+      await api.delete(`eventos/${ev.id}/`);
+      if (activeFilters) await fetchWithFilters(activeFilters);
+      else await fetchMonthEvents();
+
+      // refetch de los datos estáticos para actualizar los KPIs
+      await fetchStatic();
+
       setDeleting(null);
-      setResult({ ok: true, msg: "Evento eliminado." });
+      toast.success("Evento eliminado.");
     } catch (e) {
       console.error(e);
-      setResult({ ok: false, msg: "No se pudo eliminar el evento." });
+      toast.error("No se pudo eliminar el evento.");
     }
+  }
+
+  function applyFilters(f: Filters) {
+    setActiveFilters((prev) => {
+      // si cambian filtros, no dependemos del mes; igualmente movemos el cursor al día de 'date' si viene
+      if (f.date) {
+        const [y, m, d] = f.date.split("-").map(Number);
+        setCursor(new Date(y, (m ?? 1) - 1, d ?? 1));
+      } else if (f.from) {
+        const [y, m] = f.from.split("-").map(Number);
+        setCursor(new Date(y, (m ?? 1) - 1, 1));
+      }
+      return { ...f };
+    });
+  }
+
+  function clearFilters() {
+    setActiveFilters(null);
   }
 
   /* ------------------------------- UI ------------------------------- */
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Bienvenido a Real Connect</h2>
+    <>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Bienvenido a Real Connect</h2>
 
-        <div className="flex items-center gap-2">
-          <button
-            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
-            onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
-          >
-            + Agregar evento
-          </button>
           <div className="flex items-center gap-2">
-            <button className="h-9 w-9 rounded-lg border text-lg" onClick={prevMonth}>←</button>
-            <div className="min-w-[200px] text-center font-medium">{monthLabel}</div>
-            <button className="h-9 w-9 rounded-lg border text-lg" onClick={nextMonth}>→</button>
+            <button
+              className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
+              onClick={() => {
+                if (!localStorage.getItem('rc_token')) {
+                  toast.error("Debes iniciar sesión para agregar eventos.");
+                  return;
+                }
+                setOpenEventModal({ mode: "create", baseDate: new Date() });
+              }}
+            >
+              + Agregar evento
+            </button>
+            <div className="flex items-center gap-2">
+              <button className="h-9 w-9 rounded-lg border text-lg" onClick={prevMonth}>←</button>
+              <div className="min-w-[200px] text-center font-medium">{monthLabel}</div>
+              <button className="h-9 w-9 rounded-lg border text-lg" onClick={nextMonth}>→</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* KPIs */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-        {kpis.map((k) => (
-          <div key={k.label} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
-            <div className="text-3xl font-semibold">{k.value}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">{k.label}</div>
-            {k.hint && <div className="text-xs text-gray-400 mt-1">{k.hint}</div>}
-          </div>
-        ))}
-      </section>
+        {/* Filtros rápidos */}
+        <div className="flex items-center gap-3">
+          <TopFilters onChange={applyFilters} />
+          {activeFilters && (
+            <button className="h-9 px-3 rounded-lg border text-sm" onClick={clearFilters}>
+              Limpiar filtros
+            </button>
+          )}
+        </div>
 
-      {/* Calendar (filas fluidas que se estiran si hace falta) */}
-      <div className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden">
-        {/* header week days */}
-        <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500">
-          {WEEKDAYS.map((w) => (
-            <div key={w} className="px-3 py-2">{w}</div>
+        {/* KPIs */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          {kpis.map((k) => (
+            <div key={k.label} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
+              <div className="text-3xl font-semibold">{k.value}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{k.label}</div>
+              {k.hint && <div className="text-xs text-gray-400 mt-1">{k.hint}</div>}
+            </div>
           ))}
-        </div>
+        </section>
 
-        {/* month grid con alto mínimo y expansión automática */}
-        <div className="grid grid-cols-7 auto-rows-[minmax(7rem,auto)]">
-          {monthGrid.days.map((d, i) => {
-            const inMonth = d.getMonth() === cursor.getMonth();
-            const key = toKey(d);
-            const isToday = sameDay(d, today);
-            const allEvents = inMonth ? (eventsByDay.get(key) || []) : [];
-            const sum = summaryByDay.get(key) || { r: 0, l: 0, v: 0, total: 0 };
+        {/* Calendar */}
+        <div className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden">
+          {/* header week days */}
+          <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500">
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="px-3 py-2">{w}</div>
+            ))}
+          </div>
 
-            const dd = String(d.getDate()).padStart(2, "0");
-            const monthAbbr = MONTHS[d.getMonth()].slice(0, 3);
-            const dayLabel = inMonth ? (d.getDate() === 1 ? `${dd}-${monthAbbr}` : dd) : "";
+          {/* month grid con alto mínimo y expansión automática */}
+          <div className="grid grid-cols-7 auto-rows-[minmax(7rem,auto)]">
+            {monthGrid.days.map((d, i) => {
+              const inMonth = d.getMonth() === cursor.getMonth();
+              const key = toKey(d);
+              const isToday = sameDay(d, today);
+              const allEvents = inMonth ? (eventsByDay.get(key) || []) : [];
+              const sum = summaryByDay.get(key) || { r: 0, l: 0, v: 0, total: 0 };
 
-            return (
-              <div
-                key={i}
-                className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
-                title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
-              >
-                {/* Contenedor columna + evitar desborde */}
-                <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
-                  {/* header mini */}
-                  <div className="flex items-center justify-between shrink-0">
-                    <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
-                      {dayLabel}
-                    </div>
-                    {inMonth && isToday && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>
-                    )}
-                  </div>
+              const dd = String(d.getDate()).padStart(2, "0");
+              const monthAbbr = MONTHS[d.getMonth()].slice(0, 3);
+              const dayLabel = inMonth ? (d.getDate() === 1 ? `${dd}-${monthAbbr}` : dd) : "";
 
-                  {/* Resumen compacto en una sola línea */}
-                  {inMonth && sum.total > 0 && (
-                    <button
-                      className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100/60 dark:hover:bg-gray-900/60 truncate"
-                      onClick={() => setOpenDayModal(d)}
-                      title={`${sum.r} ${plural(sum.r, "reunión", "reuniones")} · ${sum.l} ${plural(sum.l, "llamada", "llamadas")} · ${sum.v} ${plural(sum.v, "visita", "visitas")}`}
-                    >
-                      {sum.r} {plural(sum.r, "reunión", "reuniones")} · {sum.l} {plural(sum.l, "llamada", "llamadas")} · {sum.v} {plural(sum.v, "visita", "visitas")}
-                    </button>
-                  )}
-
-                  {/* Espaciador para empujar acciones abajo */}
-                  <div className="flex-1 min-h-0" />
-
-                  {/* Acciones rápidas ancladas abajo */}
-                  {inMonth && (
-                    <div className="pt-2 shrink-0">
-                      <button
-                        className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                        onClick={() => openCreateOnDay(d)}
-                      >
-                        + nuevo
-                      </button>
-                      {allEvents.length > 0 && (
-                        <button
-                          className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                          onClick={() => setOpenDayModal(d)}
-                        >
-                          ver
-                        </button>
+              return (
+                <div
+                  key={i}
+                  className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
+                  title={inMonth ? formatDate(d) : undefined}
+                >
+                  {/* Contenedor columna + evitar desborde */}
+                  <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
+                    {/* header mini */}
+                    <div className="flex items-center justify-between shrink-0">
+                      <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
+                        {dayLabel}
+                      </div>
+                      {inMonth && isToday && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>
                       )}
                     </div>
-                  )}
+
+                    {/* Resumen compacto en una sola línea */}
+                    {inMonth && sum.total > 0 && (
+                      <button
+                        className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100/60 dark:hover:bg-gray-900/60 truncate"
+                        onClick={() => setOpenDayModal(d)}
+                        title={`${sum.r} ${plural(sum.r, "reunión", "reuniones")} · ${sum.l} ${plural(sum.l, "llamada", "llamadas")} · ${sum.v} ${plural(sum.v, "visita", "visitas")}`}
+                      >
+                        {sum.r} {plural(sum.r, "reunión", "reuniones")} · {sum.l} {plural(sum.l, "llamada", "llamadas")} · {sum.v} {plural(sum.v, "visita", "visitas")}
+                      </button>
+                    )}
+
+                    {/* Espaciador */}
+                    <div className="flex-1 min-h-0" />
+
+                    {/* Acciones rápidas ancladas abajo */}
+                    {inMonth && (
+                      <div className="pt-2 shrink-0">
+                        <button
+                          className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                          onClick={() => {
+                            if (!localStorage.getItem('rc_token')) {
+                              toast.error("Debes iniciar sesión para agregar eventos.");
+                              return;
+                            }
+                            openCreateOnDay(d);
+                          }}
+                        >
+                          + nuevo
+                        </button>
+                        {allEvents.length > 0 && (
+                          <button
+                            className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                            onClick={() => setOpenDayModal(d)}
+                          >
+                            ver
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
+
+        {/* Day Events Modal */}
+        {openDayModal && (
+          <DayEventsModal
+            date={openDayModal}
+            eventos={(eventsByDay.get(toKey(openDayModal)) || []).slice().sort(sortByDateAsc)}
+            resumen={summaryByDay.get(toKey(openDayModal)) || { r: 0, l: 0, v: 0, total: 0 }}
+            onClose={() => setOpenDayModal(null)}
+            onEdit={(ev) => setOpenEventModal({ mode: "edit", evento: ev })}
+            onDelete={(ev) => setDeleting(ev)}
+            onCreate={() => setOpenEventModal({ mode: "create", baseDate: openDayModal })}
+          />
+        )}
+
+        {/* Create/Edit Event Modal */}
+        {openEventModal && (
+          <EventModal
+            mode={openEventModal.mode}
+            baseDate={openEventModal.baseDate}
+            evento={openEventModal.evento}
+            contactos={contactos}
+            propiedades={propiedades}
+            onCancel={() => setOpenEventModal(null)}
+            onSave={saveEvento}
+          />
+        )}
+
+        {/* Delete confirm */}
+        {deleting && (
+          <ConfirmModal
+            title="Eliminar evento"
+            message={`¿Seguro que querés eliminar el evento de ${formatHour(deleting.fecha_hora)} (${deleting.tipo})?`}
+            confirmLabel="Eliminar"
+            confirmType="danger"
+            onCancel={() => setDeleting(null)}
+            onConfirm={() => deleteEvento(deleting)}
+          />
+        )}
+
+        {/* Result toast modal */}
+        {result && <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />}
+
+        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
       </div>
-
-      {/* Day Events Modal */}
-      {openDayModal && (
-        <DayEventsModal
-          date={openDayModal}
-          eventos={(eventsByDay.get(toKey(openDayModal)) || []).slice().sort(sortByDateAsc)}
-          resumen={summaryByDay.get(toKey(openDayModal)) || { r: 0, l: 0, v: 0, total: 0 }}
-          onClose={() => setOpenDayModal(null)}
-          onEdit={(ev) => setOpenEventModal({ mode: "edit", evento: ev })}
-          onDelete={(ev) => setDeleting(ev)}
-          onCreate={() => setOpenEventModal({ mode: "create", baseDate: openDayModal })}
-        />
-      )}
-
-      {/* Create/Edit Event Modal */}
-      {openEventModal && (
-        <EventModal
-          mode={openEventModal.mode}
-          baseDate={openEventModal.baseDate}
-          evento={openEventModal.evento}
-          contactos={contactos}
-          propiedades={propiedades}
-          onCancel={() => setOpenEventModal(null)}
-          onSave={saveEvento}
-        />
-      )}
-
-      {/* Delete confirm */}
-      {deleting && (
-        <ConfirmModal
-          title="Eliminar evento"
-          message={`¿Seguro que querés eliminar el evento de ${formatHour(deleting.fecha_hora)} (${deleting.tipo})?`}
-          confirmLabel="Eliminar"
-          confirmType="danger"
-          onCancel={() => setDeleting(null)}
-          onConfirm={() => deleteEvento(deleting)}
-        />
-      )}
-
-      {/* Result toast modal */}
-      {result && <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />}
-
-      {loading && <div className="text-sm text-gray-500">Cargando…</div>}
-    </div>
+    </>
   );
 }
 
@@ -429,9 +735,7 @@ function DayEventsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold">
-            Eventos del {formatDate(date, { year: "numeric" })}
-          </div>
+          <div className="text-lg font-semibold">Eventos del {formatDate(date, true)}</div>
           <div className="flex gap-2">
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCreate}>+ Nuevo</button>
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
@@ -461,6 +765,18 @@ function DayEventsModal({
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">
                     {formatHour(ev.fecha_hora)} · {ev.tipo}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 truncate">
+                    {typeof (ev as any).propiedad_titulo === "string"
+                      ? (ev as any).propiedad_titulo
+                      : ev.propiedad
+                        ? `Propiedad #${ev.propiedad}`
+                        : "—"}
+                    {(ev as any).contacto_nombre
+                      ? ` • ${(ev as any).contacto_nombre}`
+                      : ev.contacto
+                        ? ` • Lead #${ev.contacto}`
+                        : ""}
                   </div>
                   {ev.notas && <div className="text-xs text-gray-500 mt-0.5 truncate">{ev.notas}</div>}
                 </div>
@@ -499,16 +815,18 @@ function EventModal({
     evento
       ? { ...evento }
       : {
-          tipo: "Reunion",
-          fecha_hora: toLocalInputValue(baseDate || new Date()),
-          propiedad: propiedades[0]?.id,
-          contacto: undefined,
-        }
+        tipo: "Reunion",
+        fecha_hora: toLocalInputValue(baseDate || new Date()),
+        propiedad: propiedades[0]?.id,
+        contacto: undefined,
+      }
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function set<K extends keyof Evento>(k: K, v: Evento[K] | any) { setForm((f) => ({ ...f, [k]: v })); }
+  function set<K extends keyof Evento>(k: K, v: Evento[K] | any) {
+    setForm((f) => ({ ...f, [k]: v }));
+  }
 
   async function handleSubmit() {
     setError(null);
@@ -525,7 +843,7 @@ function EventModal({
         {
           ...form,
           fecha_hora: fechaISO,
-          contacto: form.contacto === ("" as any) ? null : form.contacto,
+          contacto: (form as any).contacto === "" ? null : form.contacto,
           email: form.email || undefined,
           nombre: form.nombre || undefined,
           apellido: form.apellido || undefined,
@@ -536,7 +854,9 @@ function EventModal({
       );
     } catch {
       setError("Ocurrió un error. Intentá otra vez.");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -545,12 +865,17 @@ function EventModal({
         className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-xl font-semibold mb-4">{mode === "create" ? "Nuevo evento" : "Editar evento"}</div>
+        <div className="text-xl font-semibold mb-4">
+          {mode === "create" ? "Nuevo evento" : "Editar evento"}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Tipo">
-            <select className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                    value={form.tipo || "Reunion"} onChange={(e) => set("tipo", e.target.value as Evento["tipo"])}>
+            <select
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.tipo || "Reunion"}
+              onChange={(e) => set("tipo", e.target.value as Evento["tipo"])}
+            >
               <option value="Reunion">Reunión</option>
               <option value="Visita">Visita</option>
               <option value="Llamada">Llamada</option>
@@ -558,59 +883,84 @@ function EventModal({
           </Field>
 
           <Field label="Fecha y hora">
-            <input type="datetime-local" className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={
-                     form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
-                       ? toLocalInputValue(new Date(form.fecha_hora))
-                       : String(form.fecha_hora || "")
-                   }
-                   onChange={(e) => set("fecha_hora", e.target.value)} />
+            <input
+              type="datetime-local"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={
+                form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
+                  ? toLocalInputValue(new Date(form.fecha_hora))
+                  : String(form.fecha_hora || "")
+              }
+              onChange={(e) => set("fecha_hora", e.target.value)}
+            />
           </Field>
 
           <Field label="Propiedad">
-            <select className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                    value={String(form.propiedad || "")}
-                    onChange={(e) => set("propiedad", Number(e.target.value))}>
+            <select
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={String(form.propiedad || "")}
+              onChange={(e) => set("propiedad", Number(e.target.value))}
+            >
               {propiedades.map((p) => (
                 <option key={p.id} value={String(p.id)}>
-                  {p.titulo || p.direccion || `Propiedad #${p.id}`}
+                  {p.titulo || (p as any).direccion || `Propiedad #${p.id}`}
                 </option>
               ))}
             </select>
           </Field>
 
+          {/* 👇 Autocompletado de Contacto (Lead) */}
           <Field label="Contacto (opcional)">
-            <select className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                    value={form.contacto == null ? "" : String(form.contacto)}
-                    onChange={(e) => set("contacto", e.target.value ? Number(e.target.value) : null)}>
-              <option value="">— Ninguno —</option>
-              {contactos.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {(c.nombre || "") + " " + (c.apellido || "")} {c.email ? `• ${c.email}` : ""}
-                </option>
-              ))}
-            </select>
+            <ContactAutocomplete
+              valueId={form.contacto == null ? null : Number(form.contacto)}
+              initialList={contactos}
+              onChange={(id: number | null, item: Contacto | null | undefined) => { // Corregido el tipo
+                set("contacto", id);
+                // Limpio visitante si hay lead
+                if (id) {
+                  set("nombre", "");
+                  set("apellido", "");
+                  set("email", null);
+                }
+              }}
+              onClear={() => set("contacto", null)}
+            />
           </Field>
 
           <Field label="Nombre (visitante)">
-            <input className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={form.nombre || ""} onChange={(e) => set("nombre", e.target.value)} placeholder="Si no es contacto registrado" />
+            <input
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.nombre || ""}
+              onChange={(e) => set("nombre", e.target.value)}
+              placeholder="Si no es contacto registrado"
+            />
           </Field>
 
           <Field label="Apellido (visitante)">
-            <input className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={form.apellido || ""} onChange={(e) => set("apellido", e.target.value)} />
+            <input
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.apellido || ""}
+              onChange={(e) => set("apellido", e.target.value)}
+            />
           </Field>
 
           <Field label="Email (visitante)">
-            <input type="email" className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-                   value={form.email || ""} onChange={(e) => set("email", e.target.value)} />
+            <input
+              type="email"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+              value={form.email || ""}
+              onChange={(e) => set("email", e.target.value)}
+            />
           </Field>
 
           <div className="md:col-span-2">
             <Field label="Notas">
-              <textarea rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
-                        value={form.notas || ""} onChange={(e) => set("notas", e.target.value)} />
+              <textarea
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                value={form.notas || ""}
+                onChange={(e) => set("notas", e.target.value)}
+              />
             </Field>
           </div>
         </div>
@@ -618,9 +968,14 @@ function EventModal({
         {error && <div className="mt-3 text-sm text-rose-500">{error}</div>}
 
         <div className="mt-6 flex items-center justify-end gap-2">
-          <button className="h-10 px-4 rounded-lg border text-sm" onClick={onCancel} disabled={saving}>Cancelar</button>
-          <button className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-                  onClick={handleSubmit} disabled={saving}>
+          <button className="h-10 px-4 rounded-lg border text-sm" onClick={onCancel} disabled={saving}>
+            Cancelar
+          </button>
+          <button
+            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+            onClick={handleSubmit}
+            disabled={saving}
+          >
             {saving ? "Guardando..." : "Guardar"}
           </button>
         </div>
@@ -629,7 +984,7 @@ function EventModal({
   );
 }
 
-/* ============================ Confirm Modal ============================ */
+/* --------------------------- Confirm Modal -------------------------- */
 type ConfirmModalProps = {
   title: string;
   message: string;
@@ -659,7 +1014,9 @@ function ConfirmModal({
         <div className="text-lg font-semibold mb-2">{title}</div>
         <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>Cancelar</button>
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
+            Cancelar
+          </button>
           <button
             className={
               confirmType === "danger"
@@ -677,14 +1034,18 @@ function ConfirmModal({
   );
 }
 
-/* ============================= Result Modal ============================ */
+/* --------------------------- Result Modal --------------------------- */
+
 function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
-      <div className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
-           onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${ok
+            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
+          }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
         <div className="mt-4 text-right">
@@ -697,12 +1058,235 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
   );
 }
 
-/* ================================ UI bits ================================ */
-function Field({ label, children }: { label: string; children: ReactNode }) {
+/* --------------------------- History Modal --------------------------- */
+
+function HistoryModal({
+  contacto,
+  items,
+  loading,
+  onClose,
+}: {
+  contacto: Contacto;
+  items: HistItem[] | null;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
+      <div
+        className="w/full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-lg font-semibold mb-1">
+          Historial de {contacto.nombre || "—"} {contacto.apellido || ""}
+        </div>
+        <div className="text-xs text-gray-500 mb-4">{contacto.email || "—"}</div>
+
+        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+        {!loading && (items?.length ?? 0) === 0 && (
+          <div className="text-sm text-gray-500">Este lead aún no tiene cambios de estado.</div>
+        )}
+
+        {!loading && !!items && items.length > 0 && (
+          <ul className="relative pl-5">
+            {items.map((h, idx) => {
+              const fase = h.estado?.fase || "—";
+              const key = norm(fase);
+              const chip =
+                STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+              return (
+                <li key={h.id} className="pb-4 last:pb-0">
+                  {idx !== items.length - 1 && (
+                    <span className="absolute left-2 top-3 h-full w-px bg-gray-200 dark:bg-gray-800" />
+                  )}
+                  <span className="absolute left-0 mt-1 h-2 w-2 rounded-full bg-gray-400" />
+                  <div className="ml-4">
+                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>
+                      {fase}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">{formatDate(h.changed_at, true)}</div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="mt-5 text-right">
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ UI bits ----------------------------- */
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="block text-xs mb-1">{label}</label>
       {children}
+    </div>
+  );
+}
+
+/* --------------------------- Contact Autocomplete Component (Moved from Leads/index.tsx) -------------------------- */
+function useDebounced<T>(value: T, delay = 300) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return v;
+}
+
+function ContactAutocomplete({
+  valueId,
+  initialList,
+  onChange,
+  onClear,
+}: {
+  valueId: number | null;
+  initialList: Contacto[];
+  onChange: (id: number | null, item?: Contacto | null) => void;
+  onClear: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const debounced = useDebounced(query, 300);
+  const [items, setItems] = useState<Contacto[]>(initialList || []);
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const selected = useMemo(
+    () => (valueId ? items.find((i) => i.id === valueId) : null),
+    [valueId, items]
+  );
+
+  // Buscar cuando cambia el query debounced
+  useEffect(() => {
+    let done = false;
+    (async () => {
+      // No hacer fetch si no hay token
+      if (!localStorage.getItem('rc_token')) {
+        setItems(initialList.slice(0, 10)); // Mostrar lista inicial si no logeado
+        return;
+      }
+
+      try {
+        const q = debounced.trim();
+        // si no hay query, mostramos los primeros 10 de initialList
+        if (!q) {
+          setItems(initialList.slice(0, 10));
+          return;
+        }
+        const res = await fetchLeads({ q, limit: 10 });
+        if (!done) setItems(Array.isArray(res) ? res : res?.results ?? []);
+      } catch (e) {
+        // no romper el input
+      }
+    })();
+    return () => { done = true; };
+  }, [debounced, initialList]);
+
+  // Cerrar al click fuera
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  function pick(it: Contacto | null) {
+    onChange(it ? it.id : null, it); // Corregido: si it es null, pasamos null, no undefined
+    setOpen(false);
+  }
+
+  function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      setOpen(true);
+      return;
+    }
+    if (!open) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => Math.min(h + 1, items.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const it = items[highlight];
+      if (it) pick(it);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      {/* Input + estado seleccionado */}
+      <div className="flex gap-2">
+        <input
+          className="flex-1 h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+          placeholder="Escribí nombre/apellido/email del lead…"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); setHighlight(0); }}
+          onKeyDown={onKey}
+          onFocus={() => setOpen(true)}
+        />
+        {valueId != null ? (
+          <button
+            type="button"
+            className="h-10 px-3 rounded-lg border text-sm"
+            onClick={() => { onClear(); }}
+            title="Quitar contacto"
+          >
+            Limpiar
+          </button>
+        ) : null}
+      </div>
+
+      {/* hint seleccionado */}
+      {valueId != null && selected && (
+        <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+          Seleccionado: <strong>{(selected.nombre || "") + " " + (selected.apellido || "")}</strong>
+          {selected.email ? ` • ${selected.email}` : ""}
+        </div>
+      )}
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-xl">
+          {items.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-500">Sin resultados…</div>
+          ) : (
+            items.map((it, idx) => {
+              const full = `${it.nombre || ""} ${it.apellido || ""}`.trim() || `Lead #${it.id}`;
+              return (
+                <button
+                  key={it.id}
+                  type="button"
+                  onClick={() => pick(it)}
+                  className={`w-full text-left px-3 py-2 text-sm ${idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                    }`}
+                  onMouseEnter={() => setHighlight(idx)}
+                >
+                  <div className="font-medium truncate">{full}</div>
+                  <div className={`text-xs truncate ${idx === highlight ? "opacity-90" : "text-gray-500 dark:text-gray-400"}`}>
+                    {it.email || it.telefono || "—"}
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }

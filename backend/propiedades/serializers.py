@@ -14,7 +14,10 @@ class PropiedadSerializer(serializers.ModelSerializer):
     # multi-tenant (solo lectura): id del auth.User dueño
     owner = serializers.ReadOnlyField(source="owner.id")
     imagenes = PropiedadImagenSerializer(many=True, read_only=True)
-
+    tipo_de_propiedad = serializers.ChoiceField(choices=Propiedad.TIPO_DE_PROPIEDAD_CHOICES)
+    estado = serializers.ChoiceField(choices=Propiedad.ESTADO_CHOICES)
+    moneda = serializers.ChoiceField(choices=Propiedad.MONEDA_CHOICES)
+   
     class Meta:
         model = Propiedad
         fields = [

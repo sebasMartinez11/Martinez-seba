@@ -20,9 +20,11 @@ from usuarios.views import (
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+
 @api_view(["GET"])
 def health(_request):
     return Response({"status": "ok"})
+
 
 router = DefaultRouter()
 router.register(r"estados-lead", EstadoLeadViewSet)
@@ -37,9 +39,14 @@ urlpatterns = [
     # API base (routers)
     path("api/", include(router.urls)),
 
+    # Asistente IA
+    path("api/asistente/", include("asistente.urls")),
+    
+    # ✅ INCLUSIÓN DE DASHBOARD (SOLUCIÓN DEL 404)
+    path("api/", include("dashboard.urls")),
+
     # Usuarios CRUD + perfil
-    path("api/usuarios/", ListaYCreaUsuario.as_view(), name="usuarios-lista")
-,
+    path("api/usuarios/", ListaYCreaUsuario.as_view(), name="usuarios-lista"),
     path("api/usuarios/<int:pk>/", DetalleUsuario.as_view(), name="usuario-detalle"),
     path("api/usuarios/me/", MeUsuarioView.as_view(), name="usuarios-me"),
 

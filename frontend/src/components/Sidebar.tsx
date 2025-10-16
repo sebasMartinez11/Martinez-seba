@@ -127,15 +127,8 @@ export default function Sidebar() {
         })}
       </nav>
 
-<<<<<<< HEAD
-      {/*PIE DEL SIDEBAR (versión)*/}
-      <div className="px-3 py-3 text-[10px] rc-muted border-t rc-border">
-        {/* Muestra diferente texto si está colapsado */}
-        {collapsed ? "v0.1" : "v0.1 • Dev"}
-=======
       <div className="px-3 py-3 text-[10px] text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
         {collapsed ? "Version beta" : "Innovasoft"}
->>>>>>> dee6bb0193a32c205bd203c3b55914e3e67a801d
       </div>
     </aside>
   );

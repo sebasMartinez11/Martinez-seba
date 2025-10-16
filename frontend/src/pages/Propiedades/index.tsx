@@ -613,7 +613,22 @@ function PropiedadEditModal({
                         onChange={(e) => set("tipo_de_propiedad", e.target.value as Propiedad["tipo_de_propiedad"])}>
                   <option value="casa">Casa</option>
                   <option value="departamento">Departamento</option>
+                  <option value="ph">Ph</option>
+                  <option value="terreno">Terreno</option>
+                  <option value="cochera">Cochera</option>
+                  <option value="local">Local</option>
+                  <option value="oficina">Oficina</option>
+                  <option value="consultorio">Consultorio</option>
+                  <option value="quinta">Quinta</option>
+                  <option value="chacra">Chacra</option>
+                  <option value="galpon">Galpon</option>
+                  <option value="deposito">Deposito</option>
+                  <option value="campo">Campo</option>
                   <option value="hotel">Hotel</option>
+                  <option value="fondo de comercio">Fondo de Comercio</option>
+                  <option value="edificio">Edificio</option>
+                  <option value="otro">Otro</option>
+
                 </select>
               </Row>
               <Row label="Disponibilidad">

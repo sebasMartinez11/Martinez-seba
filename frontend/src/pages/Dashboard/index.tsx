@@ -4,18 +4,13 @@ import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
-<<<<<<< HEAD
-  fetchLeads,                 //  NEW: para autocompletar
-=======
   fetchLeads, // 👈 NEW: para autocompletar
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
 } from "../../lib/api";
 import TopFilters from "./TopFilter";
 import { toast } from 'react-hot-toast'; 
-import { FiAlertCircle, FiCheckCircle } from "react-icons/fi"; // Íconos para modales
 
 /* ============================== Types ============================== */
 // Reutilizo los tipos del cliente API para alinear con el back
@@ -35,35 +30,7 @@ type DashboardData = {
   avisos_atrasados: number; 
 };
 
-/** ✅ Ítem de historial de cambios de estado */
-type HistItem = {
-  id: number;
-  contacto: number;
-  estado: EstadoLead | null;
-  changed_at: string; // ISO
-};
-type EstadoLead = { id: number; fase: string; descripcion?: string };
-
-
-/* --------------------------- Utils / UI --------------------------- */
-const STATE_COLORS: Record<string, string> = {
-  "en negociación": "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
-  negociacion: "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
-  rechazado: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
-  vendido: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
-  nuevo: "bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30",
-};
-
-const STATUS_BADGE = {
-  pendiente: "bg-gray-500/15 text-gray-300 ring-1 ring-gray-500/30",
-  vencido: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
-  hoy: "bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/30",
-  proximo: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
-};
-
-const norm = (s?: string | null) =>
-  (s || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
-
+/* ============================ Utilities ============================ */
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
@@ -75,22 +42,15 @@ const sameDay = (a: Date, b: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
-const formatDate = (d?: Date | string | null, withTime = false) => {
-  if (!d) return "—";
-  const date = typeof d === "string" ? new Date(d) : d;
-  if (isNaN(+date)) return "—";
-  const base = date.toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-  if (withTime) {
-      const h = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-      return `${base} ${h}`;
-  }
-  return base;
+const toKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 };
-
+const fromISO = (s: string) => new Date(s);
+const sortByDateAsc = (a: Evento, b: Evento) =>
+  +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
 
 const formatHour = (d: string | Date) =>
   (typeof d === "string" ? new Date(d) : d).toLocaleTimeString("es-AR", {
@@ -98,16 +58,8 @@ const formatHour = (d: string | Date) =>
     minute: "2-digit",
   });
 
-const toKey = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
-
-const fromISO = (s: string) => new Date(s);
-const sortByDateAsc = (a: Evento, b: Evento) =>
-  +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
+const formatDate = (d: Date, opts: Intl.DateTimeFormatOptions = {}) =>
+  d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", ...opts });
 
 const toLocalInputValue = (d?: string | Date | null) => {
   if (!d) return "";
@@ -234,6 +186,7 @@ export default function DashboardPage() {
     // Verificar si el token existe antes de hacer la petición
     if (!localStorage.getItem('rc_token')) {
         setLoading(false);
+        // Podrías lanzar un toast aquí o manejar el estado de No Logeado
         toast.error("No autenticado. Por favor, inicia sesión.");
         return;
     }
@@ -316,25 +269,18 @@ export default function DashboardPage() {
 
   /* 🔔 Auto-refresh cuando el asistente crea algo */
   useEffect(() => {
-    // 🔑 ESCUCHADOR DE RECARGA GLOBAL DESDE LEADS/AVISOS
     const handler = () => {
       // Solo refrescamos si ya estamos logeados
       if (!localStorage.getItem('rc_token')) return;
 
-      // Forzamos la recarga de eventos del mes
-      // Llamamos a fetchMonthEvents para recargar los datos del calendario en el mes actual
       if (activeFilters) fetchWithFilters(activeFilters);
       else fetchMonthEvents();
-      
       fetchStatic(); // Refrescar KPIs
     };
-    
-    // El nombre de evento lo definimos en Leads/index.tsx
-    window.addEventListener("assistant:refresh-calendar", handler as EventListener); 
-    
+    window.addEventListener("assistant:refresh-calendar", handler as EventListener);
     return () => window.removeEventListener("assistant:refresh-calendar", handler as EventListener);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilters, cursor]); // cursor y activeFilters aseguran que el fetch se haga correctamente si se usa en el handler
+  }, [activeFilters, cursor]);
 
   /* ------------------------ Calendar helpers ------------------------ */
   const monthLabel = `${MONTHS[cursor.getMonth()]} de ${cursor.getFullYear()}`;
@@ -511,10 +457,6 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2">
             <button
-<<<<<<< HEAD
-              className="rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm px-3 h-9"
-              onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
-=======
               className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
               onClick={() => {
                   if (!localStorage.getItem('rc_token')) {
@@ -523,7 +465,6 @@ export default function DashboardPage() {
                   }
                   setOpenEventModal({ mode: "create", baseDate: new Date() });
               }}
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
             >
               + Agregar evento
             </button>
@@ -548,18 +489,18 @@ export default function DashboardPage() {
         {/* KPIs */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
           {kpis.map((k) => (
-            <div key={k.label} className="rounded-xl border rc-card rc-border rc-border p-4">
+            <div key={k.label} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
               <div className="text-3xl font-semibold">{k.value}</div>
-              <div className="text-sm rc-muted rc-muted">{k.label}</div>
-              {k.hint && <div className="text-xs rc-muted mt-1">{k.hint}</div>}
+              <div className="text-sm text-gray-500 dark:text-gray-400">{k.label}</div>
+              {k.hint && <div className="text-xs text-gray-400 mt-1">{k.hint}</div>}
             </div>
           ))}
         </section>
 
         {/* Calendar */}
-        <div className="rounded-2xl border rc-card rc-border rc-border overflow-hidden">
+        <div className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden">
           {/* header week days */}
-          <div className="grid grid-cols-7 border-b rc-border rc-border text-xs rc-muted">
+          <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500">
             {WEEKDAYS.map((w) => (
               <div key={w} className="px-3 py-2">{w}</div>
             ))}
@@ -581,30 +522,25 @@ export default function DashboardPage() {
               return (
                 <div
                   key={i}
-<<<<<<< HEAD
-                  className={`border-r border-b rc-border rc-border p-2 ${inMonth ? "" : "bg-gray-50/50  dark:bg-gray-900/30"}`}
-                  title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
-=======
                   className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
-                  title={inMonth ? formatDate(d) : undefined}
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
+                  title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
                 >
                   {/* Contenedor columna + evitar desborde */}
                   <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
                     {/* header mini */}
                     <div className="flex items-center justify-between shrink-0">
-                      <div className={`text-xs ${inMonth ? "rc-muted dark:text-gray-300" : "rc-muted"}`}>
+                      <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
                         {dayLabel}
                       </div>
                       {inMonth && isToday && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 rc-text rc-text">Hoy</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>
                       )}
                     </div>
 
                     {/* Resumen compacto en una sola línea */}
                     {inMonth && sum.total > 0 && (
                       <button
-                        className="mt-2 w-full rounded-lg border rc-border rc-border bg-gray-50/50   dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100 dark:hover:bg-gray-800/60 dark:hover:rc-card/60 truncate"
+                        className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100/60 dark:hover:bg-gray-900/60 truncate"
                         onClick={() => setOpenDayModal(d)}
                         title={`${sum.r} ${plural(sum.r, "reunión", "reuniones")} · ${sum.l} ${plural(sum.l, "llamada", "llamadas")} · ${sum.v} ${plural(sum.v, "visita", "visitas")}`}
                       >
@@ -619,10 +555,6 @@ export default function DashboardPage() {
                     {inMonth && (
                       <div className="pt-2 shrink-0">
                         <button
-<<<<<<< HEAD
-                          className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:rc-card"
-                          onClick={() => openCreateOnDay(d)}
-=======
                           className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
                           onClick={() => {
                             if (!localStorage.getItem('rc_token')) {
@@ -631,13 +563,12 @@ export default function DashboardPage() {
                             }
                             openCreateOnDay(d);
                           }}
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
                         >
                           + nuevo
                         </button>
                         {allEvents.length > 0 && (
                           <button
-                            className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:rc-card"
+                            className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
                             onClick={() => setOpenDayModal(d)}
                           >
                             ver
@@ -693,7 +624,7 @@ export default function DashboardPage() {
         {/* Result toast modal */}
         {result && <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />}
 
-        {loading && <div className="text-sm rc-muted">Cargando…</div>}
+        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
       </div>
     </>
   );
@@ -720,11 +651,11 @@ function DayEventsModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-3xl rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl"
+        className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold">Eventos del {formatDate(date, true)}</div>
+          <div className="text-lg font-semibold">Eventos del {formatDate(date, { year: "numeric" })}</div>
           <div className="flex gap-2">
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCreate}>+ Nuevo</button>
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
@@ -732,7 +663,7 @@ function DayEventsModal({
         </div>
 
         {/* Resumen del día */}
-        <div className="mt-3 text-sm rc-muted dark:text-gray-300 flex flex-wrap gap-2">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-300 flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30">
             {resumen.r} {plural(resumen.r, "reunión", "reuniones")}
           </span>
@@ -746,16 +677,16 @@ function DayEventsModal({
         </div>
 
         {eventos.length === 0 ? (
-          <div className="mt-5 text-sm rc-muted">No hay eventos para este día.</div>
+          <div className="mt-5 text-sm text-gray-500">No hay eventos para este día.</div>
         ) : (
           <ul className="mt-4 space-y-2">
             {eventos.map((ev) => (
-              <li key={ev.id} className="rounded-lg border rc-border rc-border p-3 flex items-center justify-between">
+              <li key={ev.id} className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 flex items-center justify-between">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">
                     {formatHour(ev.fecha_hora)} · {ev.tipo}
                   </div>
-                  <div className="text-xs rc-muted dark:text-gray-300 truncate">
+                  <div className="text-xs text-gray-600 dark:text-gray-300 truncate">
                     {typeof (ev as any).propiedad_titulo === "string"
                       ? (ev as any).propiedad_titulo
                       : ev.propiedad
@@ -767,7 +698,7 @@ function DayEventsModal({
                       ? ` • Lead #${ev.contacto}`
                       : ""}
                   </div>
-                  {ev.notas && <div className="text-xs rc-muted mt-0.5 truncate">{ev.notas}</div>}
+                  {ev.notas && <div className="text-xs text-gray-500 mt-0.5 truncate">{ev.notas}</div>}
                 </div>
                 <div className="flex items-center gap-2">
                   <button className="h-8 px-2 rounded-md border text-xs" onClick={() => onEdit(ev)}>Editar</button>
@@ -851,7 +782,7 @@ function EventModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onCancel}>
       <div
-        className="w-full max-w-3xl rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl"
+        className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-xl font-semibold mb-4">
@@ -861,7 +792,7 @@ function EventModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Tipo">
             <select
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
               value={form.tipo || "Reunion"}
               onChange={(e) => set("tipo", e.target.value as Evento["tipo"])}
             >
@@ -874,7 +805,7 @@ function EventModal({
           <Field label="Fecha y hora">
             <input
               type="datetime-local"
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
               value={
                 form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
                   ? toLocalInputValue(new Date(form.fecha_hora))
@@ -886,7 +817,7 @@ function EventModal({
 
           <Field label="Propiedad">
             <select
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
               value={String(form.propiedad || "")}
               onChange={(e) => set("propiedad", Number(e.target.value))}
             >
@@ -903,7 +834,7 @@ function EventModal({
             <ContactAutocomplete
               valueId={form.contacto == null ? null : Number(form.contacto)}
               initialList={contactos}
-              onChange={(id: number | null, item: Contacto | null | undefined) => { // Corregido el tipo
+              onChange={(id, item) => {
                 set("contacto", id);
                 // Limpio visitante si hay lead
                 if (id) {
@@ -918,7 +849,7 @@ function EventModal({
 
           <Field label="Nombre (visitante)">
             <input
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
               value={form.nombre || ""}
               onChange={(e) => set("nombre", e.target.value)}
               placeholder="Si no es contacto registrado"
@@ -927,7 +858,7 @@ function EventModal({
 
           <Field label="Apellido (visitante)">
             <input
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
               value={form.apellido || ""}
               onChange={(e) => set("apellido", e.target.value)}
             />
@@ -936,7 +867,7 @@ function EventModal({
           <Field label="Email (visitante)">
             <input
               type="email"
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
               value={form.email || ""}
               onChange={(e) => set("email", e.target.value)}
             />
@@ -946,7 +877,7 @@ function EventModal({
             <Field label="Notas">
               <textarea
                 rows={3}
-                className="w-full rounded-lg border rc-border rc-border rc-card px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
                 value={form.notas || ""}
                 onChange={(e) => set("notas", e.target.value)}
               />
@@ -961,7 +892,7 @@ function EventModal({
             Cancelar
           </button>
           <button
-            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
+            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
             onClick={handleSubmit}
             disabled={saving}
           >
@@ -973,157 +904,7 @@ function EventModal({
   );
 }
 
-/* --------------------------- Confirm Modal -------------------------- */
-type ConfirmModalProps = {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  confirmType?: "primary" | "danger";
-  onCancel: () => void;
-  onConfirm: () => void | Promise<void>;
-};
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel = "Confirmar",
-  confirmType = "primary",
-  onCancel,
-  onConfirm,
-}: ConfirmModalProps) {
-  const [working, setWorking] = useState(false);
-  async function go() {
-    setWorking(true);
-    await onConfirm();
-    setWorking(false);
-  }
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
-        <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
-            Cancelar
-          </button>
-          <button
-            className={
-              confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-            }
-            onClick={go}
-            disabled={working}
-          >
-            {working ? "Procesando..." : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* --------------------------- Result Modal --------------------------- */
-
-function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
-      <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok
-            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
-        <div className="text-sm">{message}</div>
-        <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* --------------------------- History Modal --------------------------- */
-
-function HistoryModal({
-  contacto,
-  items,
-  loading,
-  onClose,
-}: {
-  contacto: Contacto;
-  items: HistItem[] | null;
-  loading: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
-      <div
-        className="w/full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-lg font-semibold mb-1">
-          Historial de {contacto.nombre || "—"} {contacto.apellido || ""}
-        </div>
-        <div className="text-xs text-gray-500 mb-4">{contacto.email || "—"}</div>
-
-        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
-        {!loading && (items?.length ?? 0) === 0 && (
-          <div className="text-sm text-gray-500">Este lead aún no tiene cambios de estado.</div>
-        )}
-
-        {!loading && !!items && items.length > 0 && (
-          <ul className="relative pl-5">
-            {items.map((h, idx) => {
-              const fase = h.estado?.fase || "—";
-              const key = norm(fase);
-              const chip =
-                STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
-              return (
-                <li key={h.id} className="pb-4 last:pb-0">
-                  {idx !== items.length - 1 && (
-                    <span className="absolute left-2 top-3 h-full w-px bg-gray-200 dark:bg-gray-800" />
-                  )}
-                  <span className="absolute left-0 mt-1 h-2 w-2 rounded-full bg-gray-400" />
-                  <div className="ml-4">
-                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>
-                      {fase}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">{formatDate(h.changed_at, true)}</div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <div className="mt-5 text-right">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------ UI bits ----------------------------- */
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs mb-1">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-/* --------------------------- Contact Autocomplete Component (Moved from Leads/index.tsx) -------------------------- */
+/* ======================= Autocomplete Contacto ======================= */
 function useDebounced<T>(value: T, delay = 300) {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -1193,7 +974,7 @@ function ContactAutocomplete({
   }, []);
 
   function pick(it: Contacto | null) {
-    onChange(it ? it.id : null, it); // Corregido: si it es null, pasamos null, no undefined
+    onChange(it ? it.id : null, it || null);
     setOpen(false);
   }
 
@@ -1223,7 +1004,7 @@ function ContactAutocomplete({
       {/* Input + estado seleccionado */}
       <div className="flex gap-2">
         <input
-          className="flex-1 h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
+          className="flex-1 h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
           placeholder="Escribí nombre/apellido/email del lead…"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); setHighlight(0); }}
@@ -1244,7 +1025,7 @@ function ContactAutocomplete({
 
       {/* hint seleccionado */}
       {valueId != null && selected && (
-        <div className="mt-1 text-xs rc-muted dark:text-gray-300">
+        <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
           Seleccionado: <strong>{(selected.nombre || "") + " " + (selected.apellido || "")}</strong>
           {selected.email ? ` • ${selected.email}` : ""}
         </div>
@@ -1252,9 +1033,9 @@ function ContactAutocomplete({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border rc-border rc-border rc-card shadow-xl">
+        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-xl">
           {items.length === 0 ? (
-            <div className="px-3 py-2 text-sm rc-muted">Sin resultados…</div>
+            <div className="px-3 py-2 text-sm text-gray-500">Sin resultados…</div>
           ) : (
             items.map((it, idx) => {
               const full = `${it.nombre || ""} ${it.apellido || ""}`.trim() || `Lead #${it.id}`;
@@ -1264,12 +1045,12 @@ function ContactAutocomplete({
                   type="button"
                   onClick={() => pick(it)}
                   className={`w-full text-left px-3 py-2 text-sm ${
-                    idx === highlight ? "bg-blue-600 rc-text rc-text" : "hover:bg-gray-50 dark:hover:rc-card"
+                    idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
                   }`}
                   onMouseEnter={() => setHighlight(idx)}
                 >
                   <div className="font-medium truncate">{full}</div>
-                  <div className={`text-xs truncate ${idx === highlight ? "opacity-90" : "rc-muted rc-muted"}`}>
+                  <div className={`text-xs truncate ${idx === highlight ? "opacity-90" : "text-gray-500 dark:text-gray-400"}`}>
                     {it.email || it.telefono || "—"}
                   </div>
                 </button>
@@ -1281,7 +1062,6 @@ function ContactAutocomplete({
     </div>
   );
 }
-<<<<<<< HEAD
 
 /* ============================ Confirm Modal ============================ */
 type ConfirmModalProps = {
@@ -1309,9 +1089,9 @@ function ConfirmModal({
   }
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
         <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm rc-muted dark:text-gray-300">{message}</div>
+        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
           <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
             Cancelar
@@ -1319,8 +1099,8 @@ function ConfirmModal({
           <button
             className={
               confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 rc-text rc-text text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
+                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
+                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
             }
             onClick={go}
             disabled={working}
@@ -1340,13 +1120,13 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
       <div
         className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
           ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
+              : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
         <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm" onClick={onClose}>
+          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
             Cerrar
           </button>
         </div>
@@ -1364,5 +1144,3 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     </div>
   );
 }
-=======
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39

@@ -92,10 +92,6 @@ class ContactoSerializer(serializers.ModelSerializer):
              validated_data['owner'] = user
              
         contacto = Contacto.objects.create(**validated_data)
-<<<<<<< HEAD
-        #  No crear historial acá: lo hace la signal post_save(Contacto).
-=======
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
         return contacto
 
     def update(self, instance, validated_data):

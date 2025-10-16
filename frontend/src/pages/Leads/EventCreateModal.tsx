@@ -92,11 +92,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
           <div>
             <label className="text-sm">Nombre</label>
             <input
-<<<<<<< HEAD
-              className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
-=======
               className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
             />
@@ -104,11 +100,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
           <div>
             <label className="text-sm">Apellido</label>
             <input
-<<<<<<< HEAD
-              className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
-=======
               className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
               value={apellido}
               onChange={(e) => setApellido(e.target.value)}
             />
@@ -119,46 +111,10 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
           <label className="text-sm">Email</label>
           <input
             type="email"
-<<<<<<< HEAD
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="text-sm">Teléfono</label>
-          <input
-            type="tel"
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-text"
-            value={telefono}
-            onChange={(e) => setTelefono(e.target.value.replace(/\D/g, ""))} // solo dígitos
-            onPaste={(e) => {
-              const pasted = (e.clipboardData || (window as any).clipboardData).getData("text");
-              if (/\D/.test(pasted)) {
-                e.preventDefault();
-                const digits = pasted.replace(/\D/g, "");
-                setTelefono((prev) => prev + digits);
-              }
-            }}
-            onKeyDown={(e) => {
-              const allowed = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"];
-              if (allowed.includes(e.key)) return;
-              if ((e.ctrlKey || e.metaKey) && ["a", "c", "v", "x"].includes(e.key.toLowerCase())) return;
-              if (!/^\d$/.test(e.key)) e.preventDefault();
-            }}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={15} 
-            placeholder="Sólo números"
-            aria-label="Teléfono"
-          />
-=======
             className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
         </div>
 
         <div>
@@ -209,21 +165,13 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
           <button
             type="button"
             onClick={onClose}
-<<<<<<< HEAD
-            className="rounded-md border px-4 py-2 text-sm rc-border rc-border"
-=======
             className="rounded-md border px-4 py-2 text-sm border-gray-300 dark:border-gray-700"
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
           >
             Cancelar
           </button>
           <button
             disabled={submitting || !propiedadId || !fechaHora || !tipo}
-<<<<<<< HEAD
-            className="rounded-md px-4 py-2 text-sm rc-text rc-text bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
-=======
             className="rounded-md px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
           >
             {submitting ? "Guardando..." : "Registrar"}
           </button>

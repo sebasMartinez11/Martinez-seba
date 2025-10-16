@@ -100,45 +100,6 @@ export default function AvisosPage() {
     }
   };
 
-<<<<<<< HEAD
-      <div className="mb-4 flex items-center gap-2">
-        <input
-          className="h-10 w-full rounded-xl border rc-border rc-border rc-card px-3 text-sm"
-          placeholder="Buscar por título o descripción…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </div>
-
-      {loading && <div className="text-sm rc-muted">Cargando…</div>}
-      {error && <div className="text-sm text-red-600">{error}</div>}
-
-      {!loading && !error && filtered.length === 0 && (
-        <div className="text-sm rc-muted">No hay avisos.</div>
-      )}
-
-      <ul className="space-y-3">
-        {filtered.map((a) => (
-          <li key={a.id} className="rounded-xl border rc-border rc-border p-4">
-            <div className="font-medium">{a.titulo || `Aviso #${a.id}`}</div>
-            {a.descripcion && <div className="text-sm rc-muted dark:text-gray-300 mt-1">{a.descripcion}</div>}
-            {a.creado_en && (
-              <div className="text-xs rc-muted mt-2">
-                Creado: {new Date(a.creado_en).toLocaleString()}
-              </div>
-            )}
-            <div className="mt-2 text-xs text-gray-500 flex gap-3">
-              {a.fecha && <>📅 {new Date(a.fecha).toLocaleString()}</>}
-              {a.estado && <span>• Estado: {a.estado}</span>}
-              {a.creado_en && (
-                <span>• Creado: {new Date(a.creado_en).toLocaleDateString()}</span>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-=======
   return (
     <>
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -221,7 +182,6 @@ export default function AvisosPage() {
       {/* Modal de resultado */}
       {result && <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />}
     </>
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
   );
 }
 

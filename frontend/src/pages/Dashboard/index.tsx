@@ -10,8 +10,12 @@ import {
   type Contacto as ContactoApi,
 } from "../../lib/api";
 import TopFilters from "./TopFilter";
+<<<<<<< HEAD
 import { toast } from 'react-hot-toast';
 import { FiAlertCircle, FiCheckCircle } from "react-icons/fi"; // Íconos para modales
+=======
+import { toast } from 'react-hot-toast'; 
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 
 /* ============================== Types ============================== */
 // Reutilizo los tipos del cliente API para alinear con el back
@@ -31,35 +35,7 @@ type DashboardData = {
   avisos_atrasados: number;
 };
 
-/** ✅ Ítem de historial de cambios de estado */
-type HistItem = {
-  id: number;
-  contacto: number;
-  estado: EstadoLead | null;
-  changed_at: string; // ISO
-};
-type EstadoLead = { id: number; fase: string; descripcion?: string };
-
-
-/* --------------------------- Utils / UI --------------------------- */
-const STATE_COLORS: Record<string, string> = {
-  "en negociación": "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
-  negociacion: "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30",
-  rechazado: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
-  vendido: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
-  nuevo: "bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30",
-};
-
-const STATUS_BADGE = {
-  pendiente: "bg-gray-500/15 text-gray-300 ring-1 ring-gray-500/30",
-  vencido: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
-  hoy: "bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/30",
-  proximo: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
-};
-
-const norm = (s?: string | null) =>
-  (s || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
-
+/* ============================ Utilities ============================ */
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
@@ -71,6 +47,7 @@ const sameDay = (a: Date, b: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
+<<<<<<< HEAD
 const formatDate = (d?: Date | string | null, withTime = false) => {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
@@ -85,8 +62,17 @@ const formatDate = (d?: Date | string | null, withTime = false) => {
     return `${base} ${h}`;
   }
   return base;
+=======
+const toKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 };
-
+const fromISO = (s: string) => new Date(s);
+const sortByDateAsc = (a: Evento, b: Evento) =>
+  +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
 
 const formatHour = (d: string | Date) =>
   (typeof d === "string" ? new Date(d) : d).toLocaleTimeString("es-AR", {
@@ -94,16 +80,8 @@ const formatHour = (d: string | Date) =>
     minute: "2-digit",
   });
 
-const toKey = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
-
-const fromISO = (s: string) => new Date(s);
-const sortByDateAsc = (a: Evento, b: Evento) =>
-  +fromISO(a.fecha_hora) - +fromISO(b.fecha_hora);
+const formatDate = (d: Date, opts: Intl.DateTimeFormatOptions = {}) =>
+  d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", ...opts });
 
 const toLocalInputValue = (d?: string | Date | null) => {
   if (!d) return "";
@@ -229,9 +207,16 @@ export default function DashboardPage() {
   async function fetchStatic() {
     // Verificar si el token existe antes de hacer la petición
     if (!localStorage.getItem('rc_token')) {
+<<<<<<< HEAD
       setLoading(false);
       toast.error("No autenticado. Por favor, inicia sesión.");
       return;
+=======
+        setLoading(false);
+        // Podrías lanzar un toast aquí o manejar el estado de No Logeado
+        toast.error("No autenticado. Por favor, inicia sesión.");
+        return;
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     }
 
     try {
@@ -312,15 +297,13 @@ export default function DashboardPage() {
 
   /* 🔔 Auto-refresh cuando el asistente crea algo */
   useEffect(() => {
-    // 🔑 ESCUCHADOR DE RECARGA GLOBAL DESDE LEADS/AVISOS
     const handler = () => {
       // Solo refrescamos si ya estamos logeados
       if (!localStorage.getItem('rc_token')) return;
 
-      // Forzamos la recarga de eventos del mes
-      // Llamamos a fetchMonthEvents para recargar los datos del calendario en el mes actual
       if (activeFilters) fetchWithFilters(activeFilters);
       else fetchMonthEvents();
+<<<<<<< HEAD
 
       fetchStatic(); // Refrescar KPIs
     };
@@ -328,9 +311,14 @@ export default function DashboardPage() {
     // El nombre de evento lo definimos en Leads/index.tsx
     window.addEventListener("assistant:refresh-calendar", handler as EventListener);
 
+=======
+      fetchStatic(); // Refrescar KPIs
+    };
+    window.addEventListener("assistant:refresh-calendar", handler as EventListener);
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     return () => window.removeEventListener("assistant:refresh-calendar", handler as EventListener);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilters, cursor]); // cursor y activeFilters aseguran que el fetch se haga correctamente si se usa en el handler
+  }, [activeFilters, cursor]);
 
   /* ------------------------ Calendar helpers ------------------------ */
   const monthLabel = `${MONTHS[cursor.getMonth()]} de ${cursor.getFullYear()}`;
@@ -573,7 +561,7 @@ export default function DashboardPage() {
                 <div
                   key={i}
                   className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
-                  title={inMonth ? formatDate(d) : undefined}
+                  title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
                 >
                   {/* Contenedor columna + evitar desborde */}
                   <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
@@ -705,7 +693,7 @@ function DayEventsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold">Eventos del {formatDate(date, true)}</div>
+          <div className="text-lg font-semibold">Eventos del {formatDate(date, { year: "numeric" })}</div>
           <div className="flex gap-2">
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCreate}>+ Nuevo</button>
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
@@ -884,7 +872,7 @@ function EventModal({
             <ContactAutocomplete
               valueId={form.contacto == null ? null : Number(form.contacto)}
               initialList={contactos}
-              onChange={(id: number | null, item: Contacto | null | undefined) => { // Corregido el tipo
+              onChange={(id, item) => {
                 set("contacto", id);
                 // Limpio visitante si hay lead
                 if (id) {
@@ -954,6 +942,7 @@ function EventModal({
   );
 }
 
+<<<<<<< HEAD
 /* --------------------------- Confirm Modal -------------------------- */
 type ConfirmModalProps = {
   title: string;
@@ -1104,6 +1093,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /* --------------------------- Contact Autocomplete Component (Moved from Leads/index.tsx) -------------------------- */
+=======
+/* ======================= Autocomplete Contacto ======================= */
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 function useDebounced<T>(value: T, delay = 300) {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -1173,7 +1165,7 @@ function ContactAutocomplete({
   }, []);
 
   function pick(it: Contacto | null) {
-    onChange(it ? it.id : null, it); // Corregido: si it es null, pasamos null, no undefined
+    onChange(it ? it.id : null, it || null);
     setOpen(false);
   }
 
@@ -1257,6 +1249,88 @@ function ContactAutocomplete({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ============================ Confirm Modal ============================ */
+type ConfirmModalProps = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  confirmType?: "primary" | "danger";
+  onCancel: () => void;
+  onConfirm: () => void | Promise<void>;
+};
+
+function ConfirmModal({
+  title,
+  message,
+  confirmLabel = "Confirmar",
+  confirmType = "primary",
+  onCancel,
+  onConfirm,
+}: ConfirmModalProps) {
+  const [working, setWorking] = useState(false);
+  async function go() {
+    setWorking(true);
+    await onConfirm();
+    setWorking(false);
+  }
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
+        <div className="text-lg font-semibold mb-2">{title}</div>
+        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
+            Cancelar
+          </button>
+          <button
+            className={
+              confirmType === "danger"
+                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
+                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+            }
+            onClick={go}
+            disabled={working}
+          >
+            {working ? "Procesando..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================= Result Modal ============================ */
+function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
+      <div
+        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
+          ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+              : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
+        <div className="text-sm">{message}</div>
+        <div className="mt-4 text-right">
+          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================ UI bits ================================ */
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs mb-1">{label}</label>
+      {children}
     </div>
   );
 }

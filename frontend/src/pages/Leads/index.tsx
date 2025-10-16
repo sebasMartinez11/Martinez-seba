@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from 'react-hot-toast'; // Importar toast si no está ya
 import NextContactModal from "./NextContactModal"; // 👈 SOLUCIÓN: IMPORTAR EL MODAL
-import { FiAlertCircle } from "react-icons/fi"; // Importar ícono para modales
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
@@ -130,12 +129,15 @@ export default function LeadsPage() {
   const PAGE_SIZE = 10;
 
   async function fetchEstados() {
+<<<<<<< HEAD
     // 🔒 GUARDIA DE AUTENTICACIÓN
     if (!localStorage.getItem('rc_token')) {
       setEstados([]);
       return;
     }
 
+=======
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     try {
       const res = await api.get("estados-lead/");
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
@@ -147,6 +149,7 @@ export default function LeadsPage() {
   }
 
   async function fetchContactos() {
+<<<<<<< HEAD
     // 🔒 GUARDIA DE AUTENTICACIÓN
     if (!localStorage.getItem('rc_token')) {
       setLoading(false);
@@ -154,6 +157,8 @@ export default function LeadsPage() {
       return;
     }
 
+=======
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     setLoading(true);
     try {
       const params: Record<string, any> = {};
@@ -166,29 +171,38 @@ export default function LeadsPage() {
       const res = await api.get("contactos/", { params });
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
       setContactos(toArr(res.data));
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       setContactos([]);
+<<<<<<< HEAD
       // 🚨 Control de errores para evitar toast si el error es solo 401
       if (e.response && e.response.status !== 401) {
         toast.error("No se pudo cargar leads.");
       } else if (!e.response) { // Error de red/timeout
         toast.error("No se pudo cargar leads.");
       }
+=======
+      toast.error("No se pudo cargar leads.");
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
+<<<<<<< HEAD
     // 🔑 Solo ejecutamos si el usuario está (o estuvo) logueado
     if (localStorage.getItem('rc_token')) {
       fetchEstados();
     }
+=======
+    fetchEstados();
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
   }, []);
 
   // Carga inicial y recargas por filtros
   useEffect(() => {
+<<<<<<< HEAD
     // 🔑 GUARDIA CRÍTICA para el polling de datos
     if (localStorage.getItem('rc_token')) {
       fetchContactos();
@@ -196,6 +210,9 @@ export default function LeadsPage() {
       setContactos([]); // Limpiar si el token desaparece
       setLoading(false);
     }
+=======
+    fetchContactos();
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     setPage(1);
   }, [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
 
@@ -284,6 +301,18 @@ export default function LeadsPage() {
       setHistoryLoading(false);
     }
   }
+
+  /* === Acciones rápidas: próximo contacto === */
+  // Ya no usamos estas, el modal NextContactModal lo maneja
+  /*
+  async function quickSetNext(c: Contacto, daysFromToday: number, hour = 10) {
+    // ... lógica eliminada
+  }
+
+  async function quickClearNext(c: Contacto) {
+    // ... lógica eliminada
+  }
+  */
 
   /* ----------------------------- UI ------------------------------ */
   return (
@@ -550,7 +579,6 @@ export default function LeadsPage() {
             const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
             const nextChip = statusChipClass(nextLabel);
             const nextNote = c.next_contact_note || "";
-
             const isBusy = busyId === c.id;
 
             return (
@@ -708,9 +736,6 @@ export default function LeadsPage() {
           onClose={() => {
             setNextContactTarget(null);
             fetchContactos(); // Refresca los leads después de cerrar el modal
-            // 🚨 Sincronización: Disparar evento para que TopBar y Dashboard recarguen
-            window.dispatchEvent(new Event('avisos:refresh'));
-            window.dispatchEvent(new Event('assistant:refresh-calendar')); // Nuevo evento para el Dashboard
           }}
         />
       )}

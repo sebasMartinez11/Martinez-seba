@@ -1,3 +1,4 @@
+# leads/serializers.py
 from rest_framework import serializers
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import F, Value, ExpressionWrapper, DateTimeField
@@ -35,6 +36,7 @@ class ContactoSerializer(serializers.ModelSerializer):
     next_contact_note = serializers.CharField(required=False, allow_blank=True, max_length=255)
 
     # === Derivados del modelo (solo lectura) ===
+    # Nota: si el nombre del field coincide con el atributo/property del modelo, no uses `source`
     proximo_contacto_estado = serializers.ReadOnlyField()
     dias_sin_seguimiento = serializers.ReadOnlyField()
 
@@ -77,65 +79,54 @@ class ContactoSerializer(serializers.ModelSerializer):
 
     # ---- Create / Update (el historial lo maneja la signal) ----
     def create(self, validated_data):
-        # Aseguramos el owner en la creación si está disponible
-        user = self.context['request'].user
-        if not isinstance(user, AnonymousUser) and user.is_authenticated:
-             validated_data['owner'] = user
-             
         contacto = Contacto.objects.create(**validated_data)
+        # ⛔️ No crear historial acá: lo hace la signal post_save(Contacto).
         return contacto
 
     def update(self, instance, validated_data):
-        # Guardamos cambios ANTES de cualquier sincronización
+        # Guardamos cambios
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
         instance.save() # Guarda Contacto y dispara signal para EstadoLeadHistorial
 
         # ----------------------------------------------------
-        # Lógica de sincronización de Evento (para Quick-Contact/Dashboard)
+        # Lógica de sincronización de Aviso (para Quick-Contact)
         # ----------------------------------------------------
         
         # 1. Chequeamos si el próximo contacto fue modificado
         if "next_contact_at" in validated_data or "next_contact_note" in validated_data:
             
+            # Buscamos un Aviso existente ligado a este Lead y que NO provenga de un Evento
+            # Esto es nuestro marcador para "Quick Follow-up"
+            quick_aviso_qs = Aviso.objects.filter(lead=instance, evento__isnull=True)
+            
             next_contact_at = validated_data.get("next_contact_at")
             next_contact_note = validated_data.get("next_contact_note")
             
-            # 💡 CLAVE: Usamos un Evento ficticio (sin propiedad) como marcador para el Quick Contact
-            # Buscamos o creamos el Evento asociado al Lead y sin Propiedad
-            evento_marcador, created = Evento.objects.get_or_create(
-                 contacto=instance, 
-                 propiedad__isnull=True, # Evento sin propiedad = Quick Contact
-                 defaults={
-                     'tipo': 'Llamada', 
-                     'fecha_hora': timezone.now(), # Usar una fecha inicial para get_or_create
-                     'owner': instance.owner, 
-                 }
-            )
-            
-            if next_contact_at is not None and instance.next_contact_at:
-                # Caso A: Se programa un próximo contacto
+            if next_contact_at is not None:
+                # Caso A: Se programa un próximo contacto (Future Date)
                 
-                # Actualizamos el Evento Marcador
-                evento_marcador.nombre = instance.nombre
-                evento_marcador.apellido = instance.apellido
-                evento_marcador.email = instance.email
-                evento_marcador.tipo = 'Llamada' # Default para quick contact
-                evento_marcador.fecha_hora = instance.next_contact_at # Usar la fecha ya guardada en instance
-                evento_marcador.notas = next_contact_note or "Seguimiento rápido."
-                evento_marcador.save() # Dispara signal para actualizar el Aviso
+                # El título y la descripción son esenciales para el aviso
+                titulo = f"Seguimiento programado con {instance.nombre} {instance.apellido}"
+                descripcion = next_contact_note or "Próximo contacto registrado manualmente."
                 
-                # 📢 Notificación al frontend para actualizar el Dashboard (Calendario)
-                try:
-                     from django.core.signals import request_finished
-                     request_finished.send(sender=self.__class__, refresh_dashboard=True)
-                except ImportError:
-                    pass
-
+                # Creamos o actualizamos el Aviso (no ligado a Evento ni Propiedad en este contexto rápido)
+                Aviso.objects.update_or_create(
+                    lead=instance,
+                    evento=None, 
+                    defaults={
+                        'titulo': titulo,
+                        'descripcion': descripcion,
+                        'fecha': next_contact_at,
+                        'estado': 'pendiente', 
+                        'propiedad': None, # No conocemos la propiedad en este modal rápido
+                    }
+                )
+                
             else:
                 # Caso B: next_contact_at es None (Se limpia el próximo contacto)
-                # Eliminamos el Evento Marcador (y la señal post_delete eliminará el Aviso)
-                evento_marcador.delete()
+                # Eliminamos cualquier Aviso de quick-contact existente
+                quick_aviso_qs.delete()
         
         return instance # Devuelve la instancia actualizada
 

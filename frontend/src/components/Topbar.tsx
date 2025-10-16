@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiSearch, FiBell, FiAlertCircle, FiCalendar, FiClock } from "react-icons/fi";
 import ThemeToggle from "@/components/ThemeToggle";
+<<<<<<< HEAD
 import { api } from "@/lib/api";
+=======
+import { api } from "@/lib/api"; // Asegura que usamos el cliente Axios con el interceptor
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 
 // Helper para formato de fecha con hora (Ej: 15/10/2025 10:00)
 const formatDateWithTime = (d: string | Date) => {
@@ -101,9 +105,12 @@ export default function Topbar({ title }: { title: string }) {
     const [loadingAvisos, setLoadingAvisos] = useState(false);
     const [errorAvisos, setErrorAvisos] = useState<string | null>(null);
 
+<<<<<<< HEAD
     // Variable de referencia para mantener el ID del intervalo activo
     const intervalRef = useRef<number | undefined>(undefined);
 
+=======
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     // Cerrar popovers al click fuera / Esc
     useEffect(() => {
         function onDocClick(e: MouseEvent) {
@@ -221,11 +228,15 @@ export default function Topbar({ title }: { title: string }) {
     // --------- Fetch avisos + auto-refresh ---------
     async function fetchAvisos() {
         // 🔒 GUARDIA DE AUTENTICACIÓN
+<<<<<<< HEAD
         if (!localStorage.getItem('rc_token')) {
             setAvisos(null);
             setLoadingAvisos(false);
             return;
         }
+=======
+        if (!localStorage.getItem('rc_token')) return; 
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 
         setLoadingAvisos(true);
         setErrorAvisos(null);
@@ -237,6 +248,7 @@ export default function Topbar({ title }: { title: string }) {
 
             const data: AvisosPayload = res.data;
             setAvisos(data);
+<<<<<<< HEAD
         } catch (e: any) {
             // 🔑 CORRECCIÓN CRÍTICA 401: Si el token falla, detenemos el polling
             if (e.response && e.response.status === 401) {
@@ -250,20 +262,26 @@ export default function Topbar({ title }: { title: string }) {
                 setErrorAvisos("No se pudieron cargar los avisos.");
                 setAvisos(null);
             }
+=======
+        } catch (e) {
+            setErrorAvisos("No se pudieron cargar los avisos.");
+            setAvisos(null);
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
         } finally {
             setLoadingAvisos(false);
         }
     }
 
-    // 🔑 CLAVE: Control de Polling y Listeners
+    // 🔑 CLAVE: Escuchamos el evento global para forzar la recarga
     useEffect(() => {
-        // Handlers para el evento global de refresco (desde Avisos/index.tsx)
         const handleRefresh = () => {
+            // Solo si estamos logeados
             if (localStorage.getItem('rc_token')) {
                 fetchAvisos();
             }
         };
 
+<<<<<<< HEAD
         // 🛑 Función para detener completamente el polling
         const stopPolling = () => {
             if (intervalRef.current !== undefined) {
@@ -297,6 +315,21 @@ export default function Topbar({ title }: { title: string }) {
             stopPolling();
         };
     }, []); // Dependencia vacía para montar/desmontar
+=======
+        if (localStorage.getItem('rc_token')) {
+             fetchAvisos(); // Carga inicial
+             const intervalId = setInterval(fetchAvisos, 60_000); // Refresco periódico
+             
+             // Listener para el evento que dispara la página de Avisos
+             window.addEventListener('avisos:refresh', handleRefresh);
+
+             return () => {
+                 clearInterval(intervalId);
+                 window.removeEventListener('avisos:refresh', handleRefresh);
+             }
+        }
+    }, []); // Dependencia vacía
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 
     const totalAvisos =
         (avisos?.vencidos.count ?? 0) +
@@ -389,12 +422,23 @@ export default function Topbar({ title }: { title: string }) {
                 <div className="relative" ref={bellWrapRef}>
                     <button
                         className="relative h-9 w-9 grid place-items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950"
+<<<<<<< HEAD
                         // Carga los datos ANTES de abrir si está cerrado
                         onClick={() => {
                             if (!openBell) {
                                 fetchAvisos();
                             }
                             setOpenBell((v) => !v);
+=======
+                        // 🔑 MODIFICACIÓN: Dispara fetchAvisos solo si el popover se va a abrir
+                        onClick={() => { 
+                            // Si está cerrado (false), lo abrimos y disparamos la carga.
+                            if (!openBell) { 
+                                fetchAvisos();
+                            } 
+                            // Alternar el estado
+                            setOpenBell((v) => !v); 
+>>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
                         }}
                         title="Recordatorios y avisos"
                     >

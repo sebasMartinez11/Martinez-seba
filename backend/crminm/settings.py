@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     'propiedades',
     'avisos',
     'exportacion',
-    'asistente.apps.AsistenteConfig',  
+    'asistente.apps.AsistenteConfig',  # ← agregado
 
     'rest_framework',
     'rest_framework_simplejwt',

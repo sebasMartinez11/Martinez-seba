@@ -37,7 +37,6 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [email, setEmail] = useState("");
-  const [telefono, setTelefono] = useState("");
   const [propiedadId, setPropiedadId] = useState<number | "">("");
   const [fechaHora, setFechaHora] = useState("");
   const [tipo, setTipo] = useState<"Reunion" | "Visita" | "Llamada" | "">("");
@@ -58,7 +57,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
 
     setSubmitting(true);
     try {
-      // Ajustá los nombres de campos a tu serializer de Eventos
+      // ⚠️ Ajustá los nombres de campos a tu serializer de Eventos
       // Ejemplo esperado por backend:
       // { nombre, apellido, email, propiedad: propiedadId, fecha_hora: ISO, tipo }
       await axios.post("/api/eventos/", {
@@ -120,7 +119,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
         <div>
           <label className="text-sm">Propiedad</label>
           <select
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
             value={propiedadId}
             onChange={(e) => setPropiedadId(Number(e.target.value))}
             disabled={loadingProps}
@@ -140,7 +139,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
           <label className="text-sm">Fecha y hora</label>
           <input
             type="datetime-local"
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
             value={fechaHora}
             onChange={(e) => setFechaHora(e.target.value)}
             min={getTodayMin()}
@@ -150,7 +149,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
         <div>
           <label className="text-sm">Tipo de evento</label>
           <select
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
             value={tipo}
             onChange={(e) => setTipo(e.target.value as any)}
           >

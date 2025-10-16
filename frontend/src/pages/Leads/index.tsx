@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from 'react-hot-toast'; // Importar toast si no está ya
 import NextContactModal from "./NextContactModal"; // 👈 SOLUCIÓN: IMPORTAR EL MODAL
-import { FiAlertCircle } from "react-icons/fi"; // Importar ícono para modales
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
@@ -130,12 +129,6 @@ export default function LeadsPage() {
   const PAGE_SIZE = 10;
 
   async function fetchEstados() {
-    // 🔒 GUARDIA DE AUTENTICACIÓN
-    if (!localStorage.getItem('rc_token')) {
-        setEstados([]);
-        return;
-    }
-    
     try {
       const res = await api.get("estados-lead/");
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
@@ -147,13 +140,6 @@ export default function LeadsPage() {
   }
 
   async function fetchContactos() {
-    // 🔒 GUARDIA DE AUTENTICACIÓN
-    if (!localStorage.getItem('rc_token')) {
-        setLoading(false);
-        setContactos([]);
-        return;
-    }
-
     setLoading(true);
     try {
       const params: Record<string, any> = {};
@@ -166,36 +152,22 @@ export default function LeadsPage() {
       const res = await api.get("contactos/", { params });
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
       setContactos(toArr(res.data));
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       setContactos([]);
-      // 🚨 Control de errores para evitar toast si el error es solo 401
-      if (e.response && e.response.status !== 401) {
-          toast.error("No se pudo cargar leads.");
-      } else if (!e.response) { // Error de red/timeout
-          toast.error("No se pudo cargar leads.");
-      }
+      toast.error("No se pudo cargar leads.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    // 🔑 Solo ejecutamos si el usuario está (o estuvo) logueado
-    if (localStorage.getItem('rc_token')) {
-        fetchEstados();
-    }
+    fetchEstados();
   }, []);
 
   // Carga inicial y recargas por filtros
   useEffect(() => {
-    // 🔑 GUARDIA CRÍTICA para el polling de datos
-    if (localStorage.getItem('rc_token')) {
-        fetchContactos();
-    } else {
-        setContactos([]); // Limpiar si el token desaparece
-        setLoading(false);
-    }
+    fetchContactos();
     setPage(1);
   }, [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
 
@@ -285,13 +257,25 @@ export default function LeadsPage() {
     }
   }
 
+  /* === Acciones rápidas: próximo contacto === */
+  // Ya no usamos estas, el modal NextContactModal lo maneja
+  /*
+  async function quickSetNext(c: Contacto, daysFromToday: number, hour = 10) {
+    // ... lógica eliminada
+  }
+
+  async function quickClearNext(c: Contacto) {
+    // ... lógica eliminada
+  }
+  */
+
   /* ----------------------------- UI ------------------------------ */
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">Gestión de Lead</h2>
-          <div className="text-xs rc-muted rc-muted">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             Administra tus leads, próximos contactos y estado comercial.
           </div>
         </div>
@@ -306,7 +290,7 @@ export default function LeadsPage() {
             </button>
           )}
           <button
-            className="rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm px-3 h-9"
+            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
             onClick={() => setOpenAdd(true)}
           >
             + Añadir
@@ -319,10 +303,10 @@ export default function LeadsPage() {
         {kpis.map((k) => (
           <div
             key={k.label}
-            className="rounded-xl border rc-card rc-border rc-border p-4"
+            className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4"
           >
             <div className="text-3xl font-semibold">{k.value}</div>
-            <div className="text-sm rc-muted rc-muted">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               {k.label}
             </div>
           </div>
@@ -336,11 +320,11 @@ export default function LeadsPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por nombre, email o teléfono…"
-            className="w-full h-10 rounded-lg rc-card border rc-border rc-border px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            className="w-full h-10 rounded-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
           />
           {q && (
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs rc-muted"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"
               onClick={() => setQ("")}
             >
               Limpiar
@@ -349,7 +333,7 @@ export default function LeadsPage() {
         </div>
 
         <select
-          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
+          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
           value={vencimiento}
           onChange={(e) => setVencimiento(e.target.value as any)}
           title="Vencimiento de próximo contacto"
@@ -362,7 +346,7 @@ export default function LeadsPage() {
         </select>
 
         <select
-          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
+          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
           value={String(proximoEnDias)}
           onChange={(e) => setProximoEnDias(Number(e.target.value))}
           disabled={vencimiento !== "proximo"}
@@ -374,7 +358,7 @@ export default function LeadsPage() {
         </select>
 
         <select
-          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
+          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
           value={String(sinSegDias)}
           onChange={(e) => setSinSegDias(e.target.value === "" ? "" : Number(e.target.value))}
           title="Días sin seguimiento (ultimo contacto)"
@@ -386,7 +370,7 @@ export default function LeadsPage() {
         </select>
 
         <select
-          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
+          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
           value={ordering}
           onChange={(e) => setOrdering(e.target.value)}
           title="Orden"
@@ -401,9 +385,9 @@ export default function LeadsPage() {
       </div>
 
       {/* Tabla (desktop) */}
-      <div className="hidden md:block rounded-2xl overflow-hidden border rc-card rc-border rc-border">
+      <div className="hidden md:block rounded-2xl overflow-hidden border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
         <table className="w-full text-sm">
-          <thead className="rc-card/40 rc-muted dark:text-gray-300">
+          <thead className="bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300">
             <tr>
               <th className="text-left font-medium px-4 py-3">Nombre</th>
               <th className="text-left font-medium px-4 py-3">Apellido</th>
@@ -418,14 +402,14 @@ export default function LeadsPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center rc-muted">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                   Cargando…
                 </td>
               </tr>
             )}
             {!loading && pageRows.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center rc-muted">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                   Sin resultados.
                 </td>
               </tr>
@@ -435,7 +419,7 @@ export default function LeadsPage() {
                 const stateKey = norm((c as any).estadoFase);
                 const badge =
                   STATE_COLORS[stateKey] ||
-                  "bg-gray-500/15 rc-muted ring-1 ring-gray-500/20";
+                  "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
 
                 const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
                 const nextChip = statusChipClass(nextLabel);
@@ -446,7 +430,7 @@ export default function LeadsPage() {
                 return (
                   <tr
                     key={c.id}
-                    className="border-t rc-border rc-border"
+                    className="border-t border-gray-100 dark:border-gray-900"
                   >
                     <td className="px-4 py-3">{c.nombre || "—"}</td>
                     <td className="px-4 py-3">{c.apellido || "—"}</td>
@@ -454,7 +438,7 @@ export default function LeadsPage() {
                     <td className="px-4 py-3">
                       {formatDate(c.last_contact_at, true)}
                       {typeof c.dias_sin_seguimiento === "number" && (
-                        <span className="ml-2 text-xs rc-muted">
+                        <span className="ml-2 text-xs text-gray-400">
                           ({c.dias_sin_seguimiento} d)
                         </span>
                       )}
@@ -483,7 +467,7 @@ export default function LeadsPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-end gap-2">
                         <button
-                          className="h-8 px-2 rounded-md border rc-border rc-border text-xs"
+                          className="h-8 px-2 rounded-md border border-gray-300 dark:border-gray-700 text-xs"
                           onClick={() => setEditTarget(c)}
                           disabled={isBusy}
                         >
@@ -512,7 +496,7 @@ export default function LeadsPage() {
         </table>
 
         {/* Paginación */}
-        <div className="flex items-center justify-center gap-2 p-3 border-t rc-border rc-border">
+        <div className="flex items-center justify-center gap-2 p-3 border-t border-gray-100 dark:border-gray-900">
           <button
             className="h-8 px-3 rounded-md border text-sm disabled:opacity-50"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -536,27 +520,26 @@ export default function LeadsPage() {
 
       {/* Cards (mobile) */}
       <div className="md:hidden space-y-3">
-        {loading && <div className="text-sm rc-muted">Cargando…</div>}
+        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
         {!loading && rows.length === 0 && (
-          <div className="text-sm rc-muted">Sin resultados.</div>
+          <div className="text-sm text-gray-500">Sin resultados.</div>
         )}
         {!loading &&
           rows.map((c) => {
             const stateKey = norm((c as any).estadoFase);
             const badge =
               STATE_COLORS[stateKey] ||
-              "bg-gray-500/15 rc-muted ring-1 ring-gray-500/20";
+              "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
 
             const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
             const nextChip = statusChipClass(nextLabel);
             const nextNote = c.next_contact_note || "";
-
             const isBusy = busyId === c.id;
 
             return (
               <div
                 key={c.id}
-                className="rounded-xl border rc-card rc-border rc-border p-4"
+                className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="font-medium">
@@ -568,17 +551,17 @@ export default function LeadsPage() {
                     {(c as any).estadoFase}
                   </span>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs rc-muted">
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500">
                   <div>
-                    <div className="rc-muted">Teléfono</div>
+                    <div className="text-gray-400">Teléfono</div>
                     <div className="dark:text-gray-300/90">{c.telefono || "—"}</div>
                   </div>
                   <div>
-                    <div className="rc-muted">Email</div>
+                    <div className="text-gray-400">Email</div>
                     <div className="truncate">{c.email || "—"}</div>
                   </div>
                   <div>
-                    <div className="rc-muted">Último contacto</div>
+                    <div className="text-gray-400">Último contacto</div>
                     <div>
                       {formatDate(c.last_contact_at, true)}
                       {typeof c.dias_sin_seguimiento === "number" && (
@@ -587,7 +570,7 @@ export default function LeadsPage() {
                     </div>
                   </div>
                   <div title={nextNote}>
-                    <div className="rc-muted">Próximo contacto</div>
+                    <div className="text-gray-400">Próximo contacto</div>
                     <div className="flex items-center gap-1">
                       <span>{formatDate(c.next_contact_at, true)}</span>
                       <span
@@ -708,9 +691,6 @@ export default function LeadsPage() {
           onClose={() => {
             setNextContactTarget(null);
             fetchContactos(); // Refresca los leads después de cerrar el modal
-            // 🚨 Sincronización: Disparar evento para que TopBar y Dashboard recarguen
-            window.dispatchEvent(new Event('avisos:refresh'));
-            window.dispatchEvent(new Event('assistant:refresh-calendar')); // Nuevo evento para el Dashboard
           }}
         />
       )}
@@ -851,20 +831,20 @@ function LeadModal({
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-3xl rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl">
+      <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
         <div className="text-xl font-semibold mb-4">{title}</div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Nombre">
             <input
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
               value={form.nombre}
               onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
             />
           </Field>
           <Field label="Apellido">
             <input
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
               value={form.apellido}
               onChange={(e) => setForm((f) => ({ ...f, apellido: e.target.value }))}
             />
@@ -872,48 +852,23 @@ function LeadModal({
           <Field label="Email">
             <input
               type="email"
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             />
           </Field>
           <Field label="Teléfono">
-              <input
-                type="tel"
-                className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-                value={form.telefono}
-                onChange={(e) =>
-                  setForm(f => ({ ...f, telefono: e.target.value.replace(/\D/g, "") }))
-                }
-                onPaste={(e) => {
-                  const pasted = (e.clipboardData || (window as any).clipboardData).getData("text");
-                  if (/\D/.test(pasted)) {
-                    e.preventDefault();
-                    const digits = pasted.replace(/\D/g, "");
-                    setForm(f => ({ ...f, telefono: (f.telefono || "") + digits }));
-                  }
-                }}
-                onKeyDown={(e) => {
-                  const ok = [
-                    "Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"
-                  ];
-                  if (ok.includes(e.key)) return;
-                  if ((e.ctrlKey || e.metaKey) && ["a","c","v","x"].includes(e.key.toLowerCase())) return;
-                  if (!/^\d$/.test(e.key)) e.preventDefault();
-                }}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={15}         // mismo tope que en el modelo
-                placeholder="Sólo números"
-              />
+            <input
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              value={form.telefono}
+              onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
+            />
           </Field>
-
-
 
           <div className="md:col-span-2">
             <label className="block text-xs mb-1">Estado</label>
             <select
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
               value={form.estadoId}
               onChange={(e) => setForm((f) => ({ ...f, estadoId: e.target.value }))}
             >
@@ -935,14 +890,14 @@ function LeadModal({
           <Field label="Próximo contacto (opcional)">
             <input
               type="datetime-local"
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
               value={form.next_contact_at || ""}
               onChange={(e) => setForm((f) => ({ ...f, next_contact_at: e.target.value }))}
             />
           </Field>
           <Field label="Nota del próximo contacto (opcional)">
             <input
-              className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
               value={form.next_contact_note || ""}
               onChange={(e) => setForm((f) => ({ ...f, next_contact_note: e.target.value }))}
               placeholder="Ej: Llamar para confirmar visita"
@@ -958,7 +913,7 @@ function LeadModal({
             Cancelar
           </button>
           <button
-            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
+            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
             onClick={handleSubmit}
             disabled={saving}
           >
@@ -995,9 +950,9 @@ function ConfirmModal({
   }
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
         <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm rc-muted dark:text-gray-300">{message}</div>
+        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
           <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
             Cancelar
@@ -1005,8 +960,8 @@ function ConfirmModal({
           <button
             className={
               confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 rc-text rc-text text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
+                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
+                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
             }
             onClick={go}
             disabled={working}
@@ -1035,7 +990,7 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
         <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm" onClick={onClose}>
+          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
             Cerrar
           </button>
         </div>
@@ -1060,17 +1015,17 @@ function HistoryModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
       <div
-        className="w/full max-w-2xl rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl"
+        className="w/full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold mb-1">
           Historial de {contacto.nombre || "—"} {contacto.apellido || ""}
         </div>
-        <div className="text-xs rc-muted mb-4">{contacto.email || "—"}</div>
+        <div className="text-xs text-gray-500 mb-4">{contacto.email || "—"}</div>
 
-        {loading && <div className="text-sm rc-muted">Cargando…</div>}
+        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
         {!loading && (items?.length ?? 0) === 0 && (
-          <div className="text-sm rc-muted">Este lead aún no tiene cambios de estado.</div>
+          <div className="text-sm text-gray-500">Este lead aún no tiene cambios de estado.</div>
         )}
 
         {!loading && !!items && items.length > 0 && (
@@ -1079,7 +1034,7 @@ function HistoryModal({
               const fase = h.estado?.fase || "—";
               const key = norm(fase);
               const chip =
-                STATE_COLORS[key] || "bg-gray-500/15 rc-muted ring-1 ring-gray-500/20";
+                STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
               return (
                 <li key={h.id} className="pb-4 last:pb-0">
                   {idx !== items.length - 1 && (
@@ -1090,7 +1045,7 @@ function HistoryModal({
                     <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>
                       {fase}
                     </div>
-                    <div className="text-xs rc-muted mt-1">{formatDate(h.changed_at, true)}</div>
+                    <div className="text-xs text-gray-500 mt-1">{formatDate(h.changed_at, true)}</div>
                   </div>
                 </li>
               );

@@ -1,4 +1,4 @@
-
+// src/pages/Propiedades/index.tsx
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import PropiedadCreateModal from "./PropiedadCreateModal";
@@ -211,11 +211,11 @@ export default function PropiedadesPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar por título, ubicación, código, '3 amb', '100m2', usd…"
-              className="rc-input h-10 w-full"
+              className="w-[280px] h-9 rounded-md bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
             />
             {q && (
               <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs rc-muted"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"
                 onClick={() => setQ("")}
               >
                 Limpiar
@@ -224,7 +224,7 @@ export default function PropiedadesPage() {
           </div>
           <button
             onClick={() => setOpenCreate(true)}
-            className="inline-flex items-center rounded-md px-3 h-9 text-sm font-medium bg-blue-600 rc-text rc-text hover:bg-blue-700"
+            className="inline-flex items-center rounded-md px-3 h-9 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
           >
             Registrar propiedad
           </button>
@@ -234,11 +234,11 @@ export default function PropiedadesPage() {
       {loading ? (
         <div className="text-sm">Cargando…</div>
       ) : filtered.length === 0 ? (
-        <div className="text-sm rc-muted rc-muted">
+        <div className="text-sm text-gray-500 dark:text-gray-400">
           No hay propiedades que coincidan con tu búsqueda.
         </div>
       ) : (
-        //  Card fija de 22rem por columna, alineada a la izquierda
+        // 👇 Card fija de 22rem por columna, alineada a la izquierda
         <div className="grid [grid-template-columns:repeat(auto-fill,minmax(22rem,22rem))] gap-4">
           {filtered.map((p) => {
             const img = firstImage(p);
@@ -246,7 +246,7 @@ export default function PropiedadesPage() {
             return (
               <article
                 key={p.id}
-                className="rounded-xl overflow-hidden rc-card rc-text flex flex-col"
+                className="rounded-xl overflow-hidden bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 flex flex-col"
               >
                 {/* Imagen */}
                 <div className="relative h-40 bg-gray-200 dark:bg-gray-800">
@@ -268,39 +268,39 @@ export default function PropiedadesPage() {
 
                 {/* Body */}
                 <div className="p-3 space-y-1">
-                  <div className="text-sm rc-muted rc-muted">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     {p.ubicacion}
                   </div>
                   <h3 className="font-semibold leading-snug">{p.titulo}</h3>
                   <div className="text-sm">{money(p.precio, p.moneda)}</div>
                   {p.disponibilidad ? (
-                    <div className="text-xs rc-muted capitalize">{p.disponibilidad}</div>
+                    <div className="text-xs text-gray-500 capitalize">{p.disponibilidad}</div>
                   ) : null}
                   {p.descripcion ? (
-                    <p className="text-xs rc-muted line-clamp-2">
+                    <p className="text-xs text-gray-500 line-clamp-2">
                       {p.descripcion}
                     </p>
                   ) : null}
                 </div>
 
                 {/* Footer: dos filas (datos arriba, botones abajo) */}
-                <div className="mt-auto px-3 py-3 text-[11px] rc-muted rc-muted border-t rc-border rc-border">
+                <div className="mt-auto px-3 py-3 text-[11px] text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
                   {/* fila 1: datos en grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                     <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
-                      <div className="text-[10px] rc-muted">Ambientes</div>
+                      <div className="text-[10px] text-gray-400">Ambientes</div>
                       <div className="font-medium">{p.ambiente}</div>
                     </div>
                     <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
-                      <div className="text-[10px] rc-muted">Baños</div>
+                      <div className="text-[10px] text-gray-400">Baños</div>
                       <div className="font-medium">{p.banos}</div>
                     </div>
                     <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
-                      <div className="text-[10px] rc-muted">Superficie</div>
+                      <div className="text-[10px] text-gray-400">Superficie</div>
                       <div className="font-medium">{p.superficie} m²</div>
                     </div>
                     <div className="rounded-md border px-2 py-1 bg-white/5 text-[11px] min-w-0">
-                      <div className="text-[10px] rc-muted">Cód</div>
+                      <div className="text-[10px] text-gray-400">Cód</div>
                       <div className="font-medium">{p.codigo}</div>
                     </div>
                   </div>
@@ -326,7 +326,7 @@ export default function PropiedadesPage() {
                       Borrar
                     </button>
                     <button
-                      className="h-8 px-3 rounded-md border rc-border text-[11px] hover:bg-[rgb(var(--card))/0.6] whitespace-nowrap"
+                      className="h-8 px-3 rounded-md border text-[11px] hover:bg-gray-50 dark:hover:bg-gray-900 whitespace-nowrap"
                       title="Copiar etiqueta para pegar en el asistente"
                       onClick={() => copyPropTag(p)}
                     >
@@ -428,13 +428,13 @@ function PropiedadDetailModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-5xl rounded-2xl rc-card p-6 shadow-xl"
+        className="w-full max-w-5xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-lg font-semibold">{propiedad.titulo}</div>
-            <div className="text-xs rc-muted">{propiedad.ubicacion}</div>
+            <div className="text-xs text-gray-500">{propiedad.ubicacion}</div>
           </div>
           <div className="flex gap-2">
             <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCopyTag}>
@@ -448,11 +448,11 @@ function PropiedadDetailModal({
 
         {/* Galería simple */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-xl overflow-hidden border rc-border h-64 bg-[rgb(var(--card))/0.5]">
+          <div className="rounded-xl overflow-hidden border h-64 bg-gray-100 dark:bg-gray-900">
             {imgs.length ? (
               <img src={imgs[active]} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full grid place-items-center text-sm rc-muted">Sin imágenes</div>
+              <div className="w-full h-full grid place-items-center text-sm text-gray-500">Sin imágenes</div>
             )}
           </div>
           <div className="space-y-2">
@@ -463,7 +463,7 @@ function PropiedadDetailModal({
                 {propiedad.tipo_de_propiedad}
               </span>
               {propiedad.disponibilidad && (
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium rc-muted bg-[rgb(var(--card))/0.5]">
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300">
                   {propiedad.disponibilidad}
                 </span>
               )}
@@ -479,7 +479,7 @@ function PropiedadDetailModal({
             </div>
 
             {propiedad.descripcion && (
-              <div className="mt-3 text-sm rc-muted dark:text-gray-300">{propiedad.descripcion}</div>
+              <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">{propiedad.descripcion}</div>
             )}
 
             {imgs.length > 1 && (
@@ -504,8 +504,8 @@ function PropiedadDetailModal({
 
 function Info({ label, value }: { label: string; value: any }) {
   return (
-    <div className="rounded-lg border rc-border p-2 bg-[rgb(var(--card))/0.5]">
-      <div className="text-[10px] rc-muted uppercase">{label}</div>
+    <div className="rounded-lg border p-2">
+      <div className="text-[10px] text-gray-500 uppercase">{label}</div>
       <div className="text-sm">{String(value)}</div>
     </div>
   );
@@ -576,7 +576,8 @@ function PropiedadEditModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-4xl rounded-2xl rc-card p-6 shadow-xl max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-4xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl
+                   max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-xl font-semibold mb-4">Editar propiedad</div>
@@ -590,50 +591,35 @@ function PropiedadEditModal({
         <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div className="md:col-span-7 space-y-3">
             <Row label="Código">
-              <input className="rc-input h-10 w-full"
+              <input className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                      value={form.codigo} onChange={(e) => set("codigo", e.target.value)} />
             </Row>
             <Row label="Título">
-              <input className="rc-input h-10 w-full"
+              <input className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                      value={form.titulo} onChange={(e) => set("titulo", e.target.value)} />
             </Row>
             <Row label="Ubicación">
-              <input className="rc-input h-10 w-full"
+              <input className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                      value={form.ubicacion} onChange={(e) => set("ubicacion", e.target.value)} />
             </Row>
             <Row label="Descripción">
-              <textarea rows={3} className="rc-input w-full"
+              <textarea rows={3} className="w-full rounded-md border px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                         value={form.descripcion || ""} onChange={(e) => set("descripcion", e.target.value)} />
             </Row>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Row label="Tipo">
-                <select className="rc-input h-10 w-full"
+                <select className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                         value={form.tipo_de_propiedad}
                         onChange={(e) => set("tipo_de_propiedad", e.target.value as Propiedad["tipo_de_propiedad"])}>
                   <option value="casa">Casa</option>
                   <option value="departamento">Departamento</option>
-                  <option value="ph">Ph</option>
-                  <option value="terreno">Terreno</option>
-                  <option value="cochera">Cochera</option>
-                  <option value="local">Local</option>
-                  <option value="oficina">Oficina</option>
-                  <option value="consultorio">Consultorio</option>
-                  <option value="quinta">Quinta</option>
-                  <option value="chacra">Chacra</option>
-                  <option value="galpon">Galpon</option>
-                  <option value="deposito">Deposito</option>
-                  <option value="campo">Campo</option>
                   <option value="hotel">Hotel</option>
-                  <option value="fondo de comercio">Fondo de Comercio</option>
-                  <option value="edificio">Edificio</option>
-                  <option value="otro">Otro</option>
-
                 </select>
               </Row>
               <Row label="Disponibilidad">
                 <select
-                  className="rc-input h-10 w-full"
+                  className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 capitalize"
                   value={asDisponibilidad(form.disponibilidad)}
                   onChange={(e) => set("disponibilidad", e.target.value)}
                 >
@@ -645,11 +631,11 @@ function PropiedadEditModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Row label="Precio">
-                <input type="number" min={0} className="w-full h-10 rounded-md border px-3 rc-card border rc-border rc-border rc-text rc-text"
+                <input type="number" min={0} className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                        value={form.precio} onChange={(e) => set("precio", Number(e.target.value))} />
               </Row>
               <Row label="Moneda">
-                <select className="rc-input h-10 w-full"
+                <select className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                         value={form.moneda} onChange={(e) => set("moneda", e.target.value as Propiedad["moneda"])} >
                   <option value="USD">USD</option>
                   <option value="ARS">ARS</option>
@@ -659,25 +645,25 @@ function PropiedadEditModal({
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Row label="Ambientes">
-                <input type="number" min={0} className="w-full h-10 rounded-md border px-3 rc-card border rc-border rc-border rc-text rc-text"
+                <input type="number" min={0} className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                        value={form.ambiente} onChange={(e) => set("ambiente", Number(e.target.value))} />
               </Row>
               <Row label="Baños">
-                <input type="number" min={0} className="w-full h-10 rounded-md border px-3 rc-card border rc-border rc-border rc-text rc-text"
+                <input type="number" min={0} className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                        value={form.banos} onChange={(e) => set("banos", Number(e.target.value))} />
               </Row>
               <Row label="Antigüedad">
-                <input type="number" min={0} className="w-full h-10 rounded-md border px-3 rc-card border rc-border rc-border rc-text rc-text"
+                <input type="number" min={0} className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                        value={form.antiguedad} onChange={(e) => set("antiguedad", Number(e.target.value))} />
               </Row>
               <Row label="Superficie (m²)">
-                <input type="number" min={0} step="0.01" className="w-full h-10 rounded-md border px-3 rc-card border rc-border rc-border rc-text rc-text"
+                <input type="number" min={0} step="0.01" className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                        value={form.superficie} onChange={(e) => set("superficie", Number(e.target.value))} />
               </Row>
             </div>
 
             <Row label="Estado">
-              <select className="rc-input h-10 w-full"
+              <select className="w-full h-10 rounded-md border px-3 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
                       value={form.estado} onChange={(e) => set("estado", e.target.value as Propiedad["estado"])} >
                 <option value="disponible">Disponible</option>
                 <option value="vendido">Vendido</option>
@@ -694,7 +680,7 @@ function PropiedadEditModal({
               accept="image/*"
               className="block w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:bg-gray-100 dark:file:bg-gray-800 file:text-gray-700 dark:file:text-gray-200"
             />
-            <p className="text-xs rc-muted">
+            <p className="text-xs text-gray-500">
               Se agrega a la galería al guardar.
             </p>
           </div>
@@ -705,7 +691,7 @@ function PropiedadEditModal({
             Cancelar
           </button>
           <button
-            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
+            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
             onClick={handleSave}
             disabled={saving}
           >
@@ -750,9 +736,9 @@ function ConfirmModal({
   }
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
         <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm rc-muted dark:text-gray-300">{message}</div>
+        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
         <div className="mt-5 flex items-center justify-end gap-2">
           <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
             Cancelar
@@ -760,8 +746,8 @@ function ConfirmModal({
           <button
             className={
               confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 rc-text rc-text text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
+                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
+                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
             }
             onClick={go}
             disabled={working}
@@ -789,7 +775,7 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
         <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm" onClick={onClose}>
+          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
             Cerrar
           </button>
         </div>

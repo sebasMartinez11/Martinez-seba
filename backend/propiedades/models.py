@@ -7,21 +7,7 @@ class Propiedad(models.Model):
     TIPO_DE_PROPIEDAD_CHOICES = [
         ("casa", "Casa"),
         ("departamento", "Departamento"),
-        ("ph", "Ph"),
-        ("terreno","Terreno"),
-        ("cochera","Cochera"),
-        ("local","Local"),
-        ("oficina","Oficina"),
-        ("consultorio","Consultorio"),
-        ("quinta","Quinta"),
-        ("chacra","Chacra"),
-        ("galpon","Galpon"),
-        ("deposito","Deposito"),
-        ("campo","Campo"),
-        ("hotel","Hotel"),
-        ("fondo de comercio","Fondo de Comercio"),
-        ("edificio","Edificio"),
-        ("otro","Otro"),
+        ("hotel", "Hotel"),
     ]
 
     ESTADO_CHOICES = [
@@ -80,7 +66,7 @@ class Propiedad(models.Model):
         default="disponible",
     )
 
-    #  NUEVO: marca de tiempo efectiva de venta (para métricas exactas)
+    # ✅ NUEVO: marca de tiempo efectiva de venta (para métricas exactas)
     vendida_en = models.DateTimeField(null=True, blank=True)
 
     class Meta:

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiSearch, FiBell, FiAlertCircle, FiCalendar, FiClock } from "react-icons/fi";
 import ThemeToggle from "@/components/ThemeToggle";
-import { api } from "@/lib/api"; 
+import { api } from "@/lib/api"; // Asegura que usamos el cliente Axios con el interceptor
 
 // Helper para formato de fecha con hora (Ej: 15/10/2025 10:00)
 const formatDateWithTime = (d: string | Date) => {
@@ -17,7 +17,6 @@ const formatDateWithTime = (d: string | Date) => {
     });
 };
 
-/* ===================== Tipos de datos usados en la búsqueda y avisos ===================== */
 type Evento = {
     id: number;
     tipo?: string;
@@ -75,7 +74,6 @@ type AvisosPayload = {
     sin_seguimiento: Bucket;
 };
 
-/* ===================== Hook simple para “debounce” (evita disparar fetch por cada tecla) ===================== */
 function useDebouncedValue<T>(value: T, delay = 300) {
     const [v, setV] = useState(value);
     useEffect(() => {
@@ -85,7 +83,6 @@ function useDebouncedValue<T>(value: T, delay = 300) {
     return v;
 }
 
-/* ===================================== Componente ===================================== */
 export default function Topbar({ title }: { title: string }) {
     const navigate = useNavigate();
 
@@ -103,9 +100,6 @@ export default function Topbar({ title }: { title: string }) {
     const [avisos, setAvisos] = useState<AvisosPayload | null>(null);
     const [loadingAvisos, setLoadingAvisos] = useState(false);
     const [errorAvisos, setErrorAvisos] = useState<string | null>(null);
-
-    // Variable de referencia para mantener el ID del intervalo activo
-    const intervalRef = useRef<number | undefined>(undefined); 
 
     // Cerrar popovers al click fuera / Esc
     useEffect(() => {
@@ -224,11 +218,7 @@ export default function Topbar({ title }: { title: string }) {
     // --------- Fetch avisos + auto-refresh ---------
     async function fetchAvisos() {
         // 🔒 GUARDIA DE AUTENTICACIÓN
-        if (!localStorage.getItem('rc_token')) {
-            setAvisos(null);
-            setLoadingAvisos(false);
-            return; 
-        }
+        if (!localStorage.getItem('rc_token')) return; 
 
         setLoadingAvisos(true);
         setErrorAvisos(null);
@@ -240,66 +230,36 @@ export default function Topbar({ title }: { title: string }) {
             
             const data: AvisosPayload = res.data; 
             setAvisos(data);
-        } catch (e: any) {
-            // 🔑 CORRECCIÓN CRÍTICA 401: Si el token falla, detenemos el polling
-            if (e.response && e.response.status === 401) {
-                 setAvisos(null);
-                 // 🛑 Detener el intervalo si falla por 401
-                 if (intervalRef.current !== undefined) {
-                     clearInterval(intervalRef.current);
-                     intervalRef.current = undefined; // Marcar como detenido
-                 }
-            } else {
-                 setErrorAvisos("No se pudieron cargar los avisos.");
-                 setAvisos(null);
-            }
+        } catch (e) {
+            setErrorAvisos("No se pudieron cargar los avisos.");
+            setAvisos(null);
         } finally {
             setLoadingAvisos(false);
         }
     }
 
-    // 🔑 CLAVE: Control de Polling y Listeners
+    // 🔑 CLAVE: Escuchamos el evento global para forzar la recarga
     useEffect(() => {
-        // Handlers para el evento global de refresco (desde Avisos/index.tsx)
         const handleRefresh = () => {
+            // Solo si estamos logeados
             if (localStorage.getItem('rc_token')) {
                 fetchAvisos();
             }
         };
-        
-        // 🛑 Función para detener completamente el polling
-        const stopPolling = () => {
-            if (intervalRef.current !== undefined) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = undefined;
-            }
-            window.removeEventListener('avisos:refresh', handleRefresh);
+
+        if (localStorage.getItem('rc_token')) {
+             fetchAvisos(); // Carga inicial
+             const intervalId = setInterval(fetchAvisos, 60_000); // Refresco periódico
+             
+             // Listener para el evento que dispara la página de Avisos
+             window.addEventListener('avisos:refresh', handleRefresh);
+
+             return () => {
+                 clearInterval(intervalId);
+                 window.removeEventListener('avisos:refresh', handleRefresh);
+             }
         }
-
-        // Función para iniciar el polling
-        const startPolling = () => {
-             // Detener cualquier polling existente para evitar duplicados
-            stopPolling(); 
-
-            if (localStorage.getItem('rc_token')) {
-                fetchAvisos(); // Carga inicial
-                // Usamos window.setInterval para el entorno web y guardamos el ID
-                intervalRef.current = window.setInterval(fetchAvisos, 60_000) as unknown as number;
-                window.addEventListener('avisos:refresh', handleRefresh);
-            } else {
-                // Si no hay token, aseguramos que el estado esté limpio
-                setAvisos(null);
-            }
-        };
-
-        // 3. Inicialización
-        startPolling();
-
-        return () => {
-            // Cleanup al desmontar el componente
-            stopPolling();
-        };
-    }, []); // Dependencia vacía para montar/desmontar
+    }, []); // Dependencia vacía
 
     const totalAvisos =
         (avisos?.vencidos.count ?? 0) +
@@ -392,11 +352,13 @@ export default function Topbar({ title }: { title: string }) {
                 <div className="relative" ref={bellWrapRef}>
                     <button
                         className="relative h-9 w-9 grid place-items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950"
-                        // Carga los datos ANTES de abrir si está cerrado
+                        // 🔑 MODIFICACIÓN: Dispara fetchAvisos solo si el popover se va a abrir
                         onClick={() => { 
+                            // Si está cerrado (false), lo abrimos y disparamos la carga.
                             if (!openBell) { 
                                 fetchAvisos();
                             } 
+                            // Alternar el estado
                             setOpenBell((v) => !v); 
                         }}
                         title="Recordatorios y avisos"
@@ -502,7 +464,8 @@ export default function Topbar({ title }: { title: string }) {
     );
 }
 
-/* ===================== Subcomponente: bloque pequeño de avisos ===================== */
+/* ------------------------- Subcomponentes ------------------------- */
+
 function BucketSmall({
     icon,
     label,

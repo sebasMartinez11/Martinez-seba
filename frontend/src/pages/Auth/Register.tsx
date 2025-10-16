@@ -1,7 +1,6 @@
 import { FormEvent, useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "@/lib/api";
-import { onlyDigits } from "@/utils/onlyDigits";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -51,17 +50,12 @@ export default function Register() {
 
       navigate("/app", { replace: true });
     } catch (err: any) {
-      const data = err?.response?.data;
-      console.error("REGISTER ERROR:", data || err);
-
-      // DRF suele devolver {campo: ["mensaje"]} o {detail: "..."} o string
-      let msg = "Error al registrar";
-      if (data) {
-        if (typeof data === "string") msg = data;
-        else if (data.detail) msg = data.detail;
-        else msg = Object.values(data).flat().join(" · ");
-      }
-      setError(msg);
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.errors ||
+        err?.message ||
+        "Error al registrar";
+      setError(String(msg));
     } finally {
       setLoading(false);
     }
@@ -83,7 +77,7 @@ export default function Register() {
           <input
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
           />
         </div>
         <div>
@@ -91,7 +85,7 @@ export default function Register() {
           <input
             value={apellido}
             onChange={(e) => setApellido(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
           />
         </div>
         <div>
@@ -100,7 +94,7 @@ export default function Register() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
           />
         </div>
         <div>
@@ -109,53 +103,35 @@ export default function Register() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
           />
         </div>
         <div>
           <label className="text-sm">Teléfono (opcional)</label>
           <input
             value={telefono}
-            onChange={(e) => setTelefono(onlyDigits(e.target.value))}   // filtra no-digitos
-            onPaste={(e) => {                                           // limpia pegado
-              e.preventDefault();
-              const text = (e.clipboardData || (window as any).clipboardData).getData("text");
-              setTelefono(onlyDigits(text));
-            }}
-            inputMode="numeric"     //  teclado numérico en móviles
-            pattern="\d*"           //  hint de validación nativa
-            maxLength={15}          // mismo longitud que backend
-            placeholder="Ej: 3472438055"
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            onChange={(e) => setTelefono(e.target.value)}
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
           />
         </div>
         <div>
           <label className="text-sm">DNI (opcional)</label>
           <input
             value={dni}
-            onChange={(e) => setDni(onlyDigits(e.target.value))}        // filtra no-dígitos
-            onPaste={(e) => {                                           // limpia pegado
-              e.preventDefault();
-              const text = (e.clipboardData || (window as any).clipboardData).getData("text");
-              setDni(onlyDigits(text));
-            }}
-            inputMode="numeric"
-            pattern="^\d{7,8}$"     // 7 u 8 dígitos
-            maxLength={8}
-            placeholder="Ej: 40973728"
-            className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+            onChange={(e) => setDni(e.target.value)}
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
           />
         </div>
 
         <button
           disabled={loading}
-          className="w-full rounded-md px-4 py-2 bg-blue-600 rc-text rc-text hover:bg-blue-700 disabled:opacity-60"
+          className="w-full rounded-md px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
         >
           {loading ? "Creando cuenta..." : "Crear cuenta"}
         </button>
       </form>
 
-      <p className="mt-3 text-sm rc-muted rc-muted">
+      <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
         ¿Ya tenés cuenta? <Link to="/login" className="underline">Iniciá sesión</Link>
       </p>
     </div>

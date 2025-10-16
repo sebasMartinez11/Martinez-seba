@@ -3,11 +3,9 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError as DjangoValidationError
 # from django.contrib.auth.password_validation import validate_password  # si querés validadores avanzados
-import re
+
 from .models import Usuario
 
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework.exceptions import AuthenticationFailed
 
 def _sync_auth_user(email: str, first_name: str, last_name: str, raw_password: str):
     user, _ = User.objects.get_or_create(
@@ -57,38 +55,13 @@ class UsuarioSerializer(serializers.ModelSerializer):
     def validate_email(self, value: str):
         if not value:
             raise serializers.ValidationError("El email es obligatorio.")
-        email = value.strip().lower()
-        if " " in email:
-            raise serializers.ValidationError("El email no puede contener espacios.")
+        email = value.strip()
         qs = Usuario.objects.filter(email__iexact=email)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise serializers.ValidationError("Ya existe un usuario con ese email.")
         return email
-
-    def validate_telefono(self, value: str):
-        """
-        Teléfono: solo dígitos, sin espacios, sin + ni símbolos.
-        Permitimos vacío porque el modelo lo permite.
-        """
-        if value in (None, ""):
-            return value
-        if " " in value:
-            raise serializers.ValidationError("El teléfono no puede contener espacios.")
-        if not re.fullmatch(r"\d{1,15}", value):
-            raise serializers.ValidationError("Teléfono inválido: solo dígitos (máx. 15).")
-        return value
-
-    def validate_dni(self, value: str):
-        """DNI: 7 u 8 dígitos, sin espacios."""
-        if value in (None, ""):
-            return value
-        if " " in value:
-            raise serializers.ValidationError("El DNI no puede contener espacios.")
-        if not re.fullmatch(r"\d{7,8}", value):
-            raise serializers.ValidationError("DNI inválido: solo números (7 u 8 dígitos).")
-        return value
 
     def validate_reminder_every_days(self, value):
         # Aceptamos números positivos pequeños; default del modelo es 3
@@ -154,11 +127,3 @@ class UsuarioSerializer(serializers.ModelSerializer):
             raw_password=password or "",
         )
         return instance
-
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
-        try:
-            return super().validate(attrs)
-        except AuthenticationFailed:
-            # Mensaje en español:
-            raise AuthenticationFailed("Correo o contraseña incorrectos.")

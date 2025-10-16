@@ -3,14 +3,10 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from django.core.validators import RegexValidator
+
 from propiedades.models import Propiedad
 from avisos.models import Aviso
 
-solo_digitos = RegexValidator(
-    regex=r'^\d{1,15}$',           
-    message='Ingrese solo dígitos.'
-)
 
 class EstadoLead(models.Model):
     fase = models.CharField(max_length=100, unique=True)
@@ -33,18 +29,12 @@ class Contacto(models.Model):
     nombre = models.CharField(max_length=120, blank=True, default="")
     apellido = models.CharField(max_length=120, blank=True, default="")
     email = models.EmailField(blank=True, default="")
-    telefono = models.CharField(
-        max_length=15,             
-        blank=True,
-        default="",
-        validators=[solo_digitos],
-        db_index=True,             # útil para búsquedas
-        help_text="Solo dígitos, sin + ni guiones"
-    )
+    telefono = models.CharField(max_length=50, blank=True, default="")
     estado = models.ForeignKey(
         EstadoLead, null=True, blank=True, on_delete=models.SET_NULL, related_name="contactos"
     )
 
+    # ✅ NUEVO: seguimiento de contacto
     # Último contacto efectivo con el lead (ej.: llamada/visita/reunión ya ocurrida)
     last_contact_at = models.DateTimeField(null=True, blank=True)
     # Próximo contacto planificado (si no hay, queda null => “Pendiente / Por definir”)
@@ -52,7 +42,7 @@ class Contacto(models.Model):
     # Nota opcional asociada al próximo contacto (motivo/recordatorio corto)
     next_contact_note = models.CharField(max_length=255, blank=True, default="")
 
-    # timestamp de creación real del lead
+    # ✅ timestamp de creación real del lead
     creado_en = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -92,13 +82,6 @@ class Contacto(models.Model):
             return None
         now = timezone.localtime()
         return (now.date() - timezone.localtime(self.last_contact_at).date()).days
-    
-    class Meta:
-        indexes = [
-            models.Index(fields=["next_contact_at"]),
-            models.Index(fields=["last_contact_at"]),
-            models.Index(fields=["creado_en"]),
-        ]
 
 
 TIPO_EVENTO_CHOICES = [
@@ -137,7 +120,7 @@ class Evento(models.Model):
         return f"{self.tipo} {self.fecha_hora:%Y-%m-%d %H:%M}"
 
 
-# historial de cambios de estado
+# ✅ historial de cambios de estado
 class EstadoLeadHistorial(models.Model):
     contacto = models.ForeignKey(Contacto, on_delete=models.CASCADE, related_name="historial_estados")
     estado = models.ForeignKey(EstadoLead, null=True, blank=True, on_delete=models.SET_NULL)

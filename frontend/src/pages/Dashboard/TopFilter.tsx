@@ -62,19 +62,19 @@ export default function TopFilters({ onChange }: Props) {
   return (
     <div className="flex flex-wrap gap-2 items-center">
       <button
-        className={`px-3 h-9 rounded-lg border text-sm ${active === "today" ? "bg-blue-600 rc-text rc-text" : ""}`}
+        className={`px-3 h-9 rounded-lg border text-sm ${active === "today" ? "bg-blue-600 text-white" : ""}`}
         onClick={() => handleQuickFilter("today")}
       >
         Hoy
       </button>
       <button
-        className={`px-3 h-9 rounded-lg border text-sm ${active === "tomorrow" ? "bg-blue-600 rc-text rc-text" : ""}`}
+        className={`px-3 h-9 rounded-lg border text-sm ${active === "tomorrow" ? "bg-blue-600 text-white" : ""}`}
         onClick={() => handleQuickFilter("tomorrow")}
       >
         Mañana
       </button>
       <button
-        className={`px-3 h-9 rounded-lg border text-sm ${active === "week" ? "bg-blue-600 rc-text rc-text" : ""}`}
+        className={`px-3 h-9 rounded-lg border text-sm ${active === "week" ? "bg-blue-600 text-white" : ""}`}
         onClick={() => handleQuickFilter("week")}
       >
         Esta semana

@@ -29,22 +29,22 @@ export default function UserMenu() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="h-9 px-2 rounded-lg border rc-border rc-border rc-card flex items-center gap-2"
+        className="h-9 px-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 flex items-center gap-2"
         title="Cuenta"
       >
-        <div className="h-6 w-6 rounded-full bg-blue-600 rc-text rc-text grid place-items-center text-xs">{initials}</div>
+        <div className="h-6 w-6 rounded-full bg-blue-600 text-white grid place-items-center text-xs">{initials}</div>
         <span className="hidden sm:block text-sm">{user.name}</span>
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 rounded-xl border rc-border rc-border rc-card shadow-lg p-2">
+        <div className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-lg p-2">
           <div className="px-2 py-2">
             <div className="text-sm font-medium">{user.name}</div>
-            <div className="text-xs rc-muted rc-muted truncate">{user.email}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
           </div>
-          <hr className="rc-border rc-border" />
+          <hr className="border-gray-200 dark:border-gray-800" />
           <button
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-50 dark:hover:rc-card"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900"
             onClick={() => alert("TODO: ir a perfil")}
           >
             <FiUser /> Perfil

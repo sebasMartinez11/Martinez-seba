@@ -177,20 +177,20 @@ export default function SmartLocationCombo({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         required={required}
-        className="mt-1 w-full border rounded-md px-3 py-2 rc-card border rc-border rc-border rc-text rc-text"
+        className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
       />
 
       {/* Hint cuando aún no se alcanzó el mínimo */}
       {!showOnEmpty && norm(q).length > 0 && norm(q).length < minChars && (
-        <div className="absolute left-0 top-full mt-1 text-xs rc-muted">
+        <div className="absolute left-0 top-full mt-1 text-xs text-gray-500">
           Escribí al menos {minChars} {minChars === 1 ? "carácter" : "caracteres"}…
         </div>
       )}
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-md border rc-card rc-border rc-border shadow-lg">
+        <div className="absolute z-20 mt-1 w-full rounded-md border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 shadow-lg">
           {results.length === 0 ? (
-            <div className="px-3 py-2 text-sm rc-muted">Sin coincidencias</div>
+            <div className="px-3 py-2 text-sm text-gray-500">Sin coincidencias</div>
           ) : (
             <ul
               ref={listRef}
@@ -210,8 +210,8 @@ export default function SmartLocationCombo({
                   }}
                   className={`px-3 py-2 text-sm cursor-pointer ${
                     i === active
-                      ? "bg-blue-600 rc-text rc-text"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:rc-card"
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-900"
                   }`}
                 >
                   {opt.label}

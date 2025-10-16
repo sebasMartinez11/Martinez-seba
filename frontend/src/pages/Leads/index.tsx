@@ -114,13 +114,13 @@ export default function LeadsPage() {
   const [historyItems, setHistoryItems] = useState<HistItem[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // ✅ Filtros remotos (golpean API)
+  // Filtros remotos (golpean API)
   const [vencimiento, setVencimiento] = useState<"" | "pendiente" | "vencido" | "hoy" | "proximo">("");
   const [proximoEnDias, setProximoEnDias] = useState<number>(3);
   const [sinSegDias, setSinSegDias] = useState<number | "">("");
   const [ordering, setOrdering] = useState<string>("-next_contact_at");
 
-  // ✅ Busy por acción rápida
+  //  Busy por acción rápida
   const [busyId, setBusyId] = useState<number | null>(null);
 
   // Nuevo estado para el modal de próximo contacto
@@ -129,15 +129,6 @@ export default function LeadsPage() {
   const PAGE_SIZE = 10;
 
   async function fetchEstados() {
-<<<<<<< HEAD
-    // 🔒 GUARDIA DE AUTENTICACIÓN
-    if (!localStorage.getItem('rc_token')) {
-      setEstados([]);
-      return;
-    }
-
-=======
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     try {
       const res = await api.get("estados-lead/");
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
@@ -149,16 +140,6 @@ export default function LeadsPage() {
   }
 
   async function fetchContactos() {
-<<<<<<< HEAD
-    // 🔒 GUARDIA DE AUTENTICACIÓN
-    if (!localStorage.getItem('rc_token')) {
-      setLoading(false);
-      setContactos([]);
-      return;
-    }
-
-=======
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     setLoading(true);
     try {
       const params: Record<string, any> = {};
@@ -174,45 +155,19 @@ export default function LeadsPage() {
     } catch (e) {
       console.error(e);
       setContactos([]);
-<<<<<<< HEAD
-      // 🚨 Control de errores para evitar toast si el error es solo 401
-      if (e.response && e.response.status !== 401) {
-        toast.error("No se pudo cargar leads.");
-      } else if (!e.response) { // Error de red/timeout
-        toast.error("No se pudo cargar leads.");
-      }
-=======
       toast.error("No se pudo cargar leads.");
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-<<<<<<< HEAD
-    // 🔑 Solo ejecutamos si el usuario está (o estuvo) logueado
-    if (localStorage.getItem('rc_token')) {
-      fetchEstados();
-    }
-=======
     fetchEstados();
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
   }, []);
 
   // Carga inicial y recargas por filtros
   useEffect(() => {
-<<<<<<< HEAD
-    // 🔑 GUARDIA CRÍTICA para el polling de datos
-    if (localStorage.getItem('rc_token')) {
-      fetchContactos();
-    } else {
-      setContactos([]); // Limpiar si el token desaparece
-      setLoading(false);
-    }
-=======
     fetchContactos();
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     setPage(1);
   }, [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
 

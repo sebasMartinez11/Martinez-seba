@@ -2,11 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiSearch, FiBell, FiAlertCircle, FiCalendar, FiClock } from "react-icons/fi";
 import ThemeToggle from "@/components/ThemeToggle";
-<<<<<<< HEAD
-import { api } from "@/lib/api";
-=======
 import { api } from "@/lib/api"; // Asegura que usamos el cliente Axios con el interceptor
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 
 // Helper para formato de fecha con hora (Ej: 15/10/2025 10:00)
 const formatDateWithTime = (d: string | Date) => {
@@ -105,12 +101,6 @@ export default function Topbar({ title }: { title: string }) {
     const [loadingAvisos, setLoadingAvisos] = useState(false);
     const [errorAvisos, setErrorAvisos] = useState<string | null>(null);
 
-<<<<<<< HEAD
-    // Variable de referencia para mantener el ID del intervalo activo
-    const intervalRef = useRef<number | undefined>(undefined);
-
-=======
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     // Cerrar popovers al click fuera / Esc
     useEffect(() => {
         function onDocClick(e: MouseEvent) {
@@ -227,16 +217,8 @@ export default function Topbar({ title }: { title: string }) {
 
     // --------- Fetch avisos + auto-refresh ---------
     async function fetchAvisos() {
-        // 🔒 GUARDIA DE AUTENTICACIÓN
-<<<<<<< HEAD
-        if (!localStorage.getItem('rc_token')) {
-            setAvisos(null);
-            setLoadingAvisos(false);
-            return;
-        }
-=======
+        //  GUARDIA DE AUTENTICACIÓN
         if (!localStorage.getItem('rc_token')) return; 
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 
         setLoadingAvisos(true);
         setErrorAvisos(null);
@@ -248,31 +230,15 @@ export default function Topbar({ title }: { title: string }) {
 
             const data: AvisosPayload = res.data;
             setAvisos(data);
-<<<<<<< HEAD
-        } catch (e: any) {
-            // 🔑 CORRECCIÓN CRÍTICA 401: Si el token falla, detenemos el polling
-            if (e.response && e.response.status === 401) {
-                setAvisos(null);
-                // 🛑 Detener el intervalo si falla por 401
-                if (intervalRef.current !== undefined) {
-                    clearInterval(intervalRef.current);
-                    intervalRef.current = undefined; // Marcar como detenido
-                }
-            } else {
-                setErrorAvisos("No se pudieron cargar los avisos.");
-                setAvisos(null);
-            }
-=======
         } catch (e) {
             setErrorAvisos("No se pudieron cargar los avisos.");
             setAvisos(null);
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
         } finally {
             setLoadingAvisos(false);
         }
     }
 
-    // 🔑 CLAVE: Escuchamos el evento global para forzar la recarga
+    //  CLAVE: Escuchamos el evento global para forzar la recarga
     useEffect(() => {
         const handleRefresh = () => {
             // Solo si estamos logeados
@@ -281,41 +247,6 @@ export default function Topbar({ title }: { title: string }) {
             }
         };
 
-<<<<<<< HEAD
-        // 🛑 Función para detener completamente el polling
-        const stopPolling = () => {
-            if (intervalRef.current !== undefined) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = undefined;
-            }
-            window.removeEventListener('avisos:refresh', handleRefresh);
-        }
-
-        // Función para iniciar el polling
-        const startPolling = () => {
-            // Detener cualquier polling existente para evitar duplicados
-            stopPolling();
-
-            if (localStorage.getItem('rc_token')) {
-                fetchAvisos(); // Carga inicial
-                // Usamos window.setInterval para el entorno web y guardamos el ID
-                intervalRef.current = window.setInterval(fetchAvisos, 60_000) as unknown as number;
-                window.addEventListener('avisos:refresh', handleRefresh);
-            } else {
-                // Si no hay token, aseguramos que el estado esté limpio
-                setAvisos(null);
-            }
-        };
-
-        // 3. Inicialización
-        startPolling();
-
-        return () => {
-            // Cleanup al desmontar el componente
-            stopPolling();
-        };
-    }, []); // Dependencia vacía para montar/desmontar
-=======
         if (localStorage.getItem('rc_token')) {
              fetchAvisos(); // Carga inicial
              const intervalId = setInterval(fetchAvisos, 60_000); // Refresco periódico
@@ -329,7 +260,6 @@ export default function Topbar({ title }: { title: string }) {
              }
         }
     }, []); // Dependencia vacía
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 
     const totalAvisos =
         (avisos?.vencidos.count ?? 0) +
@@ -422,15 +352,7 @@ export default function Topbar({ title }: { title: string }) {
                 <div className="relative" ref={bellWrapRef}>
                     <button
                         className="relative h-9 w-9 grid place-items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950"
-<<<<<<< HEAD
-                        // Carga los datos ANTES de abrir si está cerrado
-                        onClick={() => {
-                            if (!openBell) {
-                                fetchAvisos();
-                            }
-                            setOpenBell((v) => !v);
-=======
-                        // 🔑 MODIFICACIÓN: Dispara fetchAvisos solo si el popover se va a abrir
+                        //  MODIFICACIÓN: Dispara fetchAvisos solo si el popover se va a abrir
                         onClick={() => { 
                             // Si está cerrado (false), lo abrimos y disparamos la carga.
                             if (!openBell) { 
@@ -438,7 +360,6 @@ export default function Topbar({ title }: { title: string }) {
                             } 
                             // Alternar el estado
                             setOpenBell((v) => !v); 
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
                         }}
                         title="Recordatorios y avisos"
                     >

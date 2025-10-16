@@ -4,18 +4,13 @@ import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
-  fetchLeads, // 👈 NEW: para autocompletar
+  fetchLeads, //  NEW: para autocompletar
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
 } from "../../lib/api";
 import TopFilters from "./TopFilter";
-<<<<<<< HEAD
-import { toast } from 'react-hot-toast';
-import { FiAlertCircle, FiCheckCircle } from "react-icons/fi"; // Íconos para modales
-=======
 import { toast } from 'react-hot-toast'; 
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 
 /* ============================== Types ============================== */
 // Reutilizo los tipos del cliente API para alinear con el back
@@ -47,28 +42,11 @@ const sameDay = (a: Date, b: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
-<<<<<<< HEAD
-const formatDate = (d?: Date | string | null, withTime = false) => {
-  if (!d) return "—";
-  const date = typeof d === "string" ? new Date(d) : d;
-  if (isNaN(+date)) return "—";
-  const base = date.toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-  if (withTime) {
-    const h = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-    return `${base} ${h}`;
-  }
-  return base;
-=======
 const toKey = (d: Date) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 };
 const fromISO = (s: string) => new Date(s);
 const sortByDateAsc = (a: Evento, b: Evento) =>
@@ -207,16 +185,10 @@ export default function DashboardPage() {
   async function fetchStatic() {
     // Verificar si el token existe antes de hacer la petición
     if (!localStorage.getItem('rc_token')) {
-<<<<<<< HEAD
-      setLoading(false);
-      toast.error("No autenticado. Por favor, inicia sesión.");
-      return;
-=======
         setLoading(false);
         // Podrías lanzar un toast aquí o manejar el estado de No Logeado
         toast.error("No autenticado. Por favor, inicia sesión.");
         return;
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     }
 
     try {
@@ -303,19 +275,9 @@ export default function DashboardPage() {
 
       if (activeFilters) fetchWithFilters(activeFilters);
       else fetchMonthEvents();
-<<<<<<< HEAD
-
-      fetchStatic(); // Refrescar KPIs
-    };
-
-    // El nombre de evento lo definimos en Leads/index.tsx
-    window.addEventListener("assistant:refresh-calendar", handler as EventListener);
-
-=======
       fetchStatic(); // Refrescar KPIs
     };
     window.addEventListener("assistant:refresh-calendar", handler as EventListener);
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
     return () => window.removeEventListener("assistant:refresh-calendar", handler as EventListener);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilters, cursor]);
@@ -942,160 +904,7 @@ function EventModal({
   );
 }
 
-<<<<<<< HEAD
-/* --------------------------- Confirm Modal -------------------------- */
-type ConfirmModalProps = {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  confirmType?: "primary" | "danger";
-  onCancel: () => void;
-  onConfirm: () => void | Promise<void>;
-};
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel = "Confirmar",
-  confirmType = "primary",
-  onCancel,
-  onConfirm,
-}: ConfirmModalProps) {
-  const [working, setWorking] = useState(false);
-  async function go() {
-    setWorking(true);
-    await onConfirm();
-    setWorking(false);
-  }
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
-        <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
-            Cancelar
-          </button>
-          <button
-            className={
-              confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-            }
-            onClick={go}
-            disabled={working}
-          >
-            {working ? "Procesando..." : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* --------------------------- Result Modal --------------------------- */
-
-function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
-      <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${ok
-            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
-          }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
-        <div className="text-sm">{message}</div>
-        <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* --------------------------- History Modal --------------------------- */
-
-function HistoryModal({
-  contacto,
-  items,
-  loading,
-  onClose,
-}: {
-  contacto: Contacto;
-  items: HistItem[] | null;
-  loading: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
-      <div
-        className="w/full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-lg font-semibold mb-1">
-          Historial de {contacto.nombre || "—"} {contacto.apellido || ""}
-        </div>
-        <div className="text-xs text-gray-500 mb-4">{contacto.email || "—"}</div>
-
-        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
-        {!loading && (items?.length ?? 0) === 0 && (
-          <div className="text-sm text-gray-500">Este lead aún no tiene cambios de estado.</div>
-        )}
-
-        {!loading && !!items && items.length > 0 && (
-          <ul className="relative pl-5">
-            {items.map((h, idx) => {
-              const fase = h.estado?.fase || "—";
-              const key = norm(fase);
-              const chip =
-                STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
-              return (
-                <li key={h.id} className="pb-4 last:pb-0">
-                  {idx !== items.length - 1 && (
-                    <span className="absolute left-2 top-3 h-full w-px bg-gray-200 dark:bg-gray-800" />
-                  )}
-                  <span className="absolute left-0 mt-1 h-2 w-2 rounded-full bg-gray-400" />
-                  <div className="ml-4">
-                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>
-                      {fase}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">{formatDate(h.changed_at, true)}</div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <div className="mt-5 text-right">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------ UI bits ----------------------------- */
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs mb-1">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-/* --------------------------- Contact Autocomplete Component (Moved from Leads/index.tsx) -------------------------- */
-=======
 /* ======================= Autocomplete Contacto ======================= */
->>>>>>> a60596feb95b2115a9835361dd107b169b114ab5
 function useDebounced<T>(value: T, delay = 300) {
   const [v, setV] = useState(value);
   useEffect(() => {

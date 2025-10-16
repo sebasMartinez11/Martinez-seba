@@ -48,37 +48,6 @@ export default function Login() {
 
             if (!localStorage.getItem("rc_theme")) localStorage.setItem("rc_theme", "dark");
 
-<<<<<<< HEAD
-      // listo
-      navigate("/app", { replace: true });
-    } catch (err: any) {
-      const status = err?.response?.status;
-      const data = err?.response?.data;
-      console.error("LOGIN ERROR", status, data ?? err);
-
-      // Mensaje por defecto en español
-      let msg = "Correo o contraseña incorrectos.";
-
-      // Si el backend envía detalle, lo normalizamos
-      const detail = data?.detail || data?.message || (typeof data === "string" ? data : "");
-
-      // Si viene el mensaje de SimpleJWT en inglés, lo traducimos
-      if (/No active account found with the given credentials\.?/.test(detail || "")) {
-        msg = "Correo o contraseña incorrectos.";
-      } else if (detail) {
-        // Para otros errores específicos del backend
-        msg = detail;
-      } else if (status && status !== 401) {
-        // Errores no-auth (timeout, 5xx, etc.)
-        msg = `Error ${status}: no se pudo iniciar sesión.`;
-      }
-
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  } 
-=======
             // ===== 2) ME (ahora sí con api, ya que el interceptor pondrá el Bearer) =====
             // El interceptor en api.ts ahora lee 'rc_token' y adjunta el header Bearer.
             const me = await api.get<{ id: number }>("usuarios/me/");
@@ -100,7 +69,6 @@ export default function Login() {
             setLoading(false);
         }
     }
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 
     return (
         <main className="relative min-h-[100svh] overflow-hidden">
@@ -161,50 +129,6 @@ export default function Login() {
                     </button>
                 </form>
             </div>
-<<<<<<< HEAD
-          )}
-
-          <div className="space-y-1">
-            <label className="text-sm text-gray-300">Email o usuario</label>
-            <input
-              type="text"
-              required
-              value={userOrEmail}
-              onChange={(e) => setUserOrEmail(e.target.value)}
-              className="w-full h-10 rounded-lg border border-white/15 bg-white/5
-                         px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400/50"
-              placeholder="tu@mail.com o username"
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="space-y-1 mt-4">
-            <label className="text-sm text-gray-300">Contraseña</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-10 rounded-lg border border-white/15 bg-white/5
-                         px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400/50"
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-          </div>
-
-          <button
-            disabled={loading}
-            className="mt-5 w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60
-                       rc-text rc-text text-sm font-medium shadow-lg shadow-blue-900/30"
-          >
-            {loading ? "Ingresando..." : "Ingresar"}
-          </button>
-        </form>
-      </div>
-    </main>
-  );
-=======
         </main>
     );
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
 }

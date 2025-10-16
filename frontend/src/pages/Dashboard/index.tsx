@@ -4,11 +4,7 @@ import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
-<<<<<<< HEAD
-  fetchLeads,                 //  NEW: para autocompletar
-=======
   fetchLeads, // 👈 NEW: para autocompletar
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
@@ -511,10 +507,6 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2">
             <button
-<<<<<<< HEAD
-              className="rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm px-3 h-9"
-              onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
-=======
               className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
               onClick={() => {
                   if (!localStorage.getItem('rc_token')) {
@@ -523,7 +515,6 @@ export default function DashboardPage() {
                   }
                   setOpenEventModal({ mode: "create", baseDate: new Date() });
               }}
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
             >
               + Agregar evento
             </button>
@@ -581,13 +572,8 @@ export default function DashboardPage() {
               return (
                 <div
                   key={i}
-<<<<<<< HEAD
-                  className={`border-r border-b rc-border rc-border p-2 ${inMonth ? "" : "bg-gray-50/50  dark:bg-gray-900/30"}`}
-                  title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
-=======
                   className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
                   title={inMonth ? formatDate(d) : undefined}
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
                 >
                   {/* Contenedor columna + evitar desborde */}
                   <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
@@ -619,10 +605,6 @@ export default function DashboardPage() {
                     {inMonth && (
                       <div className="pt-2 shrink-0">
                         <button
-<<<<<<< HEAD
-                          className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:rc-card"
-                          onClick={() => openCreateOnDay(d)}
-=======
                           className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
                           onClick={() => {
                             if (!localStorage.getItem('rc_token')) {
@@ -631,7 +613,6 @@ export default function DashboardPage() {
                             }
                             openCreateOnDay(d);
                           }}
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39
                         >
                           + nuevo
                         </button>
@@ -1281,88 +1262,3 @@ function ContactAutocomplete({
     </div>
   );
 }
-<<<<<<< HEAD
-
-/* ============================ Confirm Modal ============================ */
-type ConfirmModalProps = {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  confirmType?: "primary" | "danger";
-  onCancel: () => void;
-  onConfirm: () => void | Promise<void>;
-};
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel = "Confirmar",
-  confirmType = "primary",
-  onCancel,
-  onConfirm,
-}: ConfirmModalProps) {
-  const [working, setWorking] = useState(false);
-  async function go() {
-    setWorking(true);
-    await onConfirm();
-    setWorking(false);
-  }
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl rc-card border rc-border rc-border p-6 shadow-xl">
-        <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm rc-muted dark:text-gray-300">{message}</div>
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
-            Cancelar
-          </button>
-          <button
-            className={
-              confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 rc-text rc-text text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm disabled:opacity-60"
-            }
-            onClick={go}
-            disabled={working}
-          >
-            {working ? "Procesando..." : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ============================= Result Modal ============================ */
-function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
-      <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
-        <div className="text-sm">{message}</div>
-        <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ================================ UI bits ================================ */
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs mb-1">{label}</label>
-      {children}
-    </div>
-  );
-}
-=======
->>>>>>> 5e25755c4aec0e720dc5ffd0e1caf94445721e39

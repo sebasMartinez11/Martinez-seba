@@ -42,21 +42,22 @@ urlpatterns = [
     # Asistente IA
     path("api/asistente/", include("asistente.urls")),
     
-    # ✅ INCLUSIÓN DE DASHBOARD (SOLUCIÓN DEL 404)
-    path("api/", include("dashboard.urls")),
 
     # Usuarios CRUD + perfil
     path("api/usuarios/", ListaYCreaUsuario.as_view(), name="usuarios-lista"),
     path("api/usuarios/<int:pk>/", DetalleUsuario.as_view(), name="usuario-detalle"),
     path("api/usuarios/me/", MeUsuarioView.as_view(), name="usuarios-me"),
 
-    # 🔒 Auth (JWT)
+    #  Auth (JWT)
     path("api/auth/register/", RegisterView.as_view(), name="auth-register"),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 
-    # ✅ Healthcheck
+    # Healthcheck
     path("api/health", health, name="api-health"),
+    
+    #  INCLUSIÓN DE DASHBOARD (SOLUCIÓN DEL 404)
+    path("api/", include("dashboard.urls")),
 ]
 
 # ===== Extensiones que se activan si existen =====

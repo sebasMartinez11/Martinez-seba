@@ -4,10 +4,12 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django.contrib.auth import get_user_model
-
-#  Importá SIEMPRE tu modelo de dominio con otro alias para no pisar auth.User
+# Importá SIEMPRE tu modelo de dominio con otro alias para no pisar auth.User
 from .models import Usuario as UsuarioModel
 from .serializers import UsuarioSerializer
+
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import CustomTokenObtainPairSerializer
 
 AuthUser = get_user_model()
 
@@ -153,3 +155,7 @@ class DeleteAccountView(APIView):
         user.delete()  # borra auth user
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer

@@ -80,7 +80,11 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-3 py-3 text-[10px] text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
+<<<<<<< HEAD
         {collapsed ? "Version beta" : "Innovasoft"}
+=======
+        {collapsed ? "v0.1" : "v0.1 • Dev"}
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
       </div>
     </aside>
   );

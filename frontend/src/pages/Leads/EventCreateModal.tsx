@@ -90,6 +90,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-sm">Nombre</label>
+<<<<<<< HEAD
             <input
               className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
               value={nombre}
@@ -103,17 +104,31 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
               value={apellido}
               onChange={(e) => setApellido(e.target.value)}
             />
+=======
+            <input className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+              value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm">Apellido</label>
+            <input className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+              value={apellido} onChange={(e) => setApellido(e.target.value)} />
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
           </div>
         </div>
 
         <div>
           <label className="text-sm">Email</label>
+<<<<<<< HEAD
           <input
             type="email"
             className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+=======
+          <input type="email" className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            value={email} onChange={(e) => setEmail(e.target.value)} />
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
         </div>
 
         <div>
@@ -161,6 +176,7 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2">
+<<<<<<< HEAD
           <button
             type="button"
             onClick={onClose}
@@ -172,6 +188,14 @@ export default function EventCreateModal({ open, onClose, onCreated }: Props) {
             disabled={submitting || !propiedadId || !fechaHora || !tipo}
             className="rounded-md px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
           >
+=======
+          <button type="button" onClick={onClose}
+            className="rounded-md border px-4 py-2 text-sm border-gray-300 dark:border-gray-700">
+            Cancelar
+          </button>
+          <button disabled={submitting || !propiedadId || !fechaHora || !tipo}
+            className="rounded-md px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60">
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
             {submitting ? "Guardando..." : "Registrar"}
           </button>
         </div>

@@ -72,7 +72,11 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+<<<<<<< HEAD
   }
+=======
+  } // 👈 ESTA LLAVE FALTABA
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden">

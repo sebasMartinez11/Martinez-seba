@@ -175,14 +175,26 @@ function MessageBubble({ msg }: { msg: Message }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
+<<<<<<< HEAD
         className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line ${isUser
           ? "bg-blue-600 text-white shadow-md"
           : msg.role === "system"
+=======
+        className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line ${
+          isUser
+            ? "bg-blue-600 text-white shadow-md"
+            : msg.role === "system"
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
             ? // System: contraste fuerte
             "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300 dark:border-amber-800"
             : // Assistant: alto contraste (fondo claro + borde)
+<<<<<<< HEAD
             "bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
           }`}
+=======
+              "bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
+        }`}
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
       >
         <div>{msg.text}</div>
         {isAssistant && msg.payload && msg.payload.items?.length > 0 && (

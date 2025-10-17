@@ -65,6 +65,7 @@ export default function AvisosPage() {
 
       <ul className="space-y-3">
         {filtered.map((a) => (
+<<<<<<< HEAD
           <li
             key={a.id}
             className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900"
@@ -73,6 +74,14 @@ export default function AvisosPage() {
             {a.descripcion && (
               <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 {a.descripcion}
+=======
+          <li key={a.id} className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+            <div className="font-medium">{a.titulo || `Aviso #${a.id}`}</div>
+            {a.descripcion && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{a.descripcion}</div>}
+            {a.creado_en && (
+              <div className="text-xs text-gray-500 mt-2">
+                Creado: {new Date(a.creado_en).toLocaleString()}
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
               </div>
             )}
             <div className="mt-2 text-xs text-gray-500 flex gap-3">

@@ -4,7 +4,11 @@ import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
+<<<<<<< HEAD
   fetchLeads, //  NEW: para autocompletar
+=======
+  fetchLeads,                 // 👈 NEW: para autocompletar
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
@@ -458,6 +462,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
+<<<<<<< HEAD
               onClick={() => {
                 if (!localStorage.getItem('rc_token')) {
                   toast.error("Debes iniciar sesión para agregar eventos.");
@@ -465,6 +470,9 @@ export default function DashboardPage() {
                 }
                 setOpenEventModal({ mode: "create", baseDate: new Date() });
               }}
+=======
+              onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
             >
               + Agregar evento
             </button>
@@ -556,6 +564,7 @@ export default function DashboardPage() {
                       <div className="pt-2 shrink-0">
                         <button
                           className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+<<<<<<< HEAD
                           onClick={() => {
                             if (!localStorage.getItem('rc_token')) {
                               toast.error("Debes iniciar sesión para agregar eventos.");
@@ -563,6 +572,9 @@ export default function DashboardPage() {
                             }
                             openCreateOnDay(d);
                           }}
+=======
+                          onClick={() => openCreateOnDay(d)}
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
                         >
                           + nuevo
                         </button>
@@ -1044,8 +1056,14 @@ function ContactAutocomplete({
                   key={it.id}
                   type="button"
                   onClick={() => pick(it)}
+<<<<<<< HEAD
                   className={`w-full text-left px-3 py-2 text-sm ${idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
                     }`}
+=======
+                  className={`w-full text-left px-3 py-2 text-sm ${
+                    idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                  }`}
+>>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
                   onMouseEnter={() => setHighlight(idx)}
                 >
                   <div className="font-medium truncate">{full}</div>

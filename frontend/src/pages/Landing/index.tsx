@@ -28,12 +28,6 @@ export default function Landing() {
             >
               Iniciar sesión
             </Link>
-            <Link
-              to="/app"
-              className="inline-flex items-center rounded-md px-4 py-2 border border-transparent underline"
-            >
-              Ver demo
-            </Link>
           </div>
           <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
             <li>• Gestión de leads con estados y seguimiento</li>
@@ -44,7 +38,14 @@ export default function Landing() {
 
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
           <img src="/logo.png" alt="Real Connect" className="h-16 w-16 mb-4" />
-          <div className="rounded-xl bg-gray-100 dark:bg-gray-800 h-64" />
+          <video
+            src="/video.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="rounded-xl w-full h-64 object-cover"
+          />
           <p className="mt-3 text-xs text-gray-500">Mockup de app (ilustrativo)</p>
         </div>
       </div>

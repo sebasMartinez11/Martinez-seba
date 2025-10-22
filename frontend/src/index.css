@@ -1,1 +1,212 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: light;         /* controles nativos claros */
+  --bg: #faf9f6;            /* fondo general tipo papel */
+  --bg-muted: #f3f2ef;      /* secciones suaves */
+  --surface: #ffffff;       /* tarjetas, contenedores */
+  --surface-2: #f7f7f5;     /* encabezados, strips */
+  --border: #dedcd8;        /* bordes sutiles */
+  --text: #1a1f2c;          /* texto principal (slate-800) */
+  --text-muted: #475569;    /* texto secundario */
+  --primary: #2563eb;       /* azul profesional */
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --chip-bg: #eef2ff;
+  --chip-text: #3730a3;
+  --elev-1: 0 2px 6px rgba(15, 23, 42, 0.05);
+  --overlay: rgba(15, 23, 42, .25);
+  --text-strong: #111827;
+  --popover-bg: var(--surface);
+  --popover-ring: var(--border);
+  --popover-item-hover: rgba(15, 23, 42, .04);       /* leve en claro */
+  --popover-unread: rgba(37, 99, 235, .08);          /* azul suave */
+}
+
+/* Paleta DARK (se aplica cuando <html> tiene .dark) */
+:root.dark {
+  color-scheme: dark;             /* controles nativos oscuros */
+  --bg:            #0b1220;
+  --bg-muted:      #0f172a;
+  --surface:       #0f172a;
+  --surface-2:     #0b1220;
+  --border:        #1f2937;
+  --text:          #e5e7eb;
+  --text-muted:    #94a3b8;
+
+  --chip-bg:       #111827;
+  --chip-text:     #e5e7eb;
+  --overlay: rgba(0, 0, 0, .55);
+  --elev-1: 0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
+  --text-strong: #e2e8f0;
+  --popover-bg: var(--surface);
+  --popover-ring: var(--border);
+  --popover-item-hover: rgba(255, 255, 255, .04);    /* leve en oscuro */
+  --popover-unread: rgba(37, 99, 235, .18);
+}
+
+/* Utilidades semánticas (reutilizables con Tailwind + arbitrary values) */
+html, body, #root { background: var(--bg); color: var(--text); }
+
+.bg-app        { background-color: var(--bg); }
+.bg-muted      { background-color: var(--bg-muted); }
+.bg-surface    { background-color: var(--surface); }
+.bg-surface-2  { background-color: var(--surface-2); }
+
+.text-base-clr   { color: var(--text); }
+.text-muted-clr  { color: var(--text-muted); }
+
+.border-soft    { border-color: var(--border); }
+.shadow-elev-1  { box-shadow: var(--elev-1); }
+
+/* Inputs / selects coherentes en ambos temas */
+.input-like, .select-like, .textarea-like {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  outline: none;
+}
+.input-like::placeholder { color: var(--text-muted); }
+.input-like:focus,
+.select-like:focus,
+.textarea-like:focus { border-color: var(--primary); }
+
+/* Tarjetas */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--elev-1);
+}
+
+/* Chips suaves */
+.chip {
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: .75rem;
+  line-height: 1rem;
+}
+
+
+.backdrop {
+  background: var(--overlay) !important;
+  backdrop-filter: blur(2px) !important;
+  position: fixed;
+  
+}
+
+.text-base-clr {
+  color: var(--text-strong) !important;
+}
+
+table td, table th {
+  color: var(--text-strong) !important;
+}
+
+/* si algún navegador ignora color-scheme */
+:root.dark select,
+:root.dark option {
+  background-color: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border);
+}
+/*  mismo tratamiento para inputs y datalists si hiciera falta */
+:root.dark input,
+:root.dark textarea {
+  color-scheme: dark;
+}
+
+
+/* Contenedor del popover */
+.rc-popover {
+  background: var(--popover-bg);
+  color: var(--text);
+  border: 1px solid var(--popover-ring);
+  border-radius: 14px;
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+
+/* Login / Auth helpers */
+.auth-card { background: var(--surface); color: var(--text); }
+.auth-card .title { color: var(--text-strong); }
+.auth-card .hint { color: var(--text-muted); }
+
+.rc-input::placeholder { color: var(--text-muted); opacity: 1; }
+
+/* Encabezado opcional dentro del popover */
+.rc-popover .rc-popover-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--popover-ring);
+  font-weight: 600;
+}
+
+/* Ítems */
+.rc-popover-item {
+  display: flex;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  line-height: 1.2rem;
+  cursor: pointer;
+}
+
+.rc-popover-item:hover {
+  background: var(--popover-item-hover);
+}
+
+.rc-popover-item.unread {
+  background: var(--popover-unread);
+}
+
+/* Texto secundario dentro del ítem */
+.rc-popover-item .meta {
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+
+/* Separador */
+.rc-popover-divider {
+  height: 1px;
+  background: var(--popover-ring);
+  margin: 6px 0;
+}
+
+/* Pie de acciones */
+.rc-popover-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--popover-ring);
+}
+
+.rc-popover-footer .btn-link {
+  font-size: .85rem;
+  color: var(--primary);
+}
+
+/* Scrollbar discreta cuando la lista es larga */
+.rc-popover .scroll {
+  max-height: 360px;
+  overflow: auto;
+}
+.rc-popover .scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.rc-popover .scroll::-webkit-scrollbar-thumb {
+  background: var(--popover-ring);
+  border-radius: 999px;
+}
+
+button, .btn {
+  color: var(--text);
+  font-weight: 500;
+}

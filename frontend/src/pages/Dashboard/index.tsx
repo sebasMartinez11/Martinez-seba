@@ -4,11 +4,7 @@ import type { ReactNode } from "react";
 import {
   api,
   fetchEventos,
-<<<<<<< HEAD
-  fetchLeads, //  NEW: para autocompletar
-=======
-  fetchLeads,                 // 👈 NEW: para autocompletar
->>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
+  fetchLeads,                 //  para autocompletar
   type Evento as EventoApi,
   type Propiedad as PropiedadApi,
   type Contacto as ContactoApi,
@@ -33,6 +29,62 @@ type DashboardData = {
   avisos_pendientes: number;
   avisos_atrasados: number;
 };
+/** ModalShell
+ * - Separa BACKDROP del CONTENIDO.
+ * - Resuelve z-index y stacking contexts para que el fondo no "lave" el modal.
+ * - Cierra al click fuera y con Escape.
+ */
+  
+function ModalShell({
+  title,
+  children,
+  maxWidth = "max-w-3xl",
+  onClose,
+}: {
+  title?: string;
+  children: ReactNode;
+  maxWidth?: "max-w-sm" | "max-w-lg" | "max-w-3xl" | "max-w-4xl";
+  onClose: () => void;
+}) {
+  // Cerrar con Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Bloquear scroll del fondo
+  useEffect(() => {
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => { document.documentElement.style.overflow = prev; };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[10000]">
+      {/* Backdrop (velo) – debajo del modal */}
+      <div className="fixed inset-0 z-10 backdrop" aria-hidden="true" onClick={onClose} />
+      {/* Contenedor del diálogo – encima del velo */}
+      <div className="fixed inset-0 z-20 flex items-center justify-center p-4">
+        <div
+          className={`w-full ${maxWidth} rounded-2xl border border-soft bg-surface shadow-elev-1`}
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header opcional */}
+          {title && (
+            <div className="px-5 py-3 border-b border-soft bg-surface-2">
+              <h3 className="text-lg font-semibold text-base-clr">{title}</h3>
+            </div>
+          )}
+          {/* Body */}
+          <div className="p-5 bg-surface">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ============================ Utilities ============================ */
 const MONTHS = [
@@ -461,18 +513,8 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2">
             <button
-              className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
-<<<<<<< HEAD
-              onClick={() => {
-                if (!localStorage.getItem('rc_token')) {
-                  toast.error("Debes iniciar sesión para agregar eventos.");
-                  return;
-                }
-                setOpenEventModal({ mode: "create", baseDate: new Date() });
-              }}
-=======
+              className="rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm px-3 h-9"
               onClick={() => setOpenEventModal({ mode: "create", baseDate: new Date() })}
->>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
             >
               + Agregar evento
             </button>
@@ -497,18 +539,18 @@ export default function DashboardPage() {
         {/* KPIs */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
           {kpis.map((k) => (
-            <div key={k.label} className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4">
+            <div key={k.label} className="rounded-xl border rc-card rc-border rc-border p-4">
               <div className="text-3xl font-semibold">{k.value}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">{k.label}</div>
-              {k.hint && <div className="text-xs text-gray-400 mt-1">{k.hint}</div>}
+              <div className="text-sm rc-muted rc-muted">{k.label}</div>
+              {k.hint && <div className="text-xs rc-muted mt-1">{k.hint}</div>}
             </div>
           ))}
         </section>
 
         {/* Calendar */}
-        <div className="rounded-2xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="rounded-2xl border rc-card rc-border rc-border overflow-hidden">
           {/* header week days */}
-          <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-900 text-xs text-gray-500">
+          <div className="grid grid-cols-7 border-b rc-border rc-border text-xs rc-muted">
             {WEEKDAYS.map((w) => (
               <div key={w} className="px-3 py-2">{w}</div>
             ))}
@@ -530,25 +572,25 @@ export default function DashboardPage() {
               return (
                 <div
                   key={i}
-                  className={`border-r border-b border-gray-100 dark:border-gray-900 p-2 ${inMonth ? "" : "bg-gray-50/50 dark:bg-gray-900/30"}`}
+                  className={`border-r border-b rc-border rc-border p-2 ${inMonth ? "" : "bg-app/50  dark:bg-gray-900/30"}`}
                   title={inMonth ? formatDate(d, { year: "numeric" }) : undefined}
                 >
                   {/* Contenedor columna + evitar desborde */}
                   <div className="flex h-full min-h-[7rem] flex-col overflow-hidden">
                     {/* header mini */}
                     <div className="flex items-center justify-between shrink-0">
-                      <div className={`text-xs ${inMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400"}`}>
+                      <div className={`text-xs ${inMonth ? "rc-muted dark:text-gray-300" : "rc-muted"}`}>
                         {dayLabel}
                       </div>
                       {inMonth && isToday && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Hoy</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 rc-text rc-text">Hoy</span>
                       )}
                     </div>
 
                     {/* Resumen compacto en una sola línea */}
                     {inMonth && sum.total > 0 && (
                       <button
-                        className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100/60 dark:hover:bg-gray-900/60 truncate"
+                        className="mt-2 w-full rounded-lg border rc-border rc-border bg-app/50   dark:bg-gray-900/40 px-2 py-1 text-[11px] text-left hover:bg-gray-100 dark:hover:bg-gray-800/60 dark:hover:rc-card/60 truncate"
                         onClick={() => setOpenDayModal(d)}
                         title={`${sum.r} ${plural(sum.r, "reunión", "reuniones")} · ${sum.l} ${plural(sum.l, "llamada", "llamadas")} · ${sum.v} ${plural(sum.v, "visita", "visitas")}`}
                       >
@@ -563,24 +605,14 @@ export default function DashboardPage() {
                     {inMonth && (
                       <div className="pt-2 shrink-0">
                         <button
-                          className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-<<<<<<< HEAD
-                          onClick={() => {
-                            if (!localStorage.getItem('rc_token')) {
-                              toast.error("Debes iniciar sesión para agregar eventos.");
-                              return;
-                            }
-                            openCreateOnDay(d);
-                          }}
-=======
+                          className="text-[11px] border px-1.5 py-0.5 rounded hover:bg-app dark:hover:rc-card"
                           onClick={() => openCreateOnDay(d)}
->>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
                         >
                           + nuevo
                         </button>
                         {allEvents.length > 0 && (
                           <button
-                            className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                            className="ml-2 text-[11px] border px-1.5 py-0.5 rounded hover:bg-app dark:hover:rc-card"
                             onClick={() => setOpenDayModal(d)}
                           >
                             ver
@@ -636,7 +668,7 @@ export default function DashboardPage() {
         {/* Result toast modal */}
         {result && <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />}
 
-        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+        {loading && <div className="text-sm rc-muted">Cargando…</div>}
       </div>
     </>
   );
@@ -661,67 +693,55 @@ function DayEventsModal({
   onCreate: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
-      <div
-        className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold">Eventos del {formatDate(date, { year: "numeric" })}</div>
-          <div className="flex gap-2">
-            <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCreate}>+ Nuevo</button>
-            <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
-          </div>
-        </div>
-
-        {/* Resumen del día */}
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-300 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30">
-            {resumen.r} {plural(resumen.r, "reunión", "reuniones")}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30">
-            {resumen.l} {plural(resumen.l, "llamada", "llamadas")}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30">
-            {resumen.v} {plural(resumen.v, "visita", "visitas")}
-          </span>
-          <span className="ml-auto text-xs opacity-70">Total: {resumen.total}</span>
-        </div>
-
-        {eventos.length === 0 ? (
-          <div className="mt-5 text-sm text-gray-500">No hay eventos para este día.</div>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {eventos.map((ev) => (
-              <li key={ev.id} className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 flex items-center justify-between">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {formatHour(ev.fecha_hora)} · {ev.tipo}
-                  </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300 truncate">
-                    {typeof (ev as any).propiedad_titulo === "string"
-                      ? (ev as any).propiedad_titulo
-                      : ev.propiedad
-                        ? `Propiedad #${ev.propiedad}`
-                        : "—"}
-                    {(ev as any).contacto_nombre
-                      ? ` • ${(ev as any).contacto_nombre}`
-                      : ev.contacto
-                        ? ` • Lead #${ev.contacto}`
-                        : ""}
-                  </div>
-                  {ev.notas && <div className="text-xs text-gray-500 mt-0.5 truncate">{ev.notas}</div>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="h-8 px-2 rounded-md border text-xs" onClick={() => onEdit(ev)}>Editar</button>
-                  <button className="h-8 px-2 rounded-md border border-rose-600/40 text-rose-500 text-xs" onClick={() => onDelete(ev)}>Borrar</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+    <ModalShell title={`Eventos del ${formatDate(date, { year: "numeric" })}`} onClose={onClose}>
+      {/* Resumen del día */}
+      <div className="text-sm rc-muted dark:text-gray-300 flex flex-wrap gap-2">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30">
+          {resumen.r} {plural(resumen.r, "reunión", "reuniones")}
+        </span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30">
+          {resumen.l} {plural(resumen.l, "llamada", "llamadas")}
+        </span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30">
+          {resumen.v} {plural(resumen.v, "visita", "visitas")}
+        </span>
+        <span className="ml-auto text-xs opacity-70">Total: {resumen.total}</span>
       </div>
-    </div>
+
+      {eventos.length === 0 ? (
+        <div className="mt-5 text-sm rc-muted">No hay eventos para este día.</div>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {eventos.map((ev) => (
+            <li key={ev.id} className="rounded-lg border rc-border p-3 flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">
+                  {formatHour(ev.fecha_hora)} · {ev.tipo}
+                </div>
+                <div className="text-xs rc-muted dark:text-gray-300 truncate">
+                  {typeof (ev as any).propiedad_titulo === "string"
+                    ? (ev as any).propiedad_titulo
+                    : ev.propiedad ? `Propiedad #${ev.propiedad}` : "—"}
+                  {(ev as any).contacto_nombre
+                    ? ` • ${(ev as any).contacto_nombre}`
+                    : ev.contacto ? ` • Lead #${ev.contacto}` : ""}
+                </div>
+                {ev.notas && <div className="text-xs rc-muted mt-0.5 truncate">{ev.notas}</div>}
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="h-8 px-2 rounded-md border text-xs" onClick={() => onEdit(ev)}>Editar</button>
+                <button className="h-8 px-2 rounded-md border border-rose-600/40 text-rose-500 text-xs" onClick={() => onDelete(ev)}>Borrar</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-5 flex items-center justify-end gap-2">
+        <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCreate}>+ Nuevo</button>
+        <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>Cerrar</button>
+      </div>
+    </ModalShell>
   );
 }
 
@@ -792,127 +812,113 @@ function EventModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onCancel}>
-      <div
-        className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-xl font-semibold mb-4">
-          {mode === "create" ? "Nuevo evento" : "Editar evento"}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Tipo">
-            <select
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-              value={form.tipo || "Reunion"}
-              onChange={(e) => set("tipo", e.target.value as Evento["tipo"])}
-            >
-              <option value="Reunion">Reunión</option>
-              <option value="Visita">Visita</option>
-              <option value="Llamada">Llamada</option>
-            </select>
-          </Field>
-
-          <Field label="Fecha y hora">
-            <input
-              type="datetime-local"
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-              value={
-                form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
-                  ? toLocalInputValue(new Date(form.fecha_hora))
-                  : String(form.fecha_hora || "")
-              }
-              onChange={(e) => set("fecha_hora", e.target.value)}
-            />
-          </Field>
-
-          <Field label="Propiedad">
-            <select
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-              value={String(form.propiedad || "")}
-              onChange={(e) => set("propiedad", Number(e.target.value))}
-            >
-              {propiedades.map((p) => (
-                <option key={p.id} value={String(p.id)}>
-                  {p.titulo || (p as any).direccion || `Propiedad #${p.id}`}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          {/* 👇 Autocompletado de Contacto (Lead) */}
-          <Field label="Contacto (opcional)">
-            <ContactAutocomplete
-              valueId={form.contacto == null ? null : Number(form.contacto)}
-              initialList={contactos}
-              onChange={(id, item) => {
-                set("contacto", id);
-                // Limpio visitante si hay lead
-                if (id) {
-                  set("nombre", "");
-                  set("apellido", "");
-                  set("email", null);
-                }
-              }}
-              onClear={() => set("contacto", null)}
-            />
-          </Field>
-
-          <Field label="Nombre (visitante)">
-            <input
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-              value={form.nombre || ""}
-              onChange={(e) => set("nombre", e.target.value)}
-              placeholder="Si no es contacto registrado"
-            />
-          </Field>
-
-          <Field label="Apellido (visitante)">
-            <input
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-              value={form.apellido || ""}
-              onChange={(e) => set("apellido", e.target.value)}
-            />
-          </Field>
-
-          <Field label="Email (visitante)">
-            <input
-              type="email"
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
-              value={form.email || ""}
-              onChange={(e) => set("email", e.target.value)}
-            />
-          </Field>
-
-          <div className="md:col-span-2">
-            <Field label="Notas">
-              <textarea
-                rows={3}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
-                value={form.notas || ""}
-                onChange={(e) => set("notas", e.target.value)}
-              />
-            </Field>
-          </div>
-        </div>
-
-        {error && <div className="mt-3 text-sm text-rose-500">{error}</div>}
-
-        <div className="mt-6 flex items-center justify-end gap-2">
-          <button className="h-10 px-4 rounded-lg border text-sm" onClick={onCancel} disabled={saving}>
-            Cancelar
-          </button>
-          <button
-            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-            onClick={handleSubmit}
-            disabled={saving}
+    <ModalShell title={mode === "create" ? "Nuevo evento" : "Editar evento"} onClose={onCancel}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="Tipo">
+          <select
+            className="w-full h-10 rounded-lg border rc-border px-3 text-sm bg-surface"
+            value={form.tipo || "Reunion"}
+            onChange={(e) => set("tipo", e.target.value as Evento["tipo"])}
           >
-            {saving ? "Guardando..." : "Guardar"}
-          </button>
+            <option value="Reunion">Reunión</option>
+            <option value="Visita">Visita</option>
+            <option value="Llamada">Llamada</option>
+          </select>
+        </Field>
+
+        <Field label="Fecha y hora">
+          <input
+            type="datetime-local"
+            className="w-full h-10 rounded-lg border rc-border px-3 text-sm bg-surface"
+            value={
+              form.fecha_hora && form.fecha_hora.includes("T") && form.fecha_hora.length > 16
+                ? toLocalInputValue(new Date(form.fecha_hora))
+                : String(form.fecha_hora || "")
+            }
+            onChange={(e) => set("fecha_hora", e.target.value)}
+          />
+        </Field>
+
+        <Field label="Propiedad">
+          <select
+            className="w-full h-10 rounded-lg border rc-border px-3 text-sm bg-surface"
+            value={String(form.propiedad || "")}
+            onChange={(e) => set("propiedad", Number(e.target.value))}
+          >
+            {propiedades.map((p) => (
+              <option key={p.id} value={String(p.id)}>
+                {p.titulo || (p as any).direccion || `Propiedad #${p.id}`}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        {/* Autocompletado de Contacto (Lead) */}
+        <Field label="Contacto (opcional)">
+          <ContactAutocomplete
+            valueId={form.contacto == null ? null : Number(form.contacto)}
+            initialList={contactos}
+            onChange={(id) => {
+              set("contacto", id);
+              if (id) { set("nombre", ""); set("apellido", ""); set("email", null); }
+            }}
+            onClear={() => set("contacto", null)}
+          />
+        </Field>
+
+        <Field label="Nombre (visitante)">
+          <input
+            className="w-full h-10 rounded-lg border rc-border px-3 text-sm bg-surface"
+            value={form.nombre || ""}
+            onChange={(e) => set("nombre", e.target.value)}
+            placeholder="Si no es contacto registrado"
+          />
+        </Field>
+
+        <Field label="Apellido (visitante)">
+          <input
+            className="w-full h-10 rounded-lg border rc-border px-3 text-sm bg-surface"
+            value={form.apellido || ""}
+            onChange={(e) => set("apellido", e.target.value)}
+          />
+        </Field>
+
+        <Field label="Email (visitante)">
+          <input
+            type="email"
+            className="w-full h-10 rounded-lg border rc-border px-3 text-sm bg-surface"
+            value={form.email || ""}
+            onChange={(e) => set("email", e.target.value)}
+          />
+        </Field>
+
+        <div className="md:col-span-2">
+          <Field label="Notas">
+            <textarea
+              rows={3}
+              className="w-full rounded-lg border rc-border px-3 py-2 text-sm bg-surface"
+              value={form.notas || ""}
+              onChange={(e) => set("notas", e.target.value)}
+            />
+          </Field>
         </div>
       </div>
-    </div>
+
+      {error && <div className="mt-3 text-sm text-rose-500">{error}</div>}
+
+      <div className="mt-6 flex items-center justify-end gap-2">
+        <button className="h-10 px-4 rounded-lg border text-sm" onClick={onCancel} disabled={saving}>
+          Cancelar
+        </button>
+        <button
+          className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm disabled:opacity-60"
+          onClick={handleSubmit}
+          disabled={saving}
+        >
+          {saving ? "Guardando..." : "Guardar"}
+        </button>
+      </div>
+    </ModalShell>
   );
 }
 
@@ -1016,7 +1022,7 @@ function ContactAutocomplete({
       {/* Input + estado seleccionado */}
       <div className="flex gap-2">
         <input
-          className="flex-1 h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+          className="flex-1 h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
           placeholder="Escribí nombre/apellido/email del lead…"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); setHighlight(0); }}
@@ -1037,7 +1043,7 @@ function ContactAutocomplete({
 
       {/* hint seleccionado */}
       {valueId != null && selected && (
-        <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+        <div className="mt-1 text-xs rc-muted dark:text-gray-300">
           Seleccionado: <strong>{(selected.nombre || "") + " " + (selected.apellido || "")}</strong>
           {selected.email ? ` • ${selected.email}` : ""}
         </div>
@@ -1045,9 +1051,9 @@ function ContactAutocomplete({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-xl">
+        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border rc-border rc-border rc-card shadow-xl">
           {items.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-500">Sin resultados…</div>
+            <div className="px-3 py-2 text-sm rc-muted">Sin resultados…</div>
           ) : (
             items.map((it, idx) => {
               const full = `${it.nombre || ""} ${it.apellido || ""}`.trim() || `Lead #${it.id}`;
@@ -1056,18 +1062,13 @@ function ContactAutocomplete({
                   key={it.id}
                   type="button"
                   onClick={() => pick(it)}
-<<<<<<< HEAD
-                  className={`w-full text-left px-3 py-2 text-sm ${idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
-                    }`}
-=======
                   className={`w-full text-left px-3 py-2 text-sm ${
-                    idx === highlight ? "bg-blue-600 text-white" : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                    idx === highlight ? "bg-blue-600 rc-text rc-text" : "hover:bg-app dark:hover:rc-card"
                   }`}
->>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
                   onMouseEnter={() => setHighlight(idx)}
                 >
                   <div className="font-medium truncate">{full}</div>
-                  <div className={`text-xs truncate ${idx === highlight ? "opacity-90" : "text-gray-500 dark:text-gray-400"}`}>
+                  <div className={`text-xs truncate ${idx === highlight ? "opacity-90" : "rc-muted rc-muted"}`}>
                     {it.email || it.telefono || "—"}
                   </div>
                 </button>
@@ -1105,50 +1106,47 @@ function ConfirmModal({
     setWorking(false);
   }
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
-        <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
-            Cancelar
-          </button>
-          <button
-            className={
-              confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-            }
-            onClick={go}
-            disabled={working}
-          >
-            {working ? "Procesando..." : confirmLabel}
-          </button>
-        </div>
+    <ModalShell title={title} onClose={onCancel} maxWidth="max-w-lg">
+      <div className="text-sm rc-muted dark:text-gray-300">{message}</div>
+      <div className="mt-5 flex items-center justify-end gap-2">
+        <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
+          Cancelar
+        </button>
+        <button
+          className={
+            confirmType === "danger"
+              ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 rc-text text-sm disabled:opacity-60"
+              : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm disabled:opacity-60"
+          }
+          onClick={go}
+          disabled={working}
+        >
+          {working ? "Procesando..." : confirmLabel}
+        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
 /* ============================= Result Modal ============================ */
 function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
+    <ModalShell title={ok ? "OK" : "Ups"} onClose={onClose} maxWidth="max-w-sm">
       <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
-          ok ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-              : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"}`}
-        onClick={(e) => e.stopPropagation()}
+        className={
+          ok
+            ? "rounded-xl p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800"
+            : "rounded-xl p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800"
+        }
       >
-        <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
         <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
+          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm" onClick={onClose}>
             Cerrar
           </button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 

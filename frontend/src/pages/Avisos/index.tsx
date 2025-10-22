@@ -49,42 +49,31 @@ export default function AvisosPage() {
 
       <div className="mb-4 flex items-center gap-2">
         <input
-          className="h-10 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm"
+          className="h-10 w-full rounded-xl border rc-border rc-border rc-card px-3 text-sm"
           placeholder="Buscar por título o descripción…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
       </div>
 
-      {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+      {loading && <div className="text-sm rc-muted">Cargando…</div>}
       {error && <div className="text-sm text-red-600">{error}</div>}
 
       {!loading && !error && filtered.length === 0 && (
-        <div className="text-sm text-gray-500">No hay avisos.</div>
+        <div className="text-sm rc-muted">No hay avisos.</div>
       )}
 
       <ul className="space-y-3">
         {filtered.map((a) => (
-<<<<<<< HEAD
-          <li
-            key={a.id}
-            className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900"
-          >
-            <div className="font-medium text-lg">{a.titulo}</div>
-            {a.descripcion && (
-              <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                {a.descripcion}
-=======
-          <li key={a.id} className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+          <li key={a.id} className="rounded-xl border rc-border rc-border p-4">
             <div className="font-medium">{a.titulo || `Aviso #${a.id}`}</div>
-            {a.descripcion && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{a.descripcion}</div>}
+            {a.descripcion && <div className="text-sm rc-muted dark:text-gray-300 mt-1">{a.descripcion}</div>}
             {a.creado_en && (
-              <div className="text-xs text-gray-500 mt-2">
+              <div className="text-xs rc-muted mt-2">
                 Creado: {new Date(a.creado_en).toLocaleString()}
->>>>>>> parent of 0870ace (Cambiar tema claro y oscuro)
               </div>
             )}
-            <div className="mt-2 text-xs text-gray-500 flex gap-3">
+            <div className="mt-2 text-xs text-muted-clr flex gap-3">
               {a.fecha && <>📅 {new Date(a.fecha).toLocaleString()}</>}
               {a.estado && <span>• Estado: {a.estado}</span>}
               {a.creado_en && (

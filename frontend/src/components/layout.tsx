@@ -18,9 +18,9 @@ export function Layout({ title, children }: { title: string; children: ReactNode
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen bg-app dark:bg-neutral-950 text-base-clr dark:text-gray-100">
       {/* Navbar (título de sección) */}
-      <header className="sticky top-0 z-20 border-b border-gray-200 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-soft dark:border-neutral-800 bg-app/70 dark:bg-neutral-900/70 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 py-3">
           <h1 className="text-xl font-semibold">{title}</h1>
         </div>

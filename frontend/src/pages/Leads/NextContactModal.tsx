@@ -94,7 +94,7 @@ export default function NextContactModal({ contacto, onClose }: Props) {
           <label className="text-sm">Fecha y hora</label>
           <input
             type="datetime-local"
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-app dark:bg-gray-950 border-soft dark:border-gray-700"
             value={fechaHora}
             onChange={(e) => setFechaHora(e.target.value)}
           />
@@ -102,7 +102,7 @@ export default function NextContactModal({ contacto, onClose }: Props) {
         <div>
           <label className="text-sm">Nota (opcional)</label>
           <textarea
-            className="mt-1 w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700"
+            className="mt-1 w-full border rounded-md px-3 py-2 bg-app dark:bg-gray-950 border-soft dark:border-gray-700"
             rows={3}
             value={nota}
             onChange={(e) => setNota(e.target.value)}
@@ -117,7 +117,7 @@ export default function NextContactModal({ contacto, onClose }: Props) {
             type="button"
             onClick={handleClear}
             disabled={saving}
-            className="h-10 px-4 rounded-lg border text-sm text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-60"
+            className="h-10 px-4 rounded-lg border text-sm text-gray-700 dark:text-gray-300 border-soft dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-60"
           >
             Limpiar
           </button>
@@ -126,7 +126,7 @@ export default function NextContactModal({ contacto, onClose }: Props) {
           type="button"
           onClick={onClose}
           disabled={saving}
-          className="h-10 px-4 rounded-lg border text-sm border-gray-300 dark:border-gray-700 disabled:opacity-60"
+          className="h-10 px-4 rounded-lg border text-sm border-soft dark:border-gray-700 disabled:opacity-60"
         >
           Cancelar
         </button>

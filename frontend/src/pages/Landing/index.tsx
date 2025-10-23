@@ -49,6 +49,7 @@ export default function Landing() {
               Iniciar sesión
             </Link>
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
             {/* Enlace */}
@@ -60,6 +61,8 @@ export default function Landing() {
               Ver demo
             </Link>
 >>>>>>> e2d14cb62bfee7c3e847e872f6cdb4e15e77a271
+=======
+>>>>>>> 6680c95cbeef4eaeafd4e43ef2235dc8491c5263
           </div>
 
           {/* Bullets */}
@@ -71,6 +74,9 @@ export default function Landing() {
         </div>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 6680c95cbeef4eaeafd4e43ef2235dc8491c5263
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
           <img src="/logo.png" alt="Real Connect" className="h-16 w-16 mb-4" />
           <video
@@ -82,6 +88,7 @@ export default function Landing() {
             className="rounded-xl w-full h-64 object-cover"
           />
           <p className="mt-3 text-xs text-gray-500">Mockup de app (ilustrativo)</p>
+<<<<<<< HEAD
 =======
         {/* Derecha */}
         <div className="rounded-2xl border rc-border rc-border p-6">
@@ -91,6 +98,8 @@ export default function Landing() {
             Mockup de app (ilustrativo)
           </p>
 >>>>>>> e2d14cb62bfee7c3e847e872f6cdb4e15e77a271
+=======
+>>>>>>> 6680c95cbeef4eaeafd4e43ef2235dc8491c5263
         </div>
       </div>
     </section>

@@ -181,13 +181,8 @@ function MessageBubble({ msg }: { msg: Message }) {
             ? // System: contraste fuerte
             "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300 dark:border-amber-800"
             : // Assistant: alto contraste (fondo claro + borde)
-<<<<<<< HEAD
-              "bg-app text-base-clr dark:bg-gray-800 dark:text-gray-100 border border-soft dark:border-gray-700"
-        }`}
-=======
             "bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
           }`}
->>>>>>> 4a5a3a368a9dff383e3a0a9b53a9ddb8915d5e0c
       >
         <div>{msg.text}</div>
         {isAssistant && msg.payload && msg.payload.items?.length > 0 && (

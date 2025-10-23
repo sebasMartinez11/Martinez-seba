@@ -48,18 +48,6 @@ export default function Landing() {
             >
               Iniciar sesión
             </Link>
-<<<<<<< HEAD
-
-            {/* Enlace */}
-            <Link
-              to="/app"
-              className="inline-flex items-center rounded-md px-4 py-2 underline
-                         text-gray-700 dark:text-gray-300 hover:no-underline"
-            >
-              Ver demo
-            </Link>
-=======
->>>>>>> 4a5a3a368a9dff383e3a0a9b53a9ddb8915d5e0c
           </div>
 
           {/* Bullets */}
@@ -70,15 +58,6 @@ export default function Landing() {
           </ul>
         </div>
 
-<<<<<<< HEAD
-        {/* Derecha */}
-        <div className="rounded-2xl border rc-border rc-border p-6">
-          <img src="/logo.png" alt="Real Connect" className="h-12 md:h-16 w-auto mx-auto"/>
-          <div className="rounded-xl bg-gray-100 dark:bg-gray-900 h-64" />
-          <p className="mt-3 text-xs rc-muted rc-muted">
-            Mockup de app (ilustrativo)
-          </p>
-=======
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
           <img src="/logo.png" alt="Real Connect" className="h-16 w-16 mb-4" />
           <video
@@ -90,7 +69,6 @@ export default function Landing() {
             className="rounded-xl w-full h-64 object-cover"
           />
           <p className="mt-3 text-xs text-gray-500">Mockup de app (ilustrativo)</p>
->>>>>>> 4a5a3a368a9dff383e3a0a9b53a9ddb8915d5e0c
         </div>
       </div>
     </section>

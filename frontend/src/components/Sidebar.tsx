@@ -33,21 +33,21 @@ export default function Sidebar() {
   return (
     <aside
       className={clsx(
-        "h-screen sticky top-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950",
+        "h-screen sticky top-0 border-r border-soft dark:border-soft bg-app dark:bg-gray-950",
         "transition-all duration-300 ease-in-out hidden md:flex flex-col",
         width
       )}
     >
-      <div className="flex items-center gap-3 px-3 py-4 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex items-center gap-3 px-3 py-4 border-b border-soft dark:border-soft">
         <img src="/logo.png" alt="Real Connect" className="h-8 w-8 rounded" />
         {!collapsed && (
           <div className="font-semibold leading-tight">
             <div className="text-sm">Real Connect</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400">CRM Inmobiliario</div>
+            <div className="text-[10px] text-muted-clr dark:text-gray-400">CRM Inmobiliario</div>
           </div>
         )}
         <button
-          className="ml-auto inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300 h-8 w-8"
+          className="ml-auto inline-flex items-center justify-center rounded-md border border-soft dark:border-soft hover:bg-app dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300 h-8 w-8"
           onClick={() => setCollapsed((c) => !c)}
           title={collapsed ? "Expandir" : "Colapsar"}
         >
@@ -65,10 +65,13 @@ export default function Sidebar() {
               end={it.to === "/app"}
               className={({ isActive }) =>
                 clsx(
-                  "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white",
+                  "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200",
+                  // Normal
+                  "text-[color:var(--text)] hover:bg-[color:var(--bg-muted)] hover:text-[color:var(--primary)]",
+                  "dark:text-[color:var(--text-muted)] dark:hover:bg-[color:var(--surface-2)] dark:hover:text-[color:var(--text-strong)]",
+                  // Activo
                   isActive &&
-                    "bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-white border border-gray-200 dark:border-gray-800"
+                    "bg-[color:var(--primary)] text-white dark:bg-[color:var(--primary)] dark:text-white shadow-sm"
                 )
               }
             >
@@ -79,8 +82,8 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="px-3 py-3 text-[10px] text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
-        {collapsed ? "Version beta" : "Innovasoft"}
+      <div className="px-3 py-3 text-[10px] text-muted-clr dark:text-gray-400 border-t border-soft dark:border-soft">
+        {collapsed ? "v0.1" : "v0.1 • Dev"}
       </div>
     </aside>
   );

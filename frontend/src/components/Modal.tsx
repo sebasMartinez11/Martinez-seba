@@ -10,6 +10,9 @@ type ModalProps = {
   maxWidth?: "sm" | "md" | "lg";
 };
 
+
+
+
 export default function Modal({ open, title, onClose, children, maxWidth = "md" }: ModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -33,7 +36,7 @@ export default function Modal({ open, title, onClose, children, maxWidth = "md" 
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div
           className={clsx(
-            "w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-xl",
+            "w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-app dark:bg-gray-950 shadow-xl",
             maxWidth === "sm" && "max-w-sm",
             maxWidth === "md" && "max-w-lg",
             maxWidth === "lg" && "max-w-2xl"

@@ -87,28 +87,28 @@ export default function EventModal({ onClose, onCreated }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6">
+      <div className="w-full max-w-3xl rounded-xl bg-app dark:bg-gray-900 border border-soft dark:border-soft p-6">
         <h3 className="text-lg font-semibold mb-4">Nuevo evento</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm text-gray-500">Nombre</label>
+            <label className="text-sm text-muted-clr">Nombre</label>
             <input className="mt-1 w-full rounded-md bg-gray-100/60 dark:bg-gray-800 px-3 h-10"
               value={nombre} onChange={(e) => setNombre(e.target.value)} />
           </div>
           <div>
-            <label className="text-sm text-gray-500">Apellido</label>
+            <label className="text-sm text-muted-clr">Apellido</label>
             <input className="mt-1 w-full rounded-md bg-gray-100/60 dark:bg-gray-800 px-3 h-10"
               value={apellido} onChange={(e) => setApellido(e.target.value)} />
           </div>
 
           <div>
-            <label className="text-sm text-gray-500">Email</label>
+            <label className="text-sm text-muted-clr">Email</label>
             <input type="email" className="mt-1 w-full rounded-md bg-gray-100/60 dark:bg-gray-800 px-3 h-10"
               value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
-            <label className="text-sm text-gray-500">Propiedad</label>
+            <label className="text-sm text-muted-clr">Propiedad</label>
             <select
               className="mt-1 w-full rounded-md bg-gray-100/60 dark:bg-gray-800 px-3 h-10"
               value={propiedadId ?? ""}
@@ -122,20 +122,20 @@ export default function EventModal({ onClose, onCreated }: Props) {
           </div>
 
           <div>
-            <label className="text-sm text-gray-500">Fecha</label>
+            <label className="text-sm text-muted-clr">Fecha</label>
             <input type="date"
               className="mt-1 w-full rounded-md bg-gray-100/60 dark:bg-gray-800 px-3 h-10"
               value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
           <div>
-            <label className="text-sm text-gray-500">Hora</label>
+            <label className="text-sm text-muted-clr">Hora</label>
             <input type="time"
               className="mt-1 w-full rounded-md bg-gray-100/60 dark:bg-gray-800 px-3 h-10"
               value={hora} onChange={(e) => setHora(e.target.value)} />
           </div>
 
           <div>
-            <label className="text-sm text-gray-500">Tipo de evento</label>
+            <label className="text-sm text-muted-clr">Tipo de evento</label>
             <select
               className="mt-1 w-full rounded-md bg-gray-100/60 dark:bg-gray-800 px-3 h-10"
               value={tipoUI}
@@ -148,7 +148,7 @@ export default function EventModal({ onClose, onCreated }: Props) {
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-sm text-gray-500">Notas</label>
+            <label className="text-sm text-muted-clr">Notas</label>
             <textarea
               className="mt-1 w-full rounded-md bg-gray-100/60 dark:bg-gray-800 px-3 py-2 min-h-[72px]"
               value={notas}
@@ -158,7 +158,7 @@ export default function EventModal({ onClose, onCreated }: Props) {
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <button className="h-10 px-4 rounded-md border border-gray-300 dark:border-gray-700"
+          <button className="h-10 px-4 rounded-md border border-soft dark:border-gray-700"
                   onClick={onClose} disabled={saving}>
             Cancelar
           </button>

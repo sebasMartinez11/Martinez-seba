@@ -1,9 +1,6 @@
 // src/pages/Leads/index.tsx
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import { toast } from 'react-hot-toast'; // Importar toast si no está ya
-import NextContactModal from "./NextContactModal"; // 👈 SOLUCIÓN: IMPORTAR EL MODAL
-import { FiAlertCircle } from "react-icons/fi"; // Importar ícono para modales
 
 /* ----------------------------- Types ----------------------------- */
 type EstadoLead = { id: number; fase: string; descripcion?: string };
@@ -18,12 +15,12 @@ type Contacto = {
   estado?: EstadoLead | number | null;
   estado_detalle?: EstadoLead | null;
 
-  // ✅ Seguimiento desde API
+  //  Seguimiento desde API
   last_contact_at?: string | null;
   next_contact_at?: string | null;
   next_contact_note?: string | null;
 
-  // ✅ Derivados desde API (read-only)
+  //  Derivados desde API (read-only)
   proximo_contacto_estado?: string; // "Pendiente / Por definir" | "Vencido" | "Vence hoy" | "Próximo en N días"
   dias_sin_seguimiento?: number | null;
 
@@ -39,7 +36,7 @@ type Evento = {
   email?: string | null;
 };
 
-/** ✅ Ítem de historial de cambios de estado */
+/**  Ítem de historial de cambios de estado */
 type HistItem = {
   id: number;
   contacto: number;
@@ -57,7 +54,7 @@ const STATE_COLORS: Record<string, string> = {
 };
 
 const STATUS_BADGE = {
-  pendiente: "bg-gray-500/15 text-gray-300 ring-1 ring-gray-500/30",
+  pendiente: "bg-app0/15 text-gray-300 ring-1 ring-gray-500/30",
   vencido: "bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30",
   hoy: "bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/30",
   proximo: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
@@ -110,32 +107,23 @@ export default function LeadsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Contacto | null>(null);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  /** ✅ Modal de historial */
+  /**  Modal de historial */
   const [historyFor, setHistoryFor] = useState<Contacto | null>(null);
   const [historyItems, setHistoryItems] = useState<HistItem[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // ✅ Filtros remotos (golpean API)
+  //  Filtros remotos (golpean API)
   const [vencimiento, setVencimiento] = useState<"" | "pendiente" | "vencido" | "hoy" | "proximo">("");
   const [proximoEnDias, setProximoEnDias] = useState<number>(3);
   const [sinSegDias, setSinSegDias] = useState<number | "">("");
   const [ordering, setOrdering] = useState<string>("-next_contact_at");
 
-  // ✅ Busy por acción rápida
+  //  Busy por acción rápida
   const [busyId, setBusyId] = useState<number | null>(null);
-
-  // Nuevo estado para el modal de próximo contacto
-  const [nextContactTarget, setNextContactTarget] = useState<Contacto | null>(null);
 
   const PAGE_SIZE = 10;
 
   async function fetchEstados() {
-    // 🔒 GUARDIA DE AUTENTICACIÓN
-    if (!localStorage.getItem('rc_token')) {
-      setEstados([]);
-      return;
-    }
-
     try {
       const res = await api.get("estados-lead/");
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
@@ -147,13 +135,6 @@ export default function LeadsPage() {
   }
 
   async function fetchContactos() {
-    // 🔒 GUARDIA DE AUTENTICACIÓN
-    if (!localStorage.getItem('rc_token')) {
-      setLoading(false);
-      setContactos([]);
-      return;
-    }
-
     setLoading(true);
     try {
       const params: Record<string, any> = {};
@@ -166,36 +147,22 @@ export default function LeadsPage() {
       const res = await api.get("contactos/", { params });
       const toArr = (d: any) => (Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : []);
       setContactos(toArr(res.data));
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       setContactos([]);
-      // 🚨 Control de errores para evitar toast si el error es solo 401
-      if (e.response && e.response.status !== 401) {
-        toast.error("No se pudo cargar leads.");
-      } else if (!e.response) { // Error de red/timeout
-        toast.error("No se pudo cargar leads.");
-      }
+      setResult({ ok: false, msg: "No se pudo cargar leads." });
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    // 🔑 Solo ejecutamos si el usuario está (o estuvo) logueado
-    if (localStorage.getItem('rc_token')) {
-      fetchEstados();
-    }
+    fetchEstados();
   }, []);
 
   // Carga inicial y recargas por filtros
   useEffect(() => {
-    // 🔑 GUARDIA CRÍTICA para el polling de datos
-    if (localStorage.getItem('rc_token')) {
-      fetchContactos();
-    } else {
-      setContactos([]); // Limpiar si el token desaparece
-      setLoading(false);
-    }
+    fetchContactos();
     setPage(1);
   }, [q, vencimiento, proximoEnDias, sinSegDias, ordering]);
 
@@ -262,14 +229,14 @@ export default function LeadsPage() {
         api.post("estados-lead/", { fase: "Vendido", descripcion: "" }),
       ]);
       await fetchEstados();
-      toast.success("Estados cargados correctamente.");
+      setResult({ ok: true, msg: "Estados cargados correctamente." });
     } catch (e) {
       console.error(e);
-      toast.error("No se pudieron cargar los estados recomendados.");
+      setResult({ ok: false, msg: "No se pudieron cargar los estados recomendados." });
     }
   }
 
-  /* ✅ Abrir modal y traer historial */
+  /*  Abrir modal y traer historial */
   async function openHistory(c: Contacto) {
     setHistoryFor(c);
     setHistoryItems(null);
@@ -285,13 +252,55 @@ export default function LeadsPage() {
     }
   }
 
+  /* === Acciones rápidas: próximo contacto === */
+  async function quickSetNext(c: Contacto, daysFromToday: number, hour = 10) {
+    try {
+      setBusyId(c.id);
+      const iso = localISOAt(daysFromToday, hour, 0);
+      const note =
+        daysFromToday === 1
+          ? "Programado rápido: mañana 10:00"
+          : `Programado rápido: +${daysFromToday}d 10:00`;
+      await saveContacto(`contactos/${c.id}/`, "patch", {
+        estado: typeof c.estado === "number" ? c.estado : c.estado_detalle?.id,
+        next_contact_at: iso,
+        next_contact_note: note,
+      });
+      await fetchContactos();
+      setResult({ ok: true, msg: "Próximo contacto programado ✅" });
+    } catch (e) {
+      console.error(e);
+      setResult({ ok: false, msg: "No se pudo programar el próximo contacto." });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function quickClearNext(c: Contacto) {
+    try {
+      setBusyId(c.id);
+      await saveContacto(`contactos/${c.id}/`, "patch", {
+        estado: typeof c.estado === "number" ? c.estado : c.estado_detalle?.id,
+        next_contact_at: null,
+        next_contact_note: null,
+      });
+      await fetchContactos();
+      setResult({ ok: true, msg: "Próximo contacto limpiado ✅" });
+    } catch (e) {
+      console.error(e);
+      setResult({ ok: false, msg: "No se pudo limpiar el próximo contacto." });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   /* ----------------------------- UI ------------------------------ */
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">Gestión de Lead</h2>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs rc-muted rc-muted">
             Administra tus leads, próximos contactos y estado comercial.
           </div>
         </div>
@@ -306,7 +315,7 @@ export default function LeadsPage() {
             </button>
           )}
           <button
-            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
+            className="rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm px-3 h-9"
             onClick={() => setOpenAdd(true)}
           >
             + Añadir
@@ -319,10 +328,10 @@ export default function LeadsPage() {
         {kpis.map((k) => (
           <div
             key={k.label}
-            className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4"
+            className="rounded-xl border rc-card rc-border rc-border p-4"
           >
             <div className="text-3xl font-semibold">{k.value}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm rc-muted rc-muted">
               {k.label}
             </div>
           </div>
@@ -336,11 +345,11 @@ export default function LeadsPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por nombre, email o teléfono…"
-            className="w-full h-10 rounded-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            className="w-full h-10 rounded-lg rc-card border rc-border rc-border px-3 text-sm outline-none focus:ring-2 ring-blue-500"
           />
           {q && (
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs rc-muted"
               onClick={() => setQ("")}
             >
               Limpiar
@@ -349,7 +358,7 @@ export default function LeadsPage() {
         </div>
 
         <select
-          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
+          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
           value={vencimiento}
           onChange={(e) => setVencimiento(e.target.value as any)}
           title="Vencimiento de próximo contacto"
@@ -362,7 +371,7 @@ export default function LeadsPage() {
         </select>
 
         <select
-          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
+          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
           value={String(proximoEnDias)}
           onChange={(e) => setProximoEnDias(Number(e.target.value))}
           disabled={vencimiento !== "proximo"}
@@ -374,7 +383,7 @@ export default function LeadsPage() {
         </select>
 
         <select
-          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
+          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
           value={String(sinSegDias)}
           onChange={(e) => setSinSegDias(e.target.value === "" ? "" : Number(e.target.value))}
           title="Días sin seguimiento (ultimo contacto)"
@@ -386,7 +395,7 @@ export default function LeadsPage() {
         </select>
 
         <select
-          className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
+          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
           value={ordering}
           onChange={(e) => setOrdering(e.target.value)}
           title="Orden"
@@ -401,9 +410,9 @@ export default function LeadsPage() {
       </div>
 
       {/* Tabla (desktop) */}
-      <div className="hidden md:block rounded-2xl overflow-hidden border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
+      <div className="hidden md:block rounded-2xl overflow-hidden border rc-card rc-border rc-border">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300">
+          <thead className="rc-card/40 rc-muted dark:text-gray-300">
             <tr>
               <th className="text-left font-medium px-4 py-3">Nombre</th>
               <th className="text-left font-medium px-4 py-3">Apellido</th>
@@ -418,14 +427,14 @@ export default function LeadsPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-4 py-8 text-center rc-muted">
                   Cargando…
                 </td>
               </tr>
             )}
             {!loading && pageRows.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-4 py-8 text-center rc-muted">
                   Sin resultados.
                 </td>
               </tr>
@@ -435,7 +444,7 @@ export default function LeadsPage() {
                 const stateKey = norm((c as any).estadoFase);
                 const badge =
                   STATE_COLORS[stateKey] ||
-                  "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+                  "bg-app0/15 rc-muted ring-1 ring-gray-500/20";
 
                 const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
                 const nextChip = statusChipClass(nextLabel);
@@ -446,23 +455,42 @@ export default function LeadsPage() {
                 return (
                   <tr
                     key={c.id}
-                    className="border-t border-gray-100 dark:border-gray-900"
+                    className="border-t rc-border rc-border"
                   >
-                    <td className="px-4 py-3">{c.nombre || "—"}</td>
-                    <td className="px-4 py-3">{c.apellido || "—"}</td>
-                    <td className="px-4 py-3">{c.telefono || "—"}</td>
+                    <td className="px-4 py-3 font-semibold text-base-clr">{c.nombre || "—"}</td>
+                    <td className="px-4 py-3 font-semibold text-base-clr">{c.apellido || "—"}</td>
+
+                    {/* Teléfono  */}
                     <td className="px-4 py-3">
-                      {formatDate(c.last_contact_at, true)}
+                      <span className={!c.telefono ? "font-semibold text-base-clr" : "text-base-clr"}>
+                        {c.telefono || "—"}
+                      </span>
+                    </td>
+
+                    {/* Último contacto */}
+                    <td className="px-4 py-3">
+                      <span className={!c.last_contact_at ? "font-semibold text-base-clr" : "text-base-clr"}>
+                        {formatDate(c.last_contact_at, true)}
+                      </span>
                       {typeof c.dias_sin_seguimiento === "number" && (
-                        <span className="ml-2 text-xs text-gray-400">
-                          ({c.dias_sin_seguimiento} d)
-                        </span>
+                        <span className="ml-2 text-xs rc-muted">({c.dias_sin_seguimiento} d)</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">{c.email || "—"}</td>
+
+                    {/* Email */}
+                    <td className="px-4 py-3">
+                      <span className={!c.email ? "font-semibold text-base-clr" : "text-base-clr"}>
+                        {c.email || "—"}
+                      </span>
+                    </td>
+
+                    {/* Próximo contacto */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span title={nextNote}>
+                        <span
+                          className={!c.next_contact_at ? "font-semibold text-base-clr" : "text-base-clr"}
+                          title={nextNote}
+                        >
                           {formatDate(c.next_contact_at, true)}
                         </span>
                         <span
@@ -473,6 +501,9 @@ export default function LeadsPage() {
                         </span>
                       </div>
                     </td>
+
+                    {/* Estado (igual) */}
+
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${badge}`}
@@ -480,10 +511,11 @@ export default function LeadsPage() {
                         {(c as any).estadoFase}
                       </span>
                     </td>
+
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-end gap-2">
                         <button
-                          className="h-8 px-2 rounded-md border border-gray-300 dark:border-gray-700 text-xs"
+                          className="h-8 px-2 rounded-md border rc-border rc-border text-xs"
                           onClick={() => setEditTarget(c)}
                           disabled={isBusy}
                         >
@@ -496,12 +528,39 @@ export default function LeadsPage() {
                         >
                           Borrar
                         </button>
+                        {/*  Historial */}
                         <button
                           className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => setNextContactTarget(c)}
+                          onClick={() => openHistory(c)}
                           disabled={isBusy}
                         >
-                          Configurar próximo contacto
+                          Historial
+                        </button>
+
+                        {/*  Acciones rápidas de seguimiento */}
+                        <button
+                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
+                          onClick={() => quickSetNext(c, 1, 10)}
+                          disabled={isBusy}
+                          title="Programar mañana a las 10:00"
+                        >
+                          Mañana 10:00
+                        </button>
+                        <button
+                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
+                          onClick={() => quickSetNext(c, 3, 10)}
+                          disabled={isBusy}
+                          title="Programar en 3 días a las 10:00"
+                        >
+                          +3d 10:00
+                        </button>
+                        <button
+                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
+                          onClick={() => quickClearNext(c)}
+                          disabled={isBusy}
+                          title="Limpiar próximo contacto"
+                        >
+                          Limpiar próximo
                         </button>
                       </div>
                     </td>
@@ -512,7 +571,7 @@ export default function LeadsPage() {
         </table>
 
         {/* Paginación */}
-        <div className="flex items-center justify-center gap-2 p-3 border-t border-gray-100 dark:border-gray-900">
+        <div className="flex items-center justify-center gap-2 p-3 border-t rc-border rc-border">
           <button
             className="h-8 px-3 rounded-md border text-sm disabled:opacity-50"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -536,30 +595,29 @@ export default function LeadsPage() {
 
       {/* Cards (mobile) */}
       <div className="md:hidden space-y-3">
-        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+        {loading && <div className="text-sm rc-muted">Cargando…</div>}
         {!loading && rows.length === 0 && (
-          <div className="text-sm text-gray-500">Sin resultados.</div>
+          <div className="text-sm rc-muted">Sin resultados.</div>
         )}
         {!loading &&
           rows.map((c) => {
             const stateKey = norm((c as any).estadoFase);
             const badge =
               STATE_COLORS[stateKey] ||
-              "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
+              "bg-app0/15 rc-muted ring-1 ring-gray-500/20";
 
             const nextLabel = c.proximo_contacto_estado || "Pendiente / Por definir";
             const nextChip = statusChipClass(nextLabel);
             const nextNote = c.next_contact_note || "";
-
             const isBusy = busyId === c.id;
 
             return (
               <div
                 key={c.id}
-                className="rounded-xl border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 p-4"
+                className="rounded-xl border rc-card rc-border rc-border p-4"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="font-medium">
+                  <div className="font-semibold">
                     {(c.nombre || "—") + " " + (c.apellido || "")}
                   </div>
                   <span
@@ -568,31 +626,35 @@ export default function LeadsPage() {
                     {(c as any).estadoFase}
                   </span>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500">
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs rc-muted">
                   <div>
-                    <div className="text-gray-400">Teléfono</div>
-                    <div className="dark:text-gray-300/90">{c.telefono || "—"}</div>
+                    <div className="rc-muted">Teléfono</div>
+                    <div className={!c.telefono ? "font-semibold text-base-clr" : "text-base-clr"}>
+                      {c.telefono || "—"}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-gray-400">Email</div>
-                    <div className="truncate">{c.email || "—"}</div>
+                    <div className="rc-muted">Email</div>
+                    <div className={`truncate ${!c.email ? "font-semibold text-base-clr" : "text-base-clr"}`}>
+                      {c.email || "—"}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-gray-400">Último contacto</div>
-                    <div>
+                    <div className="rc-muted">Último contacto</div>
+                    <div className={!c.last_contact_at ? "font-semibold text-base-clr" : "text-base-clr"}>
                       {formatDate(c.last_contact_at, true)}
                       {typeof c.dias_sin_seguimiento === "number" && (
-                        <span className="ml-1">({c.dias_sin_seguimiento} d)</span>
+                        <span className="ml-1 rc-muted">({c.dias_sin_seguimiento} d)</span>
                       )}
                     </div>
                   </div>
                   <div title={nextNote}>
-                    <div className="text-gray-400">Próximo contacto</div>
+                    <div className="rc-muted">Próximo contacto</div>
                     <div className="flex items-center gap-1">
-                      <span>{formatDate(c.next_contact_at, true)}</span>
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] ${nextChip}`}
-                      >
+                      <span className={!c.next_contact_at ? "font-semibold text-base-clr" : "text-base-clr"}>
+                        {formatDate(c.next_contact_at, true)}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] ${nextChip}`}>
                         {nextLabel}
                       </span>
                     </div>
@@ -613,12 +675,36 @@ export default function LeadsPage() {
                   >
                     Borrar
                   </button>
+                  {/*  Historial (mobile) */}
                   <button
                     className="h-8 px-3 rounded-md border text-xs"
-                    onClick={() => setNextContactTarget(c)}
+                    onClick={() => openHistory(c)}
                     disabled={isBusy}
                   >
-                    Configurar próximo contacto
+                    Historial
+                  </button>
+
+                  {/*  Acciones rápidas (mobile) */}
+                  <button
+                    className="h-8 px-3 rounded-md border text-xs"
+                    onClick={() => quickSetNext(c, 1, 10)}
+                    disabled={isBusy}
+                  >
+                    Mañana 10:00
+                  </button>
+                  <button
+                    className="h-8 px-3 rounded-md border text-xs"
+                    onClick={() => quickSetNext(c, 3, 10)}
+                    disabled={isBusy}
+                  >
+                    +3d 10:00
+                  </button>
+                  <button
+                    className="h-8 px-3 rounded-md border text-xs"
+                    onClick={() => quickClearNext(c)}
+                    disabled={isBusy}
+                  >
+                    Limpiar próximo
                   </button>
                 </div>
               </div>
@@ -637,10 +723,10 @@ export default function LeadsPage() {
               await saveContacto("contactos/", "post", payload);
               await fetchContactos();
               setOpenAdd(false);
-              toast.success("Lead creado correctamente.");
+              setResult({ ok: true, msg: "Lead creado correctamente." });
             } catch (e) {
               console.error(e);
-              toast.error("No se pudo crear el lead.");
+              setResult({ ok: false, msg: "No se pudo crear el lead." });
             }
           }}
         />
@@ -659,10 +745,10 @@ export default function LeadsPage() {
               (typeof editTarget.estado === "number"
                 ? String(editTarget.estado)
                 : editTarget.estado?.id
-                  ? String(editTarget.estado.id)
-                  : editTarget.estado_detalle?.id
-                    ? String(editTarget.estado_detalle.id)
-                    : "") || "",
+                ? String(editTarget.estado.id)
+                : editTarget.estado_detalle?.id
+                ? String(editTarget.estado_detalle.id)
+                : "") || "",
             next_contact_at: editTarget.next_contact_at || "",
             next_contact_note: editTarget.next_contact_note || "",
           }}
@@ -672,10 +758,10 @@ export default function LeadsPage() {
               await saveContacto(`contactos/${editTarget.id}/`, "patch", payload);
               await fetchContactos();
               setEditTarget(null);
-              toast.success("Lead actualizado correctamente.");
+              setResult({ ok: true, msg: "Lead actualizado correctamente." });
             } catch (e) {
               console.error(e);
-              toast.error("No se pudo actualizar el lead.");
+              setResult({ ok: false, msg: "No se pudo actualizar el lead." });
             }
           }}
         />
@@ -693,29 +779,20 @@ export default function LeadsPage() {
               await api.delete(`contactos/${deleteTarget.id}/`);
               await fetchContactos();
               setDeleteTarget(null);
-              toast.success("Lead eliminado.");
+              setResult({ ok: true, msg: "Lead eliminado." });
             } catch (e) {
               console.error(e);
-              toast.error("No se pudo eliminar el lead.");
+              setResult({ ok: false, msg: "No se pudo eliminar el lead." });
             }
           }}
         />
       )}
 
-      {nextContactTarget && (
-        <NextContactModal
-          contacto={nextContactTarget}
-          onClose={() => {
-            setNextContactTarget(null);
-            fetchContactos(); // Refresca los leads después de cerrar el modal
-            // 🚨 Sincronización: Disparar evento para que TopBar y Dashboard recarguen
-            window.dispatchEvent(new Event('avisos:refresh'));
-            window.dispatchEvent(new Event('assistant:refresh-calendar')); // Nuevo evento para el Dashboard
-          }}
-        />
+      {result && (
+        <ResultModal ok={result.ok} message={result.msg} onClose={() => setResult(null)} />
       )}
 
-      {/* ✅ Modal de Historial */}
+      {/*  Modal de Historial */}
       {historyFor && (
         <HistoryModal
           contacto={historyFor}
@@ -850,101 +927,91 @@ function LeadModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
-        <div className="text-xl font-semibold mb-4">{title}</div>
+  <ModalShell title={title} onClose={onClose} maxWidth="max-w-3xl">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Field label="Nombre">
+        <input
+          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+          value={form.nombre}
+          onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+        />
+      </Field>
+      <Field label="Apellido">
+        <input
+          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+          value={form.apellido}
+          onChange={(e) => setForm((f) => ({ ...f, apellido: e.target.value }))}
+        />
+      </Field>
+      <Field label="Email">
+        <input
+          type="email"
+          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+          value={form.email}
+          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+        />
+      </Field>
+      <Field label="Teléfono">
+        <input
+          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+          value={form.telefono}
+          onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
+        />
+      </Field>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Nombre">
-            <input
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-              value={form.nombre}
-              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-            />
-          </Field>
-          <Field label="Apellido">
-            <input
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-              value={form.apellido}
-              onChange={(e) => setForm((f) => ({ ...f, apellido: e.target.value }))}
-            />
-          </Field>
-          <Field label="Email">
-            <input
-              type="email"
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
-          </Field>
-          <Field label="Teléfono">
-            <input
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-              value={form.telefono}
-              onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
-            />
-          </Field>
-
-          <div className="md:col-span-2">
-            <label className="block text-xs mb-1">Estado</label>
-            <select
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-              value={form.estadoId}
-              onChange={(e) => setForm((f) => ({ ...f, estadoId: e.target.value }))}
-            >
-              <option value="">— Seleccionar —</option>
-              {estados.map((e) => (
-                <option key={e.id} value={String(e.id)}>
-                  {e.fase}
-                </option>
-              ))}
-            </select>
-            {!nuevoId && (
-              <div className="mt-1 text-xs text-amber-500">
-                No encuentro el estado “Nuevo”. Hacé clic en “Cargar estados recomendados”.
-              </div>
-            )}
-          </div>
-
-          {/* ✅ Próximo contacto (opcional) */}
-          <Field label="Próximo contacto (opcional)">
-            <input
-              type="datetime-local"
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-              value={form.next_contact_at || ""}
-              onChange={(e) => setForm((f) => ({ ...f, next_contact_at: e.target.value }))}
-            />
-          </Field>
-          <Field label="Nota del próximo contacto (opcional)">
-            <input
-              className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-              value={form.next_contact_note || ""}
-              onChange={(e) => setForm((f) => ({ ...f, next_contact_note: e.target.value }))}
-              placeholder="Ej: Llamar para confirmar visita"
-              maxLength={255}
-            />
-          </Field>
-        </div>
-
-        {error && <div className="mt-4 text-sm text-rose-500">{error}</div>}
-
-        <div className="mt-6 flex items-center justify-end gap-2">
-          <button className="h-10 px-4 rounded-lg border text-sm" onClick={onClose} disabled={saving}>
-            Cancelar
-          </button>
-          <button
-            className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-            onClick={handleSubmit}
-            disabled={saving}
-          >
-            {saving ? "Guardando..." : "Guardar"}
-          </button>
-        </div>
+      <div className="md:col-span-2">
+        <label className="block text-xs mb-1">Estado</label>
+        <select
+          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+          value={form.estadoId}
+          onChange={(e) => setForm((f) => ({ ...f, estadoId: e.target.value }))}
+        >
+          <option value="">— Seleccionar —</option>
+          {estados.map((e) => (
+            <option key={e.id} value={String(e.id)}>
+              {e.fase}
+            </option>
+          ))}
+        </select>
       </div>
-    </div>
-  );
-}
 
+      <Field label="Próximo contacto (opcional)">
+        <input
+          type="datetime-local"
+          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+          value={form.next_contact_at || ""}
+          onChange={(e) => setForm((f) => ({ ...f, next_contact_at: e.target.value }))}
+        />
+      </Field>
+
+      <Field label="Nota del próximo contacto (opcional)">
+        <input
+          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+          value={form.next_contact_note || ""}
+          onChange={(e) => setForm((f) => ({ ...f, next_contact_note: e.target.value }))}
+          placeholder="Ej: Llamar para confirmar visita"
+          maxLength={255}
+        />
+      </Field>
+    </div>
+
+    {error && <div className="mt-4 text-sm text-rose-500">{error}</div>}
+
+    <div className="mt-6 flex items-center justify-end gap-2">
+      <button className="h-10 px-4 rounded-lg border text-sm" onClick={onClose} disabled={saving}>
+        Cancelar
+      </button>
+      <button
+        className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm disabled:opacity-60"
+        onClick={handleSubmit}
+        disabled={saving}
+      >
+        {saving ? "Guardando..." : "Guardar"}
+      </button>
+    </div>
+  </ModalShell>
+);
+}
 /* --------------------------- Confirm Modal -------------------------- */
 
 function ConfirmModal({
@@ -969,28 +1036,25 @@ function ConfirmModal({
     setWorking(false);
   }
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
-        <div className="text-lg font-semibold mb-2">{title}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-300">{message}</div>
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
-            Cancelar
-          </button>
-          <button
-            className={
-              confirmType === "danger"
-                ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm disabled:opacity-60"
-                : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
-            }
-            onClick={go}
-            disabled={working}
-          >
-            {working ? "Procesando..." : confirmLabel}
-          </button>
-        </div>
+    <ModalShell title={title} onClose={onCancel} maxWidth="max-w-lg">
+      <div className="text-sm rc-muted dark:text-gray-300">{message}</div>
+      <div className="mt-5 flex items-center justify-end gap-2">
+        <button className="h-9 px-3 rounded-lg border text-sm" onClick={onCancel} disabled={working}>
+          Cancelar
+        </button>
+        <button
+          className={
+            confirmType === "danger"
+              ? "h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 rc-text text-sm disabled:opacity-60"
+              : "h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm disabled:opacity-60"
+          }
+          onClick={go}
+          disabled={working}
+        >
+          {working ? "Procesando..." : confirmLabel}
+        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -998,24 +1062,25 @@ function ConfirmModal({
 
 function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
+    <ModalShell onClose={onClose} maxWidth="max-w-md">
       <div
-        className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${ok
+        className={`w-full rounded-xl border p-5 shadow-elev-1 ${
+          ok
             ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
-          }`}
-        onClick={(e) => e.stopPropagation()}
+        }`}
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
         <div className="mt-4 text-right">
-          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={onClose}>
+          <button className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm" onClick={onClose}>
             Cerrar
           </button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
+
 }
 
 /* --------------------------- History Modal --------------------------- */
@@ -1032,53 +1097,42 @@ function HistoryModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4" onClick={onClose}>
-      <div
-        className="w/full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-lg font-semibold mb-1">
-          Historial de {contacto.nombre || "—"} {contacto.apellido || ""}
-        </div>
-        <div className="text-xs text-gray-500 mb-4">{contacto.email || "—"}</div>
+    <ModalShell title={`Historial de ${contacto.nombre || "—"} ${contacto.apellido || ""}`} onClose={onClose} maxWidth="max-w-2xl">
+      <div className="text-xs rc-muted mb-4">{contacto.email || "—"}</div>
 
-        {loading && <div className="text-sm text-gray-500">Cargando…</div>}
-        {!loading && (items?.length ?? 0) === 0 && (
-          <div className="text-sm text-gray-500">Este lead aún no tiene cambios de estado.</div>
-        )}
+      {loading && <div className="text-sm rc-muted">Cargando…</div>}
+      {!loading && (items?.length ?? 0) === 0 && (
+        <div className="text-sm rc-muted">Este lead aún no tiene cambios de estado.</div>
+      )}
 
-        {!loading && !!items && items.length > 0 && (
-          <ul className="relative pl-5">
-            {items.map((h, idx) => {
-              const fase = h.estado?.fase || "—";
-              const key = norm(fase);
-              const chip =
-                STATE_COLORS[key] || "bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/20";
-              return (
-                <li key={h.id} className="pb-4 last:pb-0">
-                  {idx !== items.length - 1 && (
-                    <span className="absolute left-2 top-3 h-full w-px bg-gray-200 dark:bg-gray-800" />
-                  )}
-                  <span className="absolute left-0 mt-1 h-2 w-2 rounded-full bg-gray-400" />
-                  <div className="ml-4">
-                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>
-                      {fase}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">{formatDate(h.changed_at, true)}</div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+      {!loading && !!items && items.length > 0 && (
+        <ul className="relative pl-5">
+          {items.map((h, idx) => {
+            const fase = h.estado?.fase || "—";
+            const key = norm(fase);
+            const chip = STATE_COLORS[key] || "bg-app0/15 rc-muted ring-1 ring-gray-500/20";
+            return (
+              <li key={h.id} className="pb-4 last:pb-0">
+                {idx !== items.length - 1 && (
+                  <span className="absolute left-2 top-3 h-full w-px bg-gray-200 dark:bg-gray-800" />
+                )}
+                <span className="absolute left-0 mt-1 h-2 w-2 rounded-full bg-gray-400" />
+                <div className="ml-4">
+                  <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${chip}`}>{fase}</div>
+                  <div className="text-xs rc-muted mt-1">{formatDate(h.changed_at, true)}</div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
-        <div className="mt-5 text-right">
-          <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
+      <div className="mt-5 text-right">
+        <button className="h-9 px-3 rounded-lg border text-sm" onClick={onClose}>
+          Cerrar
+        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -1089,6 +1143,49 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="block text-xs mb-1">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function ModalShell({
+  title,
+  onClose,
+  maxWidth = "max-w-3xl",
+  children,
+}: {
+  title?: string;
+  onClose: () => void;
+  maxWidth?: "max-w-sm" | "max-w-lg" | "max-w-2xl" | "max-w-3xl";
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = prev;
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[2000]">
+      {/* Backdrop */}
+      <div className="absolute inset-0 backdrop" onClick={onClose} aria-hidden="true" />
+      {/* Diálogo */}
+      <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+        <div
+          className={`w-full ${maxWidth} rounded-2xl border border-soft bg-surface shadow-elev-1`}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+        >
+          {title && (
+            <div className="px-5 py-3 border-b border-soft bg-surface-2">
+              <h3 className="text-lg font-semibold text-base-clr">{title}</h3>
+            </div>
+          )}
+          <div className="p-5">{children}</div>
+        </div>
+      </div>
     </div>
   );
 }

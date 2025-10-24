@@ -6,8 +6,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import get_user_model
 # Importá SIEMPRE tu modelo de dominio con otro alias para no pisar auth.User
 from .models import Usuario as UsuarioModel
-from .serializers import UsuarioSerializer
-
+from .serializers import UsuarioSerializer, RegisterSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import CustomTokenObtainPairSerializer
 
@@ -18,10 +17,10 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        s = UsuarioSerializer(data=request.data)
+        s = RegisterSerializer(data=request.data)         
         s.is_valid(raise_exception=True)
         obj = s.save()
-        return Response(UsuarioSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(RegisterSerializer(obj).data,status=status.HTTP_201_CREATED)
 
 
 class MeUsuarioView(APIView):

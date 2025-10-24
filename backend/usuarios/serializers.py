@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 # from django.contrib.auth.password_validation import validate_password  # si querés validadores avanzados
 import re
 from .models import Usuario
-
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -162,3 +161,47 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         except AuthenticationFailed:
             # Mensaje en español:
             raise AuthenticationFailed("Correo o contraseña incorrectos.")
+        
+
+class RegisterSerializer(UsuarioSerializer):
+    email = serializers.EmailField(
+        error_messages={
+            "required": "Falta completar el email.",
+            "blank": "Falta completar el email.",
+            "invalid": "El email no tiene un formato válido.",
+        }
+    )
+    password = serializers.CharField(
+        write_only=True,
+        required=True,          
+        allow_blank=False,
+        style={"input_type": "password"},
+        error_messages={
+            "required": "Falta completar la contraseña.",
+            "blank": "Falta completar la contraseña.",
+        },
+    )
+
+    class Meta(UsuarioSerializer.Meta):
+        model = Usuario
+        fields = ["nombre", "apellido", "email", "password", "telefono", "dni"]
+        read_only_fields = []  
+        extra_kwargs = {
+            "nombre":   {"required": True, "allow_blank": False,
+                         "error_messages": {
+                             "required": "Falta completar el nombre.",
+                             "blank": "Falta completar el nombre."
+                         }},
+            "apellido": {"required": True, "allow_blank": False,
+                         "error_messages": {
+                             "required": "Falta completar el apellido.",
+                             "blank": "Falta completar el apellido."
+                         }},
+            "email":    {"required": True, "allow_blank": False,
+                         "error_messages": {
+                             "required": "Falta completar el email.",
+                             "blank": "Falta completar el email.",
+                             "invalid": "El email no tiene un formato válido."
+                         }},
+           
+        }

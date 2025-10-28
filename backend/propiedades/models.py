@@ -99,15 +99,24 @@ class Propiedad(models.Model):
             f"{self.tipo_de_propiedad} - {self.estado} - {self.precio} {self.moneda}"
         )
 
-
 class PropiedadImagen(models.Model):
     propiedad = models.ForeignKey(
         Propiedad,
-        on_delete=models.CASCADE,
-        related_name="imagenes",
+        on_delete=models.CASCADE,     
+        related_name="imagenes",    
     )
-    imagen = models.ImageField(upload_to="propiedades/")
+    # El archivo de imagen
+    imagen = models.ImageField(
+        upload_to="propiedades_multiples/", 
+        help_text="Imagen de la propiedad"
+    )
+    # Un texto opcional para la imagen
     descripcion = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
         return f"Imagen de {self.propiedad.codigo} ({self.descripcion or 'sin descripción'})"
+
+    class Meta:
+        verbose_name = "Imagen de Propiedad"
+        verbose_name_plural = "Imágenes de Propiedades"
+        ordering = ['propiedad', 'id'] 

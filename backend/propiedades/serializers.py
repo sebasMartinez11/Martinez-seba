@@ -2,12 +2,14 @@ from rest_framework import serializers
 from .models import Propiedad, PropiedadImagen
 
 class PropiedadImagenSerializer(serializers.ModelSerializer):
-    imagen = serializers.ImageField(read_only=True)
-
     class Meta:
         model = PropiedadImagen
-        fields = ["id", "imagen", "descripcion"]
-        read_only_fields = ["id"]
+        fields = [
+            'id', 
+            'imagen',      
+            'descripcion',
+            'propiedad',   
+        ]
 
 
 class PropiedadSerializer(serializers.ModelSerializer):

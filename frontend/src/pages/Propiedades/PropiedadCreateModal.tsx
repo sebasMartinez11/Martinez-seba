@@ -8,7 +8,7 @@ import SmartLocationCombo from "@/components/SmartLocationCombo";
 type Props = { open: boolean; onClose: () => void; onCreated?: () => void };
 
 type Estado = "disponible" | "vendido" | "reservado";
-type TipoProp = "casa" | "departamento" | "hotel";
+type TipoProp = "casa" | "departamento" |"ph"|"terreno"|"cochera"|"local"|"oficina"|"consultorio"|"quinta"|"chacra"|"galpon"|"deposito"|"campo"| "hotel"|"fondo de comercio"|"edificio"|"otro";
 type Moneda = "USD" | "ARS";
 type Disponibilidad = "venta" | "alquiler";
 
@@ -187,7 +187,20 @@ export default function PropiedadCreateModal({ open, onClose, onCreated }: Props
                   >
                     <option value="casa">Casa</option>
                     <option value="departamento">Departamento</option>
-                    <option value="hotel">Hotel</option>
+                    <option value="ph">Ph</option>
+                    <option value="terreno">Terreno</option>
+                    <option value="cochera">Cochera</option>
+                    <option value="local">Local</option>
+                    <option value="oficina">Oficina</option>
+                    <option value="consultorio">Consultorio</option>
+                    <option value="quinta">Quinta</option>
+                    <option value="chacra">Chacra</option>
+                    <option value="galpon">Galpon</option>
+                    <option value="deposito">Deposito</option>
+                    <option value="campo">Campo</option>
+                    <option value="fondo de comercio">Fondo de Comercio</option>
+                    <option value="edificio">Edificio</option>
+                    <option value="otro">Otro</option>
                   </select>
                 </div>
 

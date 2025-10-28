@@ -776,6 +776,23 @@ function EventModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+  if (form.contacto != null) {
+    const c = contactos.find(x => x.id === Number(form.contacto));
+    if (c) {
+      if (!(form.nombre || form.apellido || form.email)) {
+        setForm(f => ({
+          ...f,
+          nombre: c.nombre || "",
+          apellido: c.apellido || "",
+          email: c.email || ""
+        }));
+      }
+    }
+  }
+  
+}, [form.contacto, contactos]);
+
   function set<K extends keyof Evento>(k: K, v: Evento[K] | any) {
     setForm((f) => ({ ...f, [k]: v }));
   }
@@ -858,11 +875,26 @@ function EventModal({
           <ContactAutocomplete
             valueId={form.contacto == null ? null : Number(form.contacto)}
             initialList={contactos}
-            onChange={(id) => {
+            onChange={(id, item) => {
               set("contacto", id);
-              if (id) { set("nombre", ""); set("apellido", ""); set("email", null); }
+              if (item) {
+                // Autocompletar con los datos del lead elegido
+                set("nombre", item.nombre || "");
+                set("apellido", item.apellido || "");
+                set("email", item.email || "");
+              } else {
+                // Si limpian el contacto, dejá vacíos para ingresar visitante
+                set("nombre", "");
+                set("apellido", "");
+                set("email", "");
+              }
             }}
-            onClear={() => set("contacto", null)}
+            onClear={() => {
+              set("contacto", null);
+              set("nombre", "");
+              set("apellido", "");
+              set("email", "");
+            }}
           />
         </Field>
 
@@ -1022,7 +1054,7 @@ function ContactAutocomplete({
       {/* Input + estado seleccionado */}
       <div className="flex gap-2">
         <input
-          className="flex-1 h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm"
+          className="flex-1 h-10 rounded-lg border rc-border bg-surface text-sm px-3"
           placeholder="Escribí nombre/apellido/email del lead…"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); setHighlight(0); }}
@@ -1051,7 +1083,7 @@ function ContactAutocomplete({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border rc-border rc-border rc-card shadow-xl">
+        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg border rc-border bg-surface shadow-xl">
           {items.length === 0 ? (
             <div className="px-3 py-2 text-sm rc-muted">Sin resultados…</div>
           ) : (

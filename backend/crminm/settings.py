@@ -22,9 +22,9 @@ INSTALLED_APPS = [
     'leads.apps.LeadsConfig',
     'propiedades',
     'avisos',
+    'dashboard',
     'exportacion',
     'asistente.apps.AsistenteConfig', 
-
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -64,9 +64,9 @@ WSGI_APPLICATION = 'crminm.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'inmobiliaria_crm',
-        'USER': 'juani24',
-        'PASSWORD': 'Juani2408?',
+        'NAME': 'crm_inmo',
+        'USER': 'Juani2408',
+        'PASSWORD': 'Juani240803?',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {'charset': 'utf8mb4'},

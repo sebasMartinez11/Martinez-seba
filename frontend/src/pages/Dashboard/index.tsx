@@ -10,7 +10,7 @@ import {
   type Contacto as ContactoApi,
 } from "../../lib/api";
 import TopFilters from "./TopFilter";
-import { toast } from 'react-hot-toast'; 
+import { toast } from 'react-hot-toast';
 
 /* ============================== Types ============================== */
 // Reutilizo los tipos del cliente API para alinear con el back
@@ -34,7 +34,7 @@ type DashboardData = {
  * - Resuelve z-index y stacking contexts para que el fondo no "lave" el modal.
  * - Cierra al click fuera y con Escape.
  */
-  
+
 function ModalShell({
   title,
   children,
@@ -241,10 +241,10 @@ export default function DashboardPage() {
   async function fetchStatic() {
     // Verificar si el token existe antes de hacer la petición
     if (!localStorage.getItem('rc_token')) {
-        setLoading(false);
-        // Podrías lanzar un toast aquí o manejar el estado de No Logeado
-        toast.error("No autenticado. Por favor, inicia sesión.");
-        return;
+      setLoading(false);
+      // Podrías lanzar un toast aquí o manejar el estado de No Logeado
+      toast.error("No autenticado. Por favor, inicia sesión.");
+      return;
     }
 
     try {
@@ -526,15 +526,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Filtros rápidos */}
-        <div className="flex items-center gap-3">
-          <TopFilters onChange={applyFilters} />
-          {activeFilters && (
-            <button className="h-9 px-3 rounded-lg border text-sm" onClick={clearFilters}>
-              Limpiar filtros
-            </button>
-          )}
-        </div>
 
         {/* KPIs */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -777,21 +768,21 @@ function EventModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-  if (form.contacto != null) {
-    const c = contactos.find(x => x.id === Number(form.contacto));
-    if (c) {
-      if (!(form.nombre || form.apellido || form.email)) {
-        setForm(f => ({
-          ...f,
-          nombre: c.nombre || "",
-          apellido: c.apellido || "",
-          email: c.email || ""
-        }));
+    if (form.contacto != null) {
+      const c = contactos.find(x => x.id === Number(form.contacto));
+      if (c) {
+        if (!(form.nombre || form.apellido || form.email)) {
+          setForm(f => ({
+            ...f,
+            nombre: c.nombre || "",
+            apellido: c.apellido || "",
+            email: c.email || ""
+          }));
+        }
       }
     }
-  }
-  
-}, [form.contacto, contactos]);
+
+  }, [form.contacto, contactos]);
 
   function set<K extends keyof Evento>(k: K, v: Evento[K] | any) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -1094,9 +1085,8 @@ function ContactAutocomplete({
                   key={it.id}
                   type="button"
                   onClick={() => pick(it)}
-                  className={`w-full text-left px-3 py-2 text-sm ${
-                    idx === highlight ? "bg-blue-600 rc-text rc-text" : "hover:bg-app dark:hover:rc-card"
-                  }`}
+                  className={`w-full text-left px-3 py-2 text-sm ${idx === highlight ? "bg-blue-600 rc-text rc-text" : "hover:bg-app dark:hover:rc-card"
+                    }`}
                   onMouseEnter={() => setHighlight(idx)}
                 >
                   <div className="font-medium truncate">{full}</div>

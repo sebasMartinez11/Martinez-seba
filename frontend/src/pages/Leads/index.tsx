@@ -305,15 +305,6 @@ export default function LeadsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {estados.length < 4 && (
-            <button
-              className="h-9 px-3 rounded-lg border text-sm"
-              onClick={seedEstados}
-              title="Crear Nuevo / En negociación / Rechazado / Vendido"
-            >
-              Cargar estados recomendados
-            </button>
-          )}
           <button
             className="rounded-lg bg-blue-600 hover:bg-blue-700 rc-text rc-text text-sm px-3 h-9"
             onClick={() => setOpenAdd(true)}
@@ -363,49 +354,11 @@ export default function LeadsPage() {
           onChange={(e) => setVencimiento(e.target.value as any)}
           title="Vencimiento de próximo contacto"
         >
-          <option value="">Vencimiento: todos</option>
+          <option value="">Todos</option>
           <option value="pendiente">Pendiente</option>
           <option value="vencido">Vencido</option>
           <option value="hoy">Vence hoy</option>
           <option value="proximo">Próximo</option>
-        </select>
-
-        <select
-          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
-          value={String(proximoEnDias)}
-          onChange={(e) => setProximoEnDias(Number(e.target.value))}
-          disabled={vencimiento !== "proximo"}
-          title="Ventana para 'Próximo'"
-        >
-          <option value="3">Próx. en ≤ 3 días</option>
-          <option value="5">Próx. en ≤ 5 días</option>
-          <option value="7">Próx. en ≤ 7 días</option>
-        </select>
-
-        <select
-          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
-          value={String(sinSegDias)}
-          onChange={(e) => setSinSegDias(e.target.value === "" ? "" : Number(e.target.value))}
-          title="Días sin seguimiento (ultimo contacto)"
-        >
-          <option value="">Sin seg.: todos</option>
-          <option value="3">≥ 3 días</option>
-          <option value="5">≥ 5 días</option>
-          <option value="7">≥ 7 días</option>
-        </select>
-
-        <select
-          className="h-10 rounded-lg border rc-card rc-border rc-border px-3 text-sm"
-          value={ordering}
-          onChange={(e) => setOrdering(e.target.value)}
-          title="Orden"
-        >
-          <option value="-next_contact_at">Orden: Próximo (desc)</option>
-          <option value="next_contact_at">Orden: Próximo (asc)</option>
-          <option value="-last_contact_at">Último contacto (desc)</option>
-          <option value="last_contact_at">Último contacto (asc)</option>
-          <option value="-creado_en">Creado (desc)</option>
-          <option value="creado_en">Creado (asc)</option>
         </select>
       </div>
 
@@ -527,40 +480,6 @@ export default function LeadsPage() {
                           disabled={isBusy}
                         >
                           Borrar
-                        </button>
-                        {/*  Historial */}
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => openHistory(c)}
-                          disabled={isBusy}
-                        >
-                          Historial
-                        </button>
-
-                        {/*  Acciones rápidas de seguimiento */}
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickSetNext(c, 1, 10)}
-                          disabled={isBusy}
-                          title="Programar mañana a las 10:00"
-                        >
-                          Mañana 10:00
-                        </button>
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickSetNext(c, 3, 10)}
-                          disabled={isBusy}
-                          title="Programar en 3 días a las 10:00"
-                        >
-                          +3d 10:00
-                        </button>
-                        <button
-                          className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
-                          onClick={() => quickClearNext(c)}
-                          disabled={isBusy}
-                          title="Limpiar próximo contacto"
-                        >
-                          Limpiar próximo
                         </button>
                       </div>
                     </td>
@@ -745,10 +664,10 @@ export default function LeadsPage() {
               (typeof editTarget.estado === "number"
                 ? String(editTarget.estado)
                 : editTarget.estado?.id
-                ? String(editTarget.estado.id)
-                : editTarget.estado_detalle?.id
-                ? String(editTarget.estado_detalle.id)
-                : "") || "",
+                  ? String(editTarget.estado.id)
+                  : editTarget.estado_detalle?.id
+                    ? String(editTarget.estado_detalle.id)
+                    : "") || "",
             next_contact_at: editTarget.next_contact_at || "",
             next_contact_note: editTarget.next_contact_note || "",
           }}
@@ -927,113 +846,113 @@ function LeadModal({
   }
 
   return (
-  <ModalShell title={title} onClose={onClose} maxWidth="max-w-3xl">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Field label="Nombre">
-        <input
-          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-          value={form.nombre}
-          onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-        />
-      </Field>
-      <Field label="Apellido">
-        <input
-          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-          value={form.apellido}
-          onChange={(e) => setForm((f) => ({ ...f, apellido: e.target.value }))}
-        />
-      </Field>
-      <Field label="Email">
-        <input
-          type="email"
-          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-          value={form.email}
-          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-        />
-      </Field>
-      <Field label="Teléfono">
-        <input
-          type="tel"
-          className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-          value={form.telefono}
-          onChange={(e) =>
-            setForm(f => ({ ...f, telefono: e.target.value.replace(/\D/g, "") }))
-          }
-          onPaste={(e) => {
-            const pasted = (e.clipboardData || (window as any).clipboardData).getData("text");
-            if (/\D/.test(pasted)) {
-              e.preventDefault();
-              const digits = pasted.replace(/\D/g, "");
-              setForm(f => ({ ...f, telefono: (f.telefono || "") + digits }));
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-3xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="Nombre">
+          <input
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.nombre}
+            onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+          />
+        </Field>
+        <Field label="Apellido">
+          <input
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.apellido}
+            onChange={(e) => setForm((f) => ({ ...f, apellido: e.target.value }))}
+          />
+        </Field>
+        <Field label="Email">
+          <input
+            type="email"
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          />
+        </Field>
+        <Field label="Teléfono">
+          <input
+            type="tel"
+            className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.telefono}
+            onChange={(e) =>
+              setForm(f => ({ ...f, telefono: e.target.value.replace(/\D/g, "") }))
             }
-          }}
-          onKeyDown={(e) => {
-            const ok = [
-              "Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"
-            ];
-            if (ok.includes(e.key)) return;
-            if ((e.ctrlKey || e.metaKey) && ["a","c","v","x"].includes(e.key.toLowerCase())) return;
-            if (!/^\d$/.test(e.key)) e.preventDefault();
-          }}
-          inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={15}         // mismo tope que en el modelo
-          placeholder="Sólo números"
-        />
-      </Field>
+            onPaste={(e) => {
+              const pasted = (e.clipboardData || (window as any).clipboardData).getData("text");
+              if (/\D/.test(pasted)) {
+                e.preventDefault();
+                const digits = pasted.replace(/\D/g, "");
+                setForm(f => ({ ...f, telefono: (f.telefono || "") + digits }));
+              }
+            }}
+            onKeyDown={(e) => {
+              const ok = [
+                "Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"
+              ];
+              if (ok.includes(e.key)) return;
+              if ((e.ctrlKey || e.metaKey) && ["a", "c", "v", "x"].includes(e.key.toLowerCase())) return;
+              if (!/^\d$/.test(e.key)) e.preventDefault();
+            }}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={15}         // mismo tope que en el modelo
+            placeholder="Sólo números"
+          />
+        </Field>
 
-      <div className="md:col-span-2">
-        <label className="block text-xs mb-1">Estado</label>
-        <select
-          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-          value={form.estadoId}
-          onChange={(e) => setForm((f) => ({ ...f, estadoId: e.target.value }))}
-        >
-          <option value="">— Seleccionar —</option>
-          {estados.map((e) => (
-            <option key={e.id} value={String(e.id)}>
-              {e.fase}
-            </option>
-          ))}
-        </select>
+        <div className="md:col-span-2">
+          <label className="block text-xs mb-1">Estado</label>
+          <select
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.estadoId}
+            onChange={(e) => setForm((f) => ({ ...f, estadoId: e.target.value }))}
+          >
+            <option value="">— Seleccionar —</option>
+            {estados.map((e) => (
+              <option key={e.id} value={String(e.id)}>
+                {e.fase}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Field label="Próximo contacto (opcional)">
+          <input
+            type="datetime-local"
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.next_contact_at || ""}
+            onChange={(e) => setForm((f) => ({ ...f, next_contact_at: e.target.value }))}
+          />
+        </Field>
+
+        <Field label="Nota del próximo contacto (opcional)">
+          <input
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.next_contact_note || ""}
+            onChange={(e) => setForm((f) => ({ ...f, next_contact_note: e.target.value }))}
+            placeholder="Ej: Llamar para confirmar visita"
+            maxLength={255}
+          />
+        </Field>
       </div>
 
-      <Field label="Próximo contacto (opcional)">
-        <input
-          type="datetime-local"
-          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-          value={form.next_contact_at || ""}
-          onChange={(e) => setForm((f) => ({ ...f, next_contact_at: e.target.value }))}
-        />
-      </Field>
+      {error && <div className="mt-4 text-sm text-rose-500">{error}</div>}
 
-      <Field label="Nota del próximo contacto (opcional)">
-        <input
-          className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
-          value={form.next_contact_note || ""}
-          onChange={(e) => setForm((f) => ({ ...f, next_contact_note: e.target.value }))}
-          placeholder="Ej: Llamar para confirmar visita"
-          maxLength={255}
-        />
-      </Field>
-    </div>
-
-    {error && <div className="mt-4 text-sm text-rose-500">{error}</div>}
-
-    <div className="mt-6 flex items-center justify-end gap-2">
-      <button className="h-10 px-4 rounded-lg border text-sm" onClick={onClose} disabled={saving}>
-        Cancelar
-      </button>
-      <button
-        className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm disabled:opacity-60"
-        onClick={handleSubmit}
-        disabled={saving}
-      >
-        {saving ? "Guardando..." : "Guardar"}
-      </button>
-    </div>
-  </ModalShell>
-);
+      <div className="mt-6 flex items-center justify-end gap-2">
+        <button className="h-10 px-4 rounded-lg border text-sm" onClick={onClose} disabled={saving}>
+          Cancelar
+        </button>
+        <button
+          className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm disabled:opacity-60"
+          onClick={handleSubmit}
+          disabled={saving}
+        >
+          {saving ? "Guardando..." : "Guardar"}
+        </button>
+      </div>
+    </ModalShell>
+  );
 }
 /* --------------------------- Confirm Modal -------------------------- */
 
@@ -1085,13 +1004,12 @@ function ConfirmModal({
 
 function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
   return (
-    <ModalShell onClose={onClose} maxWidth="max-w-md">
+    <ModalShell onClose={onClose} maxWidth="max-w-sm">
       <div
-        className={`w-full rounded-xl border p-5 shadow-elev-1 ${
-          ok
-            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
-        }`}
+        className={`w-full rounded-xl border p-5 shadow-elev-1 ${ok
+          ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+          : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
+          }`}
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>

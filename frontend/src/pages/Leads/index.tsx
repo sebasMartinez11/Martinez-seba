@@ -305,15 +305,6 @@ export default function LeadsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {estados.length < 4 && (
-            <button
-              className="h-9 px-3 rounded-lg border text-sm"
-              onClick={seedEstados}
-              title="Crear Nuevo / En negociación / Rechazado / Vendido"
-            >
-              Cargar estados recomendados
-            </button>
-          )}
           <button
             className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 h-9"
             onClick={() => setOpenAdd(true)}
@@ -363,12 +354,13 @@ export default function LeadsPage() {
           onChange={(e) => setVencimiento(e.target.value as any)}
           title="Vencimiento de próximo contacto"
         >
-          <option value="">Vencimiento: todos</option>
+          <option value="">Todos</option>
           <option value="pendiente">Pendiente</option>
           <option value="vencido">Vencido</option>
           <option value="hoy">Vence hoy</option>
           <option value="proximo">Próximo</option>
         </select>
+<<<<<<< HEAD
 
         <select
           className="h-10 rounded-lg border bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 px-3 text-sm"
@@ -407,6 +399,8 @@ export default function LeadsPage() {
           <option value="-creado_en">Creado (desc)</option>
           <option value="creado_en">Creado (asc)</option>
         </select>
+=======
+>>>>>>> 2a3dea99ef2a43ea77c1417dd15a82a17b0888d5
       </div>
 
       {/* Tabla (desktop) */}
@@ -505,6 +499,7 @@ export default function LeadsPage() {
                         >
                           Borrar
                         </button>
+<<<<<<< HEAD
                         {/* ✅ Historial */}
                         <button
                           className="h-8 px-2 rounded-md border text-xs disabled:opacity-60"
@@ -539,6 +534,8 @@ export default function LeadsPage() {
                         >
                           Limpiar próximo
                         </button>
+=======
+>>>>>>> 2a3dea99ef2a43ea77c1417dd15a82a17b0888d5
                       </div>
                     </td>
                   </tr>
@@ -718,10 +715,10 @@ export default function LeadsPage() {
               (typeof editTarget.estado === "number"
                 ? String(editTarget.estado)
                 : editTarget.estado?.id
-                ? String(editTarget.estado.id)
-                : editTarget.estado_detalle?.id
-                ? String(editTarget.estado_detalle.id)
-                : "") || "",
+                  ? String(editTarget.estado.id)
+                  : editTarget.estado_detalle?.id
+                    ? String(editTarget.estado_detalle.id)
+                    : "") || "",
             next_contact_at: editTarget.next_contact_at || "",
             next_contact_note: editTarget.next_contact_note || "",
           }}
@@ -900,6 +897,7 @@ function LeadModal({
   }
 
   return (
+<<<<<<< HEAD
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
       <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
         <div className="text-xl font-semibold mb-4">{title}</div>
@@ -992,6 +990,114 @@ function LeadModal({
         </div>
       </div>
     </div>
+=======
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-3xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="Nombre">
+          <input
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.nombre}
+            onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+          />
+        </Field>
+        <Field label="Apellido">
+          <input
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.apellido}
+            onChange={(e) => setForm((f) => ({ ...f, apellido: e.target.value }))}
+          />
+        </Field>
+        <Field label="Email">
+          <input
+            type="email"
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          />
+        </Field>
+        <Field label="Teléfono">
+          <input
+            type="tel"
+            className="w-full h-10 rounded-lg border rc-border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.telefono}
+            onChange={(e) =>
+              setForm(f => ({ ...f, telefono: e.target.value.replace(/\D/g, "") }))
+            }
+            onPaste={(e) => {
+              const pasted = (e.clipboardData || (window as any).clipboardData).getData("text");
+              if (/\D/.test(pasted)) {
+                e.preventDefault();
+                const digits = pasted.replace(/\D/g, "");
+                setForm(f => ({ ...f, telefono: (f.telefono || "") + digits }));
+              }
+            }}
+            onKeyDown={(e) => {
+              const ok = [
+                "Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"
+              ];
+              if (ok.includes(e.key)) return;
+              if ((e.ctrlKey || e.metaKey) && ["a", "c", "v", "x"].includes(e.key.toLowerCase())) return;
+              if (!/^\d$/.test(e.key)) e.preventDefault();
+            }}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={15}         // mismo tope que en el modelo
+            placeholder="Sólo números"
+          />
+        </Field>
+
+        <div className="md:col-span-2">
+          <label className="block text-xs mb-1">Estado</label>
+          <select
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.estadoId}
+            onChange={(e) => setForm((f) => ({ ...f, estadoId: e.target.value }))}
+          >
+            <option value="">— Seleccionar —</option>
+            {estados.map((e) => (
+              <option key={e.id} value={String(e.id)}>
+                {e.fase}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Field label="Próximo contacto (opcional)">
+          <input
+            type="datetime-local"
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.next_contact_at || ""}
+            onChange={(e) => setForm((f) => ({ ...f, next_contact_at: e.target.value }))}
+          />
+        </Field>
+
+        <Field label="Nota del próximo contacto (opcional)">
+          <input
+            className="w-full h-10 rounded-lg border rc-border rc-card px-3 text-sm outline-none focus:ring-2 ring-blue-500"
+            value={form.next_contact_note || ""}
+            onChange={(e) => setForm((f) => ({ ...f, next_contact_note: e.target.value }))}
+            placeholder="Ej: Llamar para confirmar visita"
+            maxLength={255}
+          />
+        </Field>
+      </div>
+
+      {error && <div className="mt-4 text-sm text-rose-500">{error}</div>}
+
+      <div className="mt-6 flex items-center justify-end gap-2">
+        <button className="h-10 px-4 rounded-lg border text-sm" onClick={onClose} disabled={saving}>
+          Cancelar
+        </button>
+        <button
+          className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 rc-text text-sm disabled:opacity-60"
+          onClick={handleSubmit}
+          disabled={saving}
+        >
+          {saving ? "Guardando..." : "Guardar"}
+        </button>
+      </div>
+    </ModalShell>
+>>>>>>> 2a3dea99ef2a43ea77c1417dd15a82a17b0888d5
   );
 }
 
@@ -1048,6 +1154,7 @@ function ConfirmModal({
 
 function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; onClose: () => void }) {
   return (
+<<<<<<< HEAD
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
         className={`w-full max-w-md rounded-2xl border p-5 shadow-lg ${
@@ -1056,6 +1163,14 @@ function ResultModal({ ok, message, onClose }: { ok: boolean; message: string; o
             : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
         }`}
         onClick={(e) => e.stopPropagation()}
+=======
+    <ModalShell onClose={onClose} maxWidth="max-w-sm">
+      <div
+        className={`w-full rounded-xl border p-5 shadow-elev-1 ${ok
+          ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+          : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
+          }`}
+>>>>>>> 2a3dea99ef2a43ea77c1417dd15a82a17b0888d5
       >
         <div className="text-lg font-semibold mb-2">{ok ? "OK" : "Ups"}</div>
         <div className="text-sm">{message}</div>
